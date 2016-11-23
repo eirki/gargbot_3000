@@ -45,7 +45,12 @@ def handle_command(command, channel, user):
             response = {"text": garg_quotes.quote()}
 
     elif command.startswith("pic"):
-        response = {"attachments": [{"fallback":  drop_pics.get_lark(), "image_url": drop_pics.get_lark()}]}
+        try:
+            topic = command.split()[1]
+            pic = garg_quotes.get_pic(topic)
+        except IndexError:
+            pic = garg_quotes.get_pic()
+        response = {"attachments": [{"fallback":  pic, "image_url": pic}]}
 
     elif command.startswith("/random"):
         response = {"attachments": [{"fallback":  garg_quotes.random(), "image_url": garg_quotes.random()}]}
@@ -58,7 +63,7 @@ def handle_command(command, channel, user):
 
     else:
         response = {"text": ("Beep boop beep! Nôt sure whåt you mean by %s. Dette er kommandoene jeg skjønner:\n"
-                             "@gargbot_3000 *pic* - (viser tilfedlig bilde fra Larkollen)\n"
+                             "@gargbot_3000 *pic* [lark/fe/skating] - (viser tilfedlig Larkollen/Forsterka Enhet/skate bilde)\n"
                              "@gargbot_3000 *quote* [garling] (henter tilfedlig sitat fra forumet)\n"
                              "@gargbot_3000 *vidoi* (viser tilfedlig musikkvideo fra muzakvidois tråden på forumet\n"
                              "@gargbot_3000 */random* (viser tilfedlig bilde fra \\random tråden på forumet\n"
@@ -79,6 +84,7 @@ def parse_slack_output(slack_rtm_output):
     if output_list and len(output_list) > 0:
         for output in output_list:
             if output and 'text' in output and AT_BOT in output['text']:
+                print(output)
                 return output['text'].replace(AT_BOT, "").strip().lower(), output['channel'], output["user"]
     return None, None, None
 
@@ -94,7 +100,7 @@ if __name__ == "__main__":
 
     drop_pics = droppics.DropPics()
     drop_pics.connect()
-    drop_pics.load_lark_paths()
+    drop_pics.load_img_paths()
 
     if slack_client.rtm_connect():
         print("GargBot 3000 is operational!")
