@@ -1,13 +1,8 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3.5
 # coding: utf-8
-from __future__ import unicode_literals, print_function
-
 import re
-try:
-    from HTMLParser import HTMLParser
-    html = HTMLParser()
-except ImportError:
-    import html
+import html
+
 import MySQLdb
 import requests
 

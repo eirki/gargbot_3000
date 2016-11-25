@@ -1,7 +1,5 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3.5
 # coding: utf-8
-from __future__ import unicode_literals, print_function
-
 import datetime as dt
 import time
 import traceback
