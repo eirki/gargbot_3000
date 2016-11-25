@@ -1,11 +1,11 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3.5
 # coding: utf-8
 from __future__ import unicode_literals, print_function
 
 import random
 import json
 import os
-from multiprocessing import dummy as threading
+import asyncio
 
 import dropbox
 from PIL import Image
@@ -26,7 +26,7 @@ class DropPics(object):
             "skating": self.skate_paths,
         }
         if topic is None:
-            topic = random.choice(topics.keys())
+            topic = random.choice(list(topics.keys()))
         path = random.choice(topics[topic])
         response = self.dbx.sharing_create_shared_link(path)
         return response.url.replace("?dl=0", "?raw=1")
@@ -54,20 +54,21 @@ class DropPics(object):
         self.fe_paths = []
         self.lark_paths = []
 
-        pool = threading.Pool(8)
-        for entry in self.db_file_path_generator(config.kamera_paths):
-            pool.apply_async(self.check_relevance, (entry, ))
-        pool.close()
-        pool.join()
+        loop = asyncio.get_event_loop()
+        tasks = [loop.create_task(self.check_relevance(entry, loop))
+                 for entry in self.db_file_path_generator(config.kamera_paths)]
+
+        loop.run_until_complete(asyncio.wait(tasks))
+        loop.close()
+
         for filename, data in [("skate", self.skate_paths), ("fe", self.fe_paths), ("lark", self.lark_paths)]:
             with open(os.path.join(os.getcwd(), "data", "%s_paths.json" % filename), "w") as j:
                 json.dump(data, j)
 
-    def check_relevance(self, entry):
+    async def check_relevance(self, entry, loop):
         if not entry.path_lower.endswith(".jpg"):
             return
-
-        metadata, response = self.dbx.files_download(entry.path_lower)
+        metadata, response = await loop.run_in_executor(None, self.dbx.files_download, entry.path_lower)
         tag = get_tag(response.raw)
         if not tag:
             return

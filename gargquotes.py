@@ -3,14 +3,16 @@
 from __future__ import unicode_literals, print_function
 
 import re
-from HTMLParser import HTMLParser
-
+try:
+    from HTMLParser import HTMLParser
+    html = HTMLParser()
+except ImportError:
+    import html
 import MySQLdb
 import requests
 
 import config
 
-html = HTMLParser()
 
 slack_nicks = {
     2: "asmundboe",
