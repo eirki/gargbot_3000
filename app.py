@@ -1,4 +1,4 @@
-#! /usr/bin/env python3.5
+#! /usr/bin/env python3.6
 # coding: utf-8
 from logger import log
 
@@ -34,12 +34,12 @@ def filter_slack_output(slack_rtm_output):
         this parsing function returns None unless a message is
         directed at the Bot, based on its ID.
     """
-    AT_BOT = "<@%s>" % config.bot_id
+    AT_BOT = f"<@{config.bot_id}>"
     output_list = slack_rtm_output
     if output_list and len(output_list) > 0:
         for output in output_list:
-            if output and 'text' in output and AT_BOT in output['text']:
-                return output['text'].replace(AT_BOT, "").strip().lower(), output['channel'], output["user"]
+            if output and "text" in output and AT_BOT in output["text"]:
+                return output["text"].replace(AT_BOT, "").strip().lower(), output["channel"], output["user"]
     return None, None, None
 
 
@@ -73,24 +73,25 @@ def command_handler_wrapper(garg_quotes, drop_pics):
             response = {"text": garg_quotes.vidoi()}
 
         elif command.startswith(("hei", "hallo", "hello", "morn")):
-            response = {"text": "Blëep bloöp, hallo %s!" % users.get(user, "")}
+            response = {"text": f"Blëep bloöp, hallo {users.get(user, '')}!"}
 
         else:
-            response = {"text": ("Beep boop beep! Nôt sure whåt you mean by %s. Dette er kommandoene jeg skjønner:\n"
-                                 "@gargbot_3000 *pic* [lark/fe/skating] - (viser tilfedlig Larkollen/Forsterka Enhet/skate bilde)\n"
-                                 "@gargbot_3000 *quote* [garling] (henter tilfedlig sitat fra forumet)\n"
-                                 "@gargbot_3000 *vidoi* (viser tilfedlig musikkvideo fra muzakvidois tråden på forumet\n"
-                                 "@gargbot_3000 */random* (viser tilfedlig bilde fra \\random tråden på forumet\n"
-                                 % command)}
+            response = {"text": (f"Beep boop beep! Nôt sure whåt you mean by {command}. Dette er kommandoene jeg skjønner:\n"
+                                  "@gargbot_3000 *pic [lark/fe/skating/henging]*: viser tilfedlig Larkollen/Forsterka Enhet/skate/henge bilde\n"
+                                  "@gargbot_3000 *quote [garling]*: henter tilfedlig sitat fra forumet\n"
+                                  "@gargbot_3000 *vidoi*: viser tilfedlig musikkvideo fra muzakvidois tråden på forumet\n"
+                                  "@gargbot_3000 */random*: viser tilfedlig bilde fra \\random tråden på forumet\n"
+                                  "@gargbot_3000 *Hvem [spørsmål]*: svarer på spørsmål om garglings \n"
+                                  "@gargbot_3000 *msn [garling]*: utfrag fra tilfeldig msn samtale\n")}
 
         return response
     return handle_command
 
 
-def panic():
-    text = ("Error, error! Noe har gått fryktelig galt! Ææææææ. Ta kontakt"
-            " med systemadministrator ummidelbart, før det er for sent. "
-            "HJELP MEG. If I don't survive, tell mrs. gargbot... 'Hello'")
+def panic(exc):
+    text = (f"Error, error! Noe har gått fryktelig galt: {str(exc)}! Ææææææ. Ta kontakt"
+             " med systemadministrator ummidelbart, før det er for sent. "
+             "HJELP MEG. If I don\"t survive, tell mrs. gargbot... 'Hello'")
     response = {"text": text}
     return response
 
