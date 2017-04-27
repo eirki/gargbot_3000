@@ -39,13 +39,12 @@ class DropPics(object):
         return url, timestamp
 
     def load_img_paths(self):
-        with open(os.path.join(os.getcwd(), "data", "lark_paths.json")) as j:
+        with open(os.path.join("/home", "eirki", "gargbot_3000", "data", "lark_paths.json")) as j:
             self.lark_paths = json.load(j)
-        with open(os.path.join(os.getcwd(), "data", "fe_paths.json")) as j:
+        with open(os.path.join("/home", "eirki", "gargbot_3000", "data", "fe_paths.json")) as j:
             self.fe_paths = json.load(j)
-        with open(os.path.join(os.getcwd(), "data", "skate_paths.json")) as j:
+        with open(os.path.join("/home", "eirki", "gargbot_3000", "data", "skate_paths.json")) as j:
             self.skate_paths = json.load(j)
-        print("Pictures indexed")
 
     def db_file_path_generator(self, path):
         query = self.dbx.files_list_folder(path, recursive=True)
@@ -69,7 +68,7 @@ class DropPics(object):
         loop.close()
 
         for filename, data in [("skate", self.skate_paths), ("fe", self.fe_paths), ("lark", self.lark_paths)]:
-            with open(os.path.join(os.getcwd(), "data", "%s_paths.json" % filename), "w") as j:
+            with open(os.path.join("/home", "eirki", "gargbot_3000", "data", f"{filename}_paths.json"), "w") as j:
                 json.dump(data, j)
 
     async def check_relevance(self, entry, loop):
