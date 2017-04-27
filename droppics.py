@@ -25,6 +25,8 @@ class DropPics(object):
             "lark": self.lark_paths,
             "fe": self.fe_paths,
             "skating": self.skate_paths,
+            "henging": self.henging_paths,
+            "spillnight": self.spill_paths
         }
         if topic is None:
             topic = random.choice(list(topics.keys()))
@@ -45,6 +47,11 @@ class DropPics(object):
             self.fe_paths = json.load(j)
         with open(os.path.join("/home", "eirki", "gargbot_3000", "data", "skate_paths.json")) as j:
             self.skate_paths = json.load(j)
+        with open(os.path.join("/home", "eirki", "gargbot_3000", "data", "henging_paths.json")) as j:
+            self.henging_paths = json.load(j)
+        with open(os.path.join("/home", "eirki", "gargbot_3000", "data", "spill_paths.json")) as j:
+            self.spill_paths = json.load(j)
+        log.info("Pictures indexed")
 
     def db_file_path_generator(self, path):
         query = self.dbx.files_list_folder(path, recursive=True)
@@ -89,7 +96,8 @@ class DropPics(object):
 def get_tag(fileobject):
     im = Image.open(fileobject)
     exif = im._getexif()
-    return exif[40094].decode('utf-16').rstrip('\x00')
+    return exif[40094].decode("utf-16").rstrip("\x00")
+
 
 if __name__ == "__main__":
     drop_pics = DropPics()
