@@ -6,6 +6,7 @@ import random
 import json
 import os
 import asyncio
+import time
 
 import dropbox
 from PIL import Image
@@ -28,8 +29,14 @@ class DropPics(object):
         if topic is None:
             topic = random.choice(list(topics.keys()))
         path = random.choice(topics[topic])
+
+        md = self.dbx.files_get_metadata(path, include_media_info=True)
+        date_obj = md.media_info.get_metadata().time_taken
+        timestamp = int(time.mktime(date_obj.timetuple()))
+
         response = self.dbx.sharing_create_shared_link(path)
-        return response.url.replace("?dl=0", "?raw=1")
+        url = response.url.replace("?dl=0", "?raw=1")
+        return url, timestamp
 
     def load_img_paths(self):
         with open(os.path.join(os.getcwd(), "data", "lark_paths.json")) as j:
