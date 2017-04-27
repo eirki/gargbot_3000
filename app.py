@@ -1,5 +1,7 @@
 #! /usr/bin/env python3.5
 # coding: utf-8
+from logger import log
+
 import datetime as dt
 import time
 import traceback
@@ -43,9 +45,9 @@ def filter_slack_output(slack_rtm_output):
 
 def command_handler_wrapper(garg_quotes, drop_pics):
     def handle_command(command, channel, user):
-        print(dt.datetime.now())
+        log.info(dt.datetime.now())
         command = command.strip()
-        print("command: %s" % command)
+        log.info(f"command: {command}")
         if command.startswith("ping"):
             response = {"text": "GargBot 3000 is active. Beep boop beep"}
 
@@ -94,7 +96,7 @@ def panic():
 
 
 def send_response(slack_client, response, channel):
-    print("response: %s" % response)
+    log.info(f"response: {response}")
     slack_client.api_call("chat.postMessage", channel=channel, as_user=True, **response)
 
 
@@ -113,7 +115,7 @@ def main():
 
     handle_command = command_handler_wrapper(garg_quotes, drop_pics)
 
-    print("GargBot 3000 is operational!")
+    log.info("GargBot 3000 is operational!")
     try:
         while True:
             time.sleep(1)

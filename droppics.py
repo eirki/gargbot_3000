@@ -1,5 +1,7 @@
 #! /usr/bin/env python3.5
 # coding: utf-8
+from logger import log
+
 import random
 import json
 import os
@@ -15,7 +17,7 @@ class DropPics(object):
     def connect(self):
         self.dbx = dropbox.Dropbox(config.dropbox_token)
         self.dbx.users_get_current_account()
-        print("Connected to dbx")
+        log.info("Connected to dbx")
 
     def get_pic(self, topic=None):
         topics = {
@@ -88,7 +90,7 @@ if __name__ == "__main__":
     drop_pics.connect()
     # drop_pics.store_relevant_img_paths()
     drop_pics.load_img_paths()
-    print(drop_pics.get_pic("lark"))
-    print(drop_pics.get_pic("fe"))
-    print(drop_pics.get_pic("skating"))
-    print(drop_pics.get_pic())
+    log.info(drop_pics.get_pic("lark"))
+    log.info(drop_pics.get_pic("fe"))
+    log.info(drop_pics.get_pic("skating"))
+    log.info(drop_pics.get_pic())
