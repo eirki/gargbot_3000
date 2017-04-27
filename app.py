@@ -17,16 +17,16 @@ import droppics
 import quotes
 
 users = {
-    'U33PQTYBV': 'asmundboe',
-    'U34DL838S': 'cmr',
-    'U33TL3BQC': 'eirki',
-    'U34HTUHN2': 'gargbot_3000',
-    'U346NSERJ': 'gromsten',
-    'U33SRCHB5': 'kenlee',
-    'U336SL64Q': 'lbs',
-    'U34FMDVTN': 'nils',
-    'U34FXQLUD': 'smorten',
-    'USLACKBOT': 'slackbot'
+    "U33PQTYBV": "asmundboe",
+    "U34DL838S": "cmr",
+    "U33TL3BQC": "eirki",
+    "U34HTUHN2": "gargbot_3000",
+    "U346NSERJ": "gromsten",
+    "U33SRCHB5": "kenlee",
+    "U336SL64Q": "lbs",
+    "U34FMDVTN": "nils",
+    "U34FXQLUD": "smorten",
+    "USLACKBOT": "slackbot"
 }
 
 names = ["Åsmund", "Carl Martin", "Eirik", "Pelle", "Kenneth", "Lars", "Nils", "Lars Morten"]
