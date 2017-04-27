@@ -6,13 +6,15 @@ import datetime as dt
 import time
 import traceback
 import sys
+import random
 
 import MySQLdb
 from slackclient import SlackClient
+import websocket
 
 import config
 import droppics
-import gargquotes
+import quotes
 
 users = {
     'U33PQTYBV': 'asmundboe',
@@ -26,6 +28,8 @@ users = {
     'U34FXQLUD': 'smorten',
     'USLACKBOT': 'slackbot'
 }
+
+names = ["Åsmund", "Carl Martin", "Eirik", "Pelle", "Kenneth", "Lars", "Nils", "Lars Morten"]
 
 
 def filter_slack_output(slack_rtm_output):
@@ -43,7 +47,7 @@ def filter_slack_output(slack_rtm_output):
     return None, None, None
 
 
-def command_handler_wrapper(garg_quotes, drop_pics):
+def command_handler_wrapper(quotes_db, drop_pics):
     def handle_command(command, channel, user):
         log.info(dt.datetime.now())
         command = command.strip()
@@ -51,26 +55,49 @@ def command_handler_wrapper(garg_quotes, drop_pics):
         if command.startswith("ping"):
             response = {"text": "GargBot 3000 is active. Beep boop beep"}
 
-        elif command.startswith("quote"):
-            try:
-                user = command.split()[1]
-                response = {"text": garg_quotes.quote(user)}
-            except IndexError:
-                response = {"text": garg_quotes.quote()}
-
         elif command.startswith("pic"):
             try:
                 topic = command.split()[1]
-                pic = drop_pics.get_pic(topic)
+                picurl, timestamp = drop_pics.get_pic(topic)
             except IndexError:
-                pic = drop_pics.get_pic()
-            response = {"attachments": [{"fallback":  pic, "image_url": pic}]}
+                picurl, timestamp = drop_pics.get_pic()
+            response = {"attachments": [{"fallback":  picurl, "image_url": picurl, "ts": timestamp}]}
+
+        elif command.startswith("quote"):
+            try:
+                user = command.split()[1]
+                response = {"text": quotes_db.garg("quote", user)}
+            except IndexError:
+                response = {"text": quotes_db.garg("quote")}
 
         elif command.startswith("/random"):
-            response = {"attachments": [{"fallback":  garg_quotes.random(), "image_url": garg_quotes.random()}]}
+            response = {"attachments": [{"fallback":  quotes_db.garg("random"), "image_url": quotes_db.garg("random")}]}
 
         elif command.startswith("vidoi"):
-            response = {"text": garg_quotes.vidoi()}
+            response = {"text": quotes_db.garg("vidoi")}
+
+        elif command.startswith("msn"):
+            try:
+                user = command.split()[1]
+                response = {"text": quotes_db.garg("quote", user)}
+                date, text = quotes_db.msn(user)
+            except IndexError:
+                response = {"text": quotes_db.garg("quote")}
+                date, text = quotes_db.msn()
+
+            response = {"attachments":
+                        [{
+                         "author_name": f"{from_user}:",
+                         "text": msg_text,
+                         "color": msg_color,
+                         } for from_user, msg_text, msg_color in text]
+                        }
+            response["attachments"][0]["pretext"] = date
+
+        elif command.lower().startswith("hvem"):
+            user = random.choice(names)
+            text = user + command[4:].replace("?", "!")
+            response = {"text": text}
 
         elif command.startswith(("hei", "hallo", "hello", "morn")):
             response = {"text": f"Blëep bloöp, hallo {users.get(user, '')}!"}
@@ -102,8 +129,8 @@ def send_response(slack_client, response, channel):
 
 
 def main():
-    garg_quotes = gargquotes.GargQuotes()
-    garg_quotes.connect()
+    quotes_db = quotes.Quotes()
+    quotes_db.connect()
 
     drop_pics = droppics.DropPics()
     drop_pics.connect()
@@ -114,28 +141,34 @@ def main():
     if not connected:
         raise Exception("Connection failed. Invalid Slack token or bot ID?")
 
-    handle_command = command_handler_wrapper(garg_quotes, drop_pics)
+    handle_command = command_handler_wrapper(quotes_db, drop_pics)
 
     log.info("GargBot 3000 is operational!")
     try:
         while True:
             time.sleep(1)
-            command, channel, user = filter_slack_output(slack_client.rtm_read())
+            try:
+                command, channel, user = filter_slack_output(slack_client.rtm_read())
+            except websocket.WebSocketConnectionClosedException:
+                slack_client.rtm_connect()
+                command, channel, user = filter_slack_output(slack_client.rtm_read())
+
             if not (command and channel):
                 continue
+
             try:
                 response = handle_command(command, channel, user)
             except MySQLdb.Error:
-                garg_quotes.connect()
+                quotes_db.connect()
                 response = handle_command(command, channel, user)
-            except:
-                traceback.print_exc()
-                response = panic()
+            except Exception as exc:
+                log.error(traceback.format_exc())
+                response = panic(exc)
             send_response(slack_client, response, channel)
     except KeyboardInterrupt:
         sys.exit()
     finally:
-        garg_quotes.teardown()
+        quotes_db.teardown()
 
 
 if __name__ == "__main__":
