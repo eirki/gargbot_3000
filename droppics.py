@@ -14,7 +14,7 @@ from PIL import Image
 import config
 
 
-class DropPics(object):
+class DropPics:
     def connect(self):
         self.dbx = dropbox.Dropbox(config.dropbox_token)
         self.dbx.users_get_current_account()
