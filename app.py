@@ -16,21 +16,6 @@ import config
 import droppics
 import quotes
 
-users = {
-    "U33PQTYBV": "asmundboe",
-    "U34DL838S": "cmr",
-    "U33TL3BQC": "eirki",
-    "U34HTUHN2": "gargbot_3000",
-    "U346NSERJ": "gromsten",
-    "U33SRCHB5": "kenlee",
-    "U336SL64Q": "lbs",
-    "U34FMDVTN": "nils",
-    "U34FXQLUD": "smorten",
-    "USLACKBOT": "slackbot"
-}
-
-names = ["Åsmund", "Carl Martin", "Eirik", "Pelle", "Kenneth", "Lars", "Nils", "Lars Morten"]
-
 
 def filter_slack_output(slack_rtm_output):
     """
@@ -48,7 +33,7 @@ def filter_slack_output(slack_rtm_output):
 
 
 def command_handler_wrapper(quotes_db, drop_pics):
-    def handle_command(command, channel, user):
+    def handle_command(command, channel, from_user):
         log.info(dt.datetime.now())
         command = command.strip()
         log.info(f"command: {command}")
@@ -87,20 +72,21 @@ def command_handler_wrapper(quotes_db, drop_pics):
 
             response = {"attachments":
                         [{
-                         "author_name": f"{from_user}:",
+                         "author_name": f"{msg_user}:",
                          "text": msg_text,
                          "color": msg_color,
-                         } for from_user, msg_text, msg_color in text]
+                         } for msg_user, msg_text, msg_color in text]
                         }
             response["attachments"][0]["pretext"] = date
 
         elif command.lower().startswith("hvem"):
-            user = random.choice(names)
+            user = random.choice(config.gargling_names)
             text = user + command[4:].replace("?", "!")
             response = {"text": text}
 
         elif command.startswith(("hei", "hallo", "hello", "morn")):
-            response = {"text": f"Blëep bloöp, hallo {users.get(user, '')}!"}
+            nick = config.slack_id_to_nick.get(from_user, '')
+            response = {"text": f"Blëep bloöp, hallo {nick}!"}
 
         else:
             response = {"text": (f"Beep boop beep! Nôt sure whåt you mean by {command}. Dette er kommandoene jeg skjønner:\n"

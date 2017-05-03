@@ -20,40 +20,6 @@ import config
 home = os.getcwd()
 
 
-garg_ids_to_slack_nicks = {
-    2: "asmundboe",
-    3: "gromsten",
-    5: "eirki",
-    6: "nils",
-    7: "lbs",
-    9: "kenlee",
-    10: "cmr",
-    11: "smorten",
-}
-
-slack_nicks_to_garg_ids = {
-    "asmundboe": 2,
-    "gromsten": 3,
-    "eirki": 5,
-    "nils": 6,
-    "lbs": 7,
-    "kenlee": 9,
-    "cmr": 10,
-    "smorten": 11,
-}
-
-slack_to_msn_nicks = {
-    "asmundboe": ["åsmund", "aab", "aasmund", "vismund cygnus"],
-    "gromsten": ["pelle", "gromsten", "pell-e"],
-    "eirki": ["eika", "eirik", "sem", "ulf fjorddrott", "alf", "dix", "eeiorik"],
-    "nils": ["guleful", "nils", "nisl"],
-    "lbs": ["cubikar", "lbs", "labben", "lars", "læbbes"],
-    "kenlee": ["ero-ken", "kenneth"],
-    "cmr":  ["carl martin"],
-    "smorten":  [],
-}
-
-
 class Garg:
     @staticmethod
     def _sanitize(inp, bbcode_uid):
@@ -88,11 +54,11 @@ class Garg:
 
     @staticmethod
     def quote(cursor, user=None):
-        if user and user not in slack_nicks_to_garg_ids:
+        if user and user not in config.slack_nicks_to_garg_ids:
             return f"Gargling not found: {user}. Husk å bruke slack id"
 
         if user:
-            user_filter = f"= {slack_nicks_to_garg_ids[user]}"
+            user_filter = "= " + config.slack_nicks_to_garg_ids[user]
         else:
             user_filter = "IN (2, 3, 5, 6, 7, 9, 10, 11)"
 
@@ -101,7 +67,7 @@ class Garg:
 
         cursor.execute(sql)
         poster_id, post_text, post_time, post_id, bbcode_uid = cursor.fetchall()[0]
-        user = user if user is not None else garg_ids_to_slack_nicks[poster_id]
+        user = user if user is not None else config.garg_ids_to_slack_nicks[poster_id]
         post = Garg._sanitize(post_text, bbcode_uid)
         quote = (
             f"{post}\n"
@@ -128,15 +94,6 @@ class Garg:
 
 
 class MSN:
-    garglings = {
-        "",
-        "chegivarix@yahoo.no",
-        "cubikar@hotmail.com",
-        "gromsten@hotmail.com",
-        "guleful@hotmail.com",
-        "wootyboe@hotmail.com"
-    }
-
     @staticmethod
     def db_setup(cursor, db):
         cursor.execute("DROP TABLE IF EXISTS msn_messages")
@@ -191,7 +148,7 @@ class MSN:
             elif msg_type == "invitation":
                 to_users = None
 
-            if not all(participant in MSN.garglings for participant in participants):
+            if not all(participant in config.gargling_msn_emails for participant in participants):
                 continue
 
             yield session_ID, msg_type, msg_time, msg_source, msg_color, from_user, to_users, msg_text
@@ -227,7 +184,7 @@ class MSN:
     @staticmethod
     def quote(cursor, user=None):
         if user is not None:
-            user_nicks = slack_to_msn_nicks[user]
+            user_nicks = config.slack_to_msn_nicks[user]
             filter = " WHERE " + " OR ".join([f'from_user LIKE "%{name}%"'
                                               for name in user_nicks])
         else:
