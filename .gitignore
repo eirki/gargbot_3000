@@ -1,6 +1,7 @@
 config.py
 
 data/*
+logs/*
 
 *.pyc
 *.pyo
