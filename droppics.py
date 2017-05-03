@@ -4,7 +4,7 @@ from logger import log
 
 import random
 import json
-import os
+from os import path
 import asyncio
 import time
 
@@ -30,31 +30,31 @@ class DropPics(object):
         }
         if topic is None:
             topic = random.choice(list(topics.keys()))
-        path = random.choice(topics[topic])
+        file_path = random.choice(topics[topic])
 
-        md = self.dbx.files_get_metadata(path, include_media_info=True)
+        md = self.dbx.files_get_metadata(file_path, include_media_info=True)
         date_obj = md.media_info.get_metadata().time_taken
         timestamp = int(time.mktime(date_obj.timetuple()))
 
-        response = self.dbx.sharing_create_shared_link(path)
+        response = self.dbx.sharing_create_shared_link(file_path)
         url = response.url.replace("?dl=0", "?raw=1")
         return url, timestamp
 
     def load_img_paths(self):
-        with open(os.path.join("/home", "eirki", "gargbot_3000", "data", "lark_paths.json")) as j:
+        with open(path.join(config.home, "data", "lark_paths.json")) as j:
             self.lark_paths = json.load(j)
-        with open(os.path.join("/home", "eirki", "gargbot_3000", "data", "fe_paths.json")) as j:
+        with open(path.join(config.home, "data", "fe_paths.json")) as j:
             self.fe_paths = json.load(j)
-        with open(os.path.join("/home", "eirki", "gargbot_3000", "data", "skate_paths.json")) as j:
+        with open(path.join(config.home, "data", "skate_paths.json")) as j:
             self.skate_paths = json.load(j)
-        with open(os.path.join("/home", "eirki", "gargbot_3000", "data", "henging_paths.json")) as j:
+        with open(path.join(config.home, "data", "henging_paths.json")) as j:
             self.henging_paths = json.load(j)
-        with open(os.path.join("/home", "eirki", "gargbot_3000", "data", "spill_paths.json")) as j:
+        with open(path.join(config.home, "data", "spill_paths.json")) as j:
             self.spill_paths = json.load(j)
         log.info("Pictures indexed")
 
-    def db_file_path_generator(self, path):
-        query = self.dbx.files_list_folder(path, recursive=True)
+    def db_file_path_generator(self, dir):
+        query = self.dbx.files_list_folder(dir, recursive=True)
         while True:
             for entry in query.entries:
                 yield entry
@@ -75,7 +75,7 @@ class DropPics(object):
         loop.close()
 
         for filename, data in [("skate", self.skate_paths), ("fe", self.fe_paths), ("lark", self.lark_paths)]:
-            with open(os.path.join("/home", "eirki", "gargbot_3000", "data", f"{filename}_paths.json"), "w") as j:
+            with open(path.join(config.home, "data", f"{filename}_paths.json"), "w") as j:
                 json.dump(data, j)
 
     async def check_relevance(self, entry, loop):
