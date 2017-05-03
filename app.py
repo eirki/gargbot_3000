@@ -90,12 +90,12 @@ def command_handler_wrapper(quotes_db, drop_pics):
 
         else:
             response = {"text": (f"Beep boop beep! Nôt sure whåt you mean by {command}. Dette er kommandoene jeg skjønner:\n"
-                                  "@gargbot_3000 *pic [lark/fe/skating/henging]*: viser tilfedlig Larkollen/Forsterka Enhet/skate/henge bilde\n"
-                                  "@gargbot_3000 *quote [garling]*: henter tilfedlig sitat fra forumet\n"
-                                  "@gargbot_3000 *vidoi*: viser tilfedlig musikkvideo fra muzakvidois tråden på forumet\n"
-                                  "@gargbot_3000 */random*: viser tilfedlig bilde fra \\random tråden på forumet\n"
-                                  "@gargbot_3000 *Hvem [spørsmål]*: svarer på spørsmål om garglings \n"
-                                  "@gargbot_3000 *msn [garling]*: utfrag fra tilfeldig msn samtale\n")}
+                                 "@gargbot_3000 *pic [lark/fe/skating/henging]*: viser tilfedlig Larkollen/Forsterka Enhet/skate/henge bilde\n"
+                                 "@gargbot_3000 *quote [garling]*: henter tilfedlig sitat fra forumet\n"
+                                 "@gargbot_3000 *vidoi*: viser tilfedlig musikkvideo fra muzakvidois tråden på forumet\n"
+                                 "@gargbot_3000 */random*: viser tilfedlig bilde fra \\random tråden på forumet\n"
+                                 "@gargbot_3000 *Hvem [spørsmål]*: svarer på spørsmål om garglings \n"
+                                 "@gargbot_3000 *msn [garling]*: utfrag fra tilfeldig msn samtale\n")}
 
         return response
     return handle_command
@@ -103,8 +103,8 @@ def command_handler_wrapper(quotes_db, drop_pics):
 
 def panic(exc):
     text = (f"Error, error! Noe har gått fryktelig galt: {str(exc)}! Ææææææ. Ta kontakt"
-             " med systemadministrator ummidelbart, før det er for sent. "
-             "HJELP MEG. If I don\"t survive, tell mrs. gargbot... 'Hello'")
+            " med systemadministrator ummidelbart, før det er for sent. "
+            "HJELP MEG. If I don\"t survive, tell mrs. gargbot... 'Hello'")
     response = {"text": text}
     return response
 
@@ -122,7 +122,7 @@ def main():
     drop_pics.connect()
     drop_pics.load_img_paths()
 
-    slack_client = SlackClient(config.token)
+    slack_client = SlackClient(config.slack_token)
     connected = slack_client.rtm_connect()
     if not connected:
         raise Exception("Connection failed. Invalid Slack token or bot ID?")
