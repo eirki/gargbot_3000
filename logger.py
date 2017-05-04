@@ -13,7 +13,8 @@ formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
 log_path = os.path.join(config.home, "logs", "gargbot")
 if os.path.exists(log_path + ".log"):
-    os.rename(log_path + ".log", f"{log_path}{str(dt.datetime.now().replace(microsecond=0))}.log")
+    now = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    os.rename(log_path + ".log", f"{log_path}{now}.log")
 
 fh = logging.FileHandler(f"{log_path}.log")
 fh.setLevel(logging.DEBUG)
