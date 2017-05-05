@@ -11,7 +11,6 @@ from os import path
 from xml.dom.minidom import parseString
 import datetime as dt
 
-import MySQLdb
 import requests
 
 import config
@@ -224,37 +223,35 @@ class MSN:
 
 
 class Quotes:
-    def connect(self):
-        self.db = MySQLdb.connect(host=config.db_host, user=config.db_user,
-                                  passwd=config.db_passwd, db=config.db_name, charset="utf8")
-        self.c = self.db.cursor()
-        log.info("Connected to gargen database")
-
-    def teardown(self):
-        self.db.close()
+    def __init__(self, db):
+        self.db = db
 
     def garg(self, func, *args):
+        c = self.db.cursor()
         switch = {
             "quote": Garg.quote,
             "random": Garg.random,
             "vidoi": Garg.vidoi,
         }
         selected = switch[func]
-        result = selected(self.c, *args)
+        result = selected(c, *args)
+        c.close()
         return result
 
     def msn(self, user=None):
-        result = MSN.quote(self.c, user)
+        c = self.db.cursor()
+        result = MSN.quote(c, user)
+        c.close()
         return result
 
 
 if __name__ == "__main__":
-    quotes_db = Quotes()
-    quotes_db.connect()
+    db_connection = config.connect_to_database()
+    quotes_db = Quotes(db=db_connection)
     try:
         log.info(quotes_db.garg("quote"))
         log.info(quotes_db.garg("vidoi"))
         log.info(quotes_db.garg("random"))
         log.info(quotes_db.msn(user="cmr"))
     finally:
-        quotes_db.teardown()
+        db_connection.close()

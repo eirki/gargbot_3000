@@ -115,12 +115,12 @@ def send_response(slack_client, response, channel):
 
 
 def main():
-    quotes_db = quotes.Quotes()
-    quotes_db.connect()
+    db_connection = config.connect_to_database()
 
-    drop_pics = droppics.DropPics()
-    drop_pics.connect()
-    drop_pics.load_img_paths()
+    quotes_db = quotes.Quotes(db=db_connection)
+
+    drop_pics = droppics.DropPics(db=db_connection)
+    drop_pics.connect_dbx()
 
     slack_client = SlackClient(config.slack_token)
     connected = slack_client.rtm_connect()
@@ -145,7 +145,9 @@ def main():
             try:
                 response = handle_command(command, channel, user)
             except MySQLdb.Error:
-                quotes_db.connect()
+                db_connection = config.connect_to_database()
+                quotes_db.db = db_connection
+                drop_pics.db = db_connection
                 response = handle_command(command, channel, user)
             except Exception as exc:
                 log.error(traceback.format_exc())
@@ -154,7 +156,7 @@ def main():
     except KeyboardInterrupt:
         sys.exit()
     finally:
-        quotes_db.teardown()
+        db_connection.close()
 
 
 if __name__ == "__main__":
