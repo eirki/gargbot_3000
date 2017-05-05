@@ -119,9 +119,8 @@ def main():
 
     quotes_db = quotes.Quotes(db=db_connection)
 
-    drop_pics = droppics.DropPics()
-    drop_pics.connect()
-    drop_pics.load_img_paths()
+    drop_pics = droppics.DropPics(db=db_connection)
+    drop_pics.connect_dbx()
 
     slack_client = SlackClient(config.slack_token)
     connected = slack_client.rtm_connect()
@@ -148,6 +147,7 @@ def main():
             except MySQLdb.Error:
                 db_connection = config.connect_to_database()
                 quotes_db.db = db_connection
+                drop_pics.db = db_connection
                 response = handle_command(command, channel, user)
             except Exception as exc:
                 log.error(traceback.format_exc())

@@ -4,7 +4,7 @@ from logger import log
 
 import random
 import json
-from os import path
+import os
 import asyncio
 import time
 
@@ -15,43 +15,65 @@ import config
 
 
 class DropPics:
-    def connect(self):
+    topics = ["lark", "fe", "skating", "henging", "spillnight"]
+
+    def __init__(self, db):
+        self.db = db
+
+    def connect_dbx(self):
         self.dbx = dropbox.Dropbox(config.dropbox_token)
         self.dbx.users_get_current_account()
         log.info("Connected to dbx")
 
     def get_pic(self, topic=None):
-        topics = {
-            "lark": self.lark_paths,
-            "fe": self.fe_paths,
-            "skating": self.skate_paths,
-            "henging": self.henging_paths,
-            "spillnight": self.spill_paths
-        }
         if topic is None:
-            topic = random.choice(list(topics.keys()))
-        file_path = random.choice(topics[topic])
+            topic = random.choice(self.topics)
+        sql = f'SELECT path FROM dbx_pictures WHERE topic = "{topic}" ORDER BY RAND() LIMIT 1'
+        log.info(sql)
+        cursor = self.db.cursor()
+        cursor.execute(sql)
+        path = cursor.fetchone()[0]
 
-        md = self.dbx.files_get_metadata(file_path, include_media_info=True)
+        md = self.dbx.files_get_metadata(path, include_media_info=True)
         date_obj = md.media_info.get_metadata().time_taken
         timestamp = int(time.mktime(date_obj.timetuple()))
 
-        response = self.dbx.sharing_create_shared_link(file_path)
+        response = self.dbx.sharing_create_shared_link(path)
         url = response.url.replace("?dl=0", "?raw=1")
         return url, timestamp
 
-    def load_img_paths(self):
-        with open(path.join(config.home, "data", "lark_paths.json")) as j:
-            self.lark_paths = json.load(j)
-        with open(path.join(config.home, "data", "fe_paths.json")) as j:
-            self.fe_paths = json.load(j)
-        with open(path.join(config.home, "data", "skate_paths.json")) as j:
-            self.skate_paths = json.load(j)
-        with open(path.join(config.home, "data", "henging_paths.json")) as j:
-            self.henging_paths = json.load(j)
-        with open(path.join(config.home, "data", "spill_paths.json")) as j:
-            self.spill_paths = json.load(j)
-        log.info("Pictures indexed")
+    def db_setup(self):
+        self.check_relevant_imgs()
+
+        cursor = self.db.cursor()
+        cursor.execute("DROP TABLE IF EXISTS dbx_pictures")
+        sql_command = """
+        CREATE TABLE dbx_pictures (
+        path CHAR(100),
+        topic CHAR(30));
+        """
+        cursor.execute(sql_command)
+
+        for topic, paths in self.paths.items():
+            for path in paths:
+                self.add_entry(path, topic, cursor)
+
+        self.db.commit()
+
+    @staticmethod
+    def add_entry(path, topic, cursor):
+        sql_command = """INSERT INTO dbx_pictures (path, topic)
+        VALUES (%(path)s,
+               %(topic)s);"""
+        data = {
+            "path": path,
+            "topic": topic
+        }
+        try:
+            log.info(sql_command % data)
+            cursor.execute(sql_command, data)
+        except:
+            raise
 
     def db_file_path_generator(self, dir):
         query = self.dbx.files_list_folder(dir, recursive=True)
@@ -62,10 +84,12 @@ class DropPics:
                 break
             query = self.dbx.files_list_folder_continue(query.cursor)
 
-    def store_relevant_img_paths(self):
-        self.skate_paths = []
-        self.fe_paths = []
-        self.lark_paths = []
+    def check_relevant_imgs(self):
+        self.paths = {
+            "skate": [],
+            "fe": [],
+            "lark": [],
+        }
 
         loop = asyncio.get_event_loop()
         tasks = [loop.create_task(self.check_relevance(entry, loop))
@@ -73,10 +97,6 @@ class DropPics:
 
         loop.run_until_complete(asyncio.wait(tasks))
         loop.close()
-
-        for filename, data in [("skate", self.skate_paths), ("fe", self.fe_paths), ("lark", self.lark_paths)]:
-            with open(path.join(config.home, "data", f"{filename}_paths.json"), "w") as j:
-                json.dump(data, j)
 
     async def check_relevance(self, entry, loop):
         if not entry.path_lower.endswith(".jpg"):
@@ -86,11 +106,11 @@ class DropPics:
         if not tag:
             return
         elif "Forsterka Enhet" in tag:
-            self.fe_paths.append(entry.path_lower)
+            self.paths["fe"].append(entry.path_lower)
         elif "Skating" in tag:
-            self.skate_paths.append(entry.path_lower)
+            self.paths["skate"].append(entry.path_lower)
         elif "Larkollen" in tag:
-            self.lark_paths.append(entry.path_lower)
+            self.paths["lark"].append(entry.path_lower)
 
 
 def get_tag(fileobject):
@@ -100,11 +120,13 @@ def get_tag(fileobject):
 
 
 if __name__ == "__main__":
-    drop_pics = DropPics()
+    db_connection = config.connect_to_database()
+    drop_pics = DropPics(db=db_connection)
     drop_pics.connect()
-    # drop_pics.store_relevant_img_paths()
-    drop_pics.load_img_paths()
-    log.info(drop_pics.get_pic("lark"))
-    log.info(drop_pics.get_pic("fe"))
-    log.info(drop_pics.get_pic("skating"))
-    log.info(drop_pics.get_pic())
+    # drop_pics.db_setup()
+    try:
+        for topic in drop_pics.topics:
+            log.info(drop_pics.get_pic(topic))
+        log.info(drop_pics.get_pic())
+    finally:
+        db_connection.close()
