@@ -122,7 +122,7 @@ def get_tag(fileobject):
 if __name__ == "__main__":
     db_connection = config.connect_to_database()
     drop_pics = DropPics(db=db_connection)
-    drop_pics.connect()
+    drop_pics.connect_dbx()
     # drop_pics.db_setup()
     try:
         for topic in drop_pics.topics:
