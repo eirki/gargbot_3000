@@ -11,7 +11,6 @@ from os import path
 from xml.dom.minidom import parseString
 import datetime as dt
 
-import MySQLdb
 import requests
 
 import config
@@ -247,8 +246,7 @@ class Quotes:
 
 
 if __name__ == "__main__":
-    db_connection = MySQLdb.connect(host=config.db_host, user=config.db_user,
-                                    passwd=config.db_passwd, db=config.db_name, charset="utf8")
+    db_connection = config.connect_to_database()
     quotes_db = Quotes(db=db_connection)
     try:
         log.info(quotes_db.garg("quote"))

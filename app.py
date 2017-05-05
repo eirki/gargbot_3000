@@ -114,14 +114,8 @@ def send_response(slack_client, response, channel):
     slack_client.api_call("chat.postMessage", channel=channel, as_user=True, **response)
 
 
-def connect_to_database():
-    db_connection = MySQLdb.connect(host=config.db_host, user=config.db_user,
-                                    passwd=config.db_passwd, db=config.db_name, charset="utf8")
-    return db_connection
-
-
 def main():
-    db_connection = connect_to_database()
+    db_connection = config.connect_to_database()
 
     quotes_db = quotes.Quotes(db=db_connection)
 
@@ -152,7 +146,7 @@ def main():
             try:
                 response = handle_command(command, channel, user)
             except MySQLdb.Error:
-                db_connection = connect_to_database()
+                db_connection = config.connect_to_database()
                 quotes_db.db = db_connection
                 response = handle_command(command, channel, user)
             except Exception as exc:
