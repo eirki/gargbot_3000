@@ -7,6 +7,8 @@ import time
 import traceback
 import sys
 import random
+import threading
+import itertools
 
 import MySQLdb
 from slackclient import SlackClient
@@ -15,6 +17,7 @@ import websocket
 import config
 import droppics
 import quotes
+import congrats
 
 
 def filter_slack_output(slack_rtm_output):
@@ -114,6 +117,18 @@ def send_response(slack_client, response, channel):
     slack_client.api_call("chat.postMessage", channel=channel, as_user=True, **response)
 
 
+def handle_congrats(slack_client):
+    channel = "C335L1LMN"
+    birthdays = congrats.get_birthdays()
+    for birthday in itertools.cycle(birthdays):
+        log.info(f"Next birthday: {birthday.nick}, at {birthday.next_bday}")
+        time.sleep(birthday.seconds_to_bday)
+        text = congrats.get_greeting(birthday)
+        picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
+        response = {"text": text, "attachments": [{"fallback":  picurl, "image_url": picurl}]}
+        send_response(slack_client, response=response, channel=channel)
+
+
 def main():
     db_connection = config.connect_to_database()
 
@@ -128,6 +143,10 @@ def main():
         raise Exception("Connection failed. Invalid Slack token or bot ID?")
 
     handle_command = command_handler_wrapper(quotes_db, drop_pics)
+
+    congrats_thread = threading.Thread(target=handle_congrats, args=(slack_client,))
+    congrats_thread.daemon = True
+    congrats_thread.start()
 
     log.info("GargBot 3000 is operational!")
     try:
