@@ -32,11 +32,11 @@ jabs = [
 
 
 class Birthday:
-    now = dt.datetime.now()
+    now = dt.datetime.utcnow()
 
     def __init__(self, nick, date):
         self.nick = nick
-        self.bday = dt.datetime.strptime(f"{date}.08.00", "%d.%m.%Y.%H.%M")
+        self.bday = dt.datetime.strptime(f"{date}.09.00.+0000", "%d.%m.%Y.%H.%M.%z")
         self.next_bday = self.get_next_bday(self.bday)
         self.seconds_to_bday = (self.next_bday - self.now).total_seconds()
         self.age = self.now.year - self.bday.year
