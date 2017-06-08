@@ -3,8 +3,6 @@
 from logger import log
 
 import random
-import json
-import os
 import asyncio
 import time
 

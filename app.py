@@ -104,7 +104,7 @@ def command_handler_wrapper(quotes_db, drop_pics):
 def panic(exc):
     text = (f"Error, error! Noe har gått fryktelig galt: {str(exc)}! Ææææææ. Ta kontakt"
             " med systemadministrator ummidelbart, før det er for sent. "
-            "HJELP MEG. If I don\"t survive, tell mrs. gargbot... 'Hello'")
+            "HJELP MEG. If I don't survive, tell mrs. gargbot... 'Hello'")
     response = {"text": text}
     return response
 
