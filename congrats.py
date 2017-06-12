@@ -72,3 +72,7 @@ def get_greeting(person):
     jab = random.choice(jabs)
     text = f"Hurra! Vår felles venn <@{person.slack_id}> fyller {person.age} i dag!\n {greeting}, {jab}"
     return text
+
+
+if __name__ == '__main__':
+    log.info(get_birthdays())
