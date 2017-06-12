@@ -38,12 +38,19 @@ class Birthday:
         self.nick = nick
         self.bday = dt.datetime.strptime(f"{date}.09.00.+0000", "%d.%m.%Y.%H.%M.%z")
         self.next_bday = self.get_next_bday(self.bday)
-        self.seconds_to_bday = (self.next_bday - self.now).total_seconds()
-        self.age = self.now.year - self.bday.year
         self.slack_id = config.slack_nick_to_id[nick]
 
     def __repr__(self):
         return f"{self.nick}: {self.next_bday}, {self.age} years"
+
+    @property
+    def seconds_to_bday(self):
+        secs = (self.next_bday - self.now).total_seconds()
+        return secs if secs > 0 else 0
+
+    @property
+    def age(self):
+        return self.now.year - self.born.year
 
     @classmethod
     def get_next_bday(self, bday):
