@@ -3,3 +3,4 @@ requests==2.12.0
 SlackClient==1.0.2
 dropbox==7.1.1
 Pillow==4.0.0
+pytz==2016.10
