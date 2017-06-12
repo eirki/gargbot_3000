@@ -36,8 +36,8 @@ class Birthday:
 
     def __init__(self, nick, date):
         self.nick = nick
-        self.bday = dt.datetime.strptime(f"{date}.09.00.+0000", "%d.%m.%Y.%H.%M.%z")
-        self.next_bday = self.get_next_bday(self.bday)
+        self.born = dt.datetime.strptime(f"{date}.09.00.+0000", "%d.%m.%Y.%H.%M.%z")
+        self.next_bday = self.get_next_bday(self.born)
         self.slack_id = config.slack_nick_to_id[nick]
 
     def __repr__(self):
