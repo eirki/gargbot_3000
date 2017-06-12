@@ -122,7 +122,7 @@ def handle_congrats(slack_client):
     birthdays = congrats.get_birthdays()
     for birthday in itertools.cycle(birthdays):
         log.info(f"Next birthday: {birthday.nick}, at {birthday.next_bday}")
-        time.sleep(birthday.seconds_to_bday)
+        time.sleep(birthday.seconds_to_bday())
         text = congrats.get_greeting(birthday)
         picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
         response = {"text": text, "attachments": [{"fallback":  picurl, "image_url": picurl}]}

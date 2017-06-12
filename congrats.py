@@ -36,13 +36,11 @@ class Birthday:
     def __init__(self, nick, date):
         self.nick = nick
         self.born = dt.datetime.strptime(f"{date}.09.00.+0000", "%d.%m.%Y.%H.%M.%z")
-        self.next_bday = self.get_next_bday(self.born)
         self.slack_id = config.slack_nick_to_id[nick]
 
     def __repr__(self):
         return f"{self.nick}, {self.age} years. Next bday: {self.next_bday}"
 
-    @property
     def seconds_to_bday(self):
         secs = (self.next_bday - dt.datetime.now(pytz.utc)).total_seconds()
         return secs if secs > 0 else 0
@@ -61,7 +59,7 @@ class Birthday:
 
 
 def get_birthdays():
-    with open(path.join(config.home, "data", "birthdays.json")) as j:
+    with open(path.join(config.home, "data", "birthdays - copy.json")) as j:
         data = json.load(j)
     birthdays = [Birthday(nick, date) for nick, date in data]
     birthdays.sort(key=attrgetter("next_bday"))
