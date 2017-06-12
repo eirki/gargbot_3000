@@ -32,8 +32,6 @@ jabs = [
 
 
 class Birthday:
-    now = dt.datetime.utcnow()
-
     def __init__(self, nick, date):
         self.nick = nick
         self.born = dt.datetime.strptime(f"{date}.09.00.+0000", "%d.%m.%Y.%H.%M.%z")
@@ -45,18 +43,19 @@ class Birthday:
 
     @property
     def seconds_to_bday(self):
-        secs = (self.next_bday - self.now).total_seconds()
+        secs = (self.next_bday - dt.datetime.utcnow()).total_seconds()
         return secs if secs > 0 else 0
 
     @property
     def age(self):
-        return self.now.year - self.born.year
+        return dt.datetime.utcnow().year - self.born.year
 
     @classmethod
     def get_next_bday(self, bday):
-        bday_thisyear = dt.datetime(hour=bday.hour, minute=bday.minute, day=bday.day, month=bday.month, year=self.now.year)
-        bday_nextyear = dt.datetime(hour=bday.hour, minute=bday.minute, day=bday.day, month=bday.month, year=self.now.year + 1)
-        next_bday = bday_thisyear if bday_thisyear > self.now else bday_nextyear
+        year = dt.datetime.utcnow().year
+        bday_thisyear = dt.datetime(hour=bday.hour, minute=bday.minute, day=bday.day, month=bday.month, year=year)
+        bday_nextyear = dt.datetime(hour=bday.hour, minute=bday.minute, day=bday.day, month=bday.month, year=year+1)
+        next_bday = bday_thisyear if bday_thisyear > dt.datetime.utcnow() else bday_nextyear
         return next_bday
 
 
