@@ -55,8 +55,8 @@ class Birthday:
     @classmethod
     def get_next_bday(self, bday):
         bday_thisyear = dt.datetime(hour=bday.hour, minute=bday.minute, day=bday.day, month=bday.month, year=self.now.year)
-        next_bday = (bday_thisyear if bday_thisyear > self.now
-                     else dt.datetime(hour=bday.hour, minute=bday.minute, day=bday.day, month=bday.month, year=self.now.year + 1))
+        bday_nextyear = dt.datetime(hour=bday.hour, minute=bday.minute, day=bday.day, month=bday.month, year=self.now.year + 1)
+        next_bday = bday_thisyear if bday_thisyear > self.now else bday_nextyear
         return next_bday
 
 
