@@ -49,14 +49,14 @@ class Birthday:
 
     @property
     def age(self):
-
-    @classmethod
-    def get_next_bday(self, bday):
-        year = dt.datetime.utcnow().year
-        bday_thisyear = dt.datetime(hour=bday.hour, minute=bday.minute, day=bday.day, month=bday.month, year=year)
-        bday_nextyear = dt.datetime(hour=bday.hour, minute=bday.minute, day=bday.day, month=bday.month, year=year+1)
-        next_bday = bday_thisyear if bday_thisyear > dt.datetime.utcnow() else bday_nextyear
         return dt.datetime.now(pytz.utc).year - self.born.year
+
+    @property
+    def next_bday(self):
+        now = dt.datetime.now(pytz.utc)
+        bday_thisyear = self.born.replace(year=now.year)
+        bday_nextyear = self.born.replace(year=now.year+1)
+        next_bday = bday_thisyear if bday_thisyear > now else bday_nextyear
         return next_bday
 
 
