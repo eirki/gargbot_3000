@@ -3,6 +3,7 @@
 from logger import log
 
 import datetime as dt
+import pytz
 from operator import attrgetter
 import json
 from os import path
@@ -39,16 +40,15 @@ class Birthday:
         self.slack_id = config.slack_nick_to_id[nick]
 
     def __repr__(self):
-        return f"{self.nick}: {self.next_bday}, {self.age} years"
+        return f"{self.nick}, {self.age} years. Next bday: {self.next_bday}"
 
     @property
     def seconds_to_bday(self):
-        secs = (self.next_bday - dt.datetime.utcnow()).total_seconds()
+        secs = (self.next_bday - dt.datetime.now(pytz.utc)).total_seconds()
         return secs if secs > 0 else 0
 
     @property
     def age(self):
-        return dt.datetime.utcnow().year - self.born.year
 
     @classmethod
     def get_next_bday(self, bday):
@@ -56,6 +56,7 @@ class Birthday:
         bday_thisyear = dt.datetime(hour=bday.hour, minute=bday.minute, day=bday.day, month=bday.month, year=year)
         bday_nextyear = dt.datetime(hour=bday.hour, minute=bday.minute, day=bday.day, month=bday.month, year=year+1)
         next_bday = bday_thisyear if bday_thisyear > dt.datetime.utcnow() else bday_nextyear
+        return dt.datetime.now(pytz.utc).year - self.born.year
         return next_bday
 
 
