@@ -59,7 +59,7 @@ class Birthday:
 
 
 def get_birthdays():
-    with open(path.join(config.home, "data", "birthdays - copy.json")) as j:
+    with open(path.join(config.home, "data", "birthdays.json")) as j:
         data = json.load(j)
     birthdays = [Birthday(nick, date) for nick, date in data]
     birthdays.sort(key=attrgetter("next_bday"))
