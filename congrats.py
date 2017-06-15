@@ -35,14 +35,18 @@ jabs = [
 class Birthday:
     def __init__(self, nick, date):
         self.nick = nick
-        self.born = dt.datetime.strptime(f"{date}.09.00.+0000", "%d.%m.%Y.%H.%M.%z")
+        self.born = dt.datetime.strptime(f"{date}.00.00.+0000", "%d.%m.%Y.%H.%M.%z")
         self.slack_id = config.slack_nick_to_id[nick]
 
     def __repr__(self):
         return f"{self.nick}, {self.age} years. Next bday: {self.next_bday}"
 
     def seconds_to_bday(self):
-        secs = (self.next_bday - dt.datetime.now(pytz.utc)).total_seconds()
+        next_bday_midnight_local = self.next_bday.astimezone(config.tz)
+        next_bday_morning_local = next_bday_midnight_local.replace(hour=7)
+        to_next_bday_morning_local = next_bday_morning_local - dt.datetime.now(config.tz)
+
+        secs = to_next_bday_morning_local.total_seconds()
         return secs if secs > 0 else 0
 
     @property
