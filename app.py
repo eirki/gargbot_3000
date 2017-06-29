@@ -118,7 +118,7 @@ def send_response(slack_client, response, channel):
 
 
 def handle_congrats(slack_client):
-    channel = "D34HTUJ0N"
+    channel = "C335L1LMN"
     birthdays = congrats.get_birthdays()
     for birthday in itertools.cycle(birthdays):
         log.info(f"Next birthday: {birthday.nick}, at {birthday.next_bday}")
