@@ -20,20 +20,6 @@ import quotes
 import congrats
 
 
-def filter_slack_output(slack_rtm_output):
-    """
-        The Slack Real Time Messaging API is an events firehose.
-        this parsing function returns None unless a message is
-        directed at the Bot, based on its ID.
-    """
-    AT_BOT = f"<@{config.bot_id}>"
-    output_list = slack_rtm_output
-    if output_list and len(output_list) > 0:
-        for output in output_list:
-            if output and "text" in output and AT_BOT in output["text"]:
-                return output["text"].replace(AT_BOT, "").strip().lower(), output["channel"], output["user"]
-    return None, None, None
-
 
 def command_handler_wrapper(quotes_db, drop_pics):
     def handle_command(command, channel, from_user):
@@ -110,6 +96,22 @@ def panic(exc):
             "HJELP MEG. If I don't survive, tell mrs. gargbot... 'Hello'")
     response = {"text": text}
     return response
+
+
+def filter_slack_output(slack_rtm_output):
+    """
+        The Slack Real Time Messaging API is an events firehose.
+        this parsing function returns None unless a message is
+        directed at the Bot, based on its ID.
+    """
+    AT_BOT = f"<@{config.bot_id}>"
+    output_list = slack_rtm_output
+    if output_list and len(output_list) > 0:
+        for output in output_list:
+            if output and "text" in output and AT_BOT in output["text"]:
+                return output["text"].replace(AT_BOT, "").strip().lower(), output["channel"], output["user"]
+    return None, None, None
+
 
 
 def send_response(slack_client, response, channel):
