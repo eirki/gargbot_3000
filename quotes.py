@@ -86,8 +86,10 @@ class Garg:
     @staticmethod
     def vidoi(cursor):
         def extract(text):
-            match = re.search(r"(https://www.youtube.com/watch\?v=.{11})", text)
-            return match.group(1)
+            match = re.search(r"//www.youtube.com/embed/(.{11})", text)
+            ytb_id = match.group(1)
+            ytb_url = f"https://www.youtube.com/watch?v={ytb_id}"
+            return ytb_url
         url = Garg._fetch_url(cursor, topic_id=563, extract_func=extract)
         return url
 
