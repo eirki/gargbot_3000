@@ -57,7 +57,8 @@ class Garg:
             return f"Gargling not found: {user}. Husk å bruke slack id"
 
         if user:
-            user_filter = "= " + config.slack_nicks_to_garg_ids[user]
+            garg_id = config.slack_nicks_to_garg_ids[user]
+            user_filter = f"= {garg_id}"
         else:
             user_filter = "IN (2, 3, 5, 6, 7, 9, 10, 11)"
 
