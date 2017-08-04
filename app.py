@@ -165,7 +165,7 @@ def main():
 
             try:
                 response = handle_command(command, channel, user)
-            except MySQLdb.Error:
+            except MySQLdb.OperationalError:
                 db_connection = config.connect_to_database()
                 quotes_db.db = db_connection
                 drop_pics.db = db_connection
