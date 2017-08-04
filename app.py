@@ -90,21 +90,25 @@ def command_handler_wrapper(quotes_db, drop_pics):
 
 
 def cmd_not_found(command):
-    response = {"text":
-                (f"Beep boop beep! Nôt sure whåt you mean by {command}. Dette er kommandoene jeg skjønner:\n"
-                 "`@gargbot_3000 pic [lark/fe/skating/henging]`: viser random Larkollen/Forsterka Enhet/skate/henge bilde\n"
-                 "`@gargbot_3000 quote [garling]`: henter tilfedlig sitat fra forumet\n"
-                 "`@gargbot_3000 vidoi`: viser tilfedlig musikkvideo fra muzakvidois tråden på forumet\n"
-                 "`@gargbot_3000 /random`: viser tilfedlig bilde fra \\random tråden på forumet\n"
-                 "`@gargbot_3000 Hvem [spørsmål]`: svarer på spørsmål om garglings \n"
-                 "`@gargbot_3000 msn [garling]`: utfrag fra tilfeldig msn samtale\n")}
+    text = (
+        f"Beep boop beep! Nôt sure whåt you mean by {command}. Dette er kommandoene jeg skjønner:\n"
+        "`@gargbot_3000 pic [lark/fe/skating/henging]`: viser random Larkollen/Forsterka Enhet/skate/henge bilde\n"
+        "`@gargbot_3000 quote [garling]`: henter tilfedlig sitat fra forumet\n"
+        "`@gargbot_3000 vidoi`: viser tilfedlig musikkvideo fra muzakvidois tråden på forumet\n"
+        "`@gargbot_3000 /random`: viser tilfedlig bilde fra \\random tråden på forumet\n"
+        "`@gargbot_3000 Hvem [spørsmål]`: svarer på spørsmål om garglings \n"
+        "`@gargbot_3000 msn [garling]`: utfrag fra tilfeldig msn samtale\n"
+    )
+    response = {"text": text}
     return response
 
 
 def cmd_panic(exc):
-    text = (f"Error, error! Noe har gått fryktelig galt: {str(exc)}! Ææææææ. Ta kontakt"
-            " med systemadministrator ummidelbart, før det er for sent. "
-            "HJELP MEG. If I don't survive, tell mrs. gargbot... 'Hello'")
+    text = (
+        f"Error, error! Noe har gått fryktelig galt: {str(exc)}! Ææææææ. Ta kontakt"
+        " med systemadministrator ummidelbart, før det er for sent. "
+        "HJELP MEG. If I don't survive, tell mrs. gargbot... 'Hello'"
+    )
     response = {"text": text}
     return response
 
