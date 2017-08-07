@@ -6,17 +6,10 @@ import re
 import html
 import random
 from operator import itemgetter
-import os
-from os import path
-from xml.dom.minidom import parseString
-import datetime as dt
 
 import requests
 
 import config
-
-
-home = os.getcwd()
 
 
 class Garg:
@@ -96,80 +89,6 @@ class Garg:
 
 
 class MSN:
-    @staticmethod
-    def db_setup(cursor, db):
-        for fname in os.listdir(path.join(home, "data", "logs")):
-            if not fname.lower().endswith(".xml"):
-                continue
-
-            log.info(fname)
-            for message_data in MSN.parse_log(fname):
-                MSN.add_entry(cursor, *message_data)
-
-        db.commit()
-
-    @staticmethod
-    def parse_log(fname):
-        with open(path.join(home, "data", "logs", fname), encoding="utf8") as infile:
-            txt = infile.read()
-        obj = parseString(txt.replace(b"\x1f".decode(), " ").replace(b"\x02".decode(), " ").replace(b"\x03".decode(), " ").replace(b"\x04".decode(), " ").replace(b"\x05".decode(), "|"))
-        for message in obj.getElementsByTagName("Message") + obj.getElementsByTagName("Invitation"):
-            msg_type = message.tagName.lower()
-            msg_time = dt.datetime.strptime(message.getAttribute("DateTime"), "%Y-%m-%dT%H:%M:%S.%fZ")
-            msg_source = fname
-            session_ID = msg_source + message.getAttribute("SessionID")
-
-            from_node = message.getElementsByTagName("From")[0]
-            user_from_node = from_node.getElementsByTagName("User")[0]
-            from_user = user_from_node.getAttribute("FriendlyName")
-            participants = set([user_from_node.getAttribute("LogonName")])
-
-            text_node = message.getElementsByTagName("Text")[0]
-            msg_text = text_node.firstChild.nodeValue
-            match = re.search(r"color:(#\w{6})", text_node.getAttribute("Style"))
-            msg_color = match.group(1) if match else None
-
-            if msg_type == "message":
-                to_node = message.getElementsByTagName("To")[0]
-                user_to_nodes = to_node.getElementsByTagName("User")
-                to_users = [node.getAttribute("FriendlyName") for node in user_to_nodes]
-                participants.update(node.getAttribute("LogonName") for node in user_to_nodes)
-            elif msg_type == "invitation":
-                to_users = None
-
-            if not all(participant in config.gargling_msn_emails for participant in participants):
-                continue
-
-            yield session_ID, msg_type, msg_time, msg_source, msg_color, from_user, to_users, msg_text
-
-    @staticmethod
-    def add_entry(cursor, session_ID, msg_type, msg_time, msg_source, msg_color, from_user, to_users, msg_text):
-        sql_command = """INSERT INTO msn_messages (session_ID, msg_type, msg_source, msg_time, from_user, to_users, msg_text, msg_color)
-        VALUES (%(session_ID)s,
-               %(msg_type)s,
-               %(msg_source)s,
-               %(msg_time)s,
-               %(from_user)s,
-               %(to_users)s,
-               %(msg_text)s,
-               %(msg_color)s);"""
-
-        data = {
-            "session_ID": session_ID,
-            "msg_type": msg_type,
-            "msg_time": msg_time,
-            "msg_source": msg_source,
-            "msg_color": msg_color,
-            "from_user": from_user,
-            "to_users": str(to_users),
-            "msg_text": msg_text
-        }
-        try:
-            cursor.execute(sql_command, data)
-        except:
-            print(sql_command % data)
-            raise
-
     @staticmethod
     def quote(cursor, user=None):
         if user is not None:
