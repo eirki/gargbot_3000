@@ -178,6 +178,14 @@ class DropPics:
         im = Image.open(fileobject)
         exif = im._getexif()
         return exif[40094].decode("utf-16").rstrip("\x00")
+
+    def get_date_taken(self, path):
+        im = Image.open(path)
+        exif = im._getexif()
+        date_str = exif[36867]
+        date_obj = dt.datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
+        return date_obj
+
     def add_date_to_db_pics(self):
         sql = f'SELECT pic_id, path FROM dbx_pictures where taken IS NULL'
         cursor = self.db.cursor()
@@ -206,4 +214,28 @@ class DropPics:
         if errors:
             print("ERRORS:")
             print(errors)
+
+    def add_new_pics(self, folder, topic, root):
+        cursor = self.db.cursor()
+        for pic in os.listdir(folder):
+            if not pic.endswith((".jpg", ".jpeg")):
+                continue
+            disk_path = os.path.join(folder, pic)
+            db_path = "/".join([root, pic.lower()])
+
+            date_obj = self.get_date_taken(disk_path)
+            timestr = date_obj.strftime('%Y-%m-%d %H:%M:%S')
+
+            sql_command = """INSERT INTO dbx_pictures (path, topic, taken)
+            VALUES (%(path)s,
+                   %(topic)s,
+                   %(taken)s);"""
+            data = {
+                "path": db_path,
+                "topic": topic,
+                "taken": timestr
+            }
+            print(sql_command % data)
+            cursor.execute(sql_command, data)
+        self.db.commit()
 
