@@ -44,14 +44,6 @@ class DropPics:
         self.check_relevant_imgs()
 
         cursor = self.db.cursor()
-        cursor.execute("DROP TABLE IF EXISTS dbx_pictures")
-        sql_command = """
-        CREATE TABLE dbx_pictures (
-        path CHAR(100),
-        topic CHAR(30));
-        """
-        cursor.execute(sql_command)
-
         for topic, paths in self.paths.items():
             for path in paths:
                 self.add_entry(path, topic, cursor)

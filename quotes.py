@@ -98,19 +98,6 @@ class Garg:
 class MSN:
     @staticmethod
     def db_setup(cursor, db):
-        cursor.execute("DROP TABLE IF EXISTS msn_messages")
-        sql_command = """
-        CREATE TABLE msn_messages (
-        session_ID CHAR(50),
-        msg_type CHAR(10),
-        msg_time DATETIME(3),
-        msg_source CHAR(10),
-        msg_color CHAR(10),
-        from_user CHAR(200),
-        to_users TEXT,
-        msg_text TEXT);
-        """
-        cursor.execute(sql_command)
         for fname in os.listdir(path.join(home, "data", "logs")):
             if not fname.lower().endswith(".xml"):
                 continue
