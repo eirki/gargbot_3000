@@ -24,14 +24,11 @@ class DropPics:
     def get_pic(self, topic=None):
         if topic is None:
             topic = random.choice(self.topics)
-        sql = f'SELECT path FROM dbx_pictures WHERE topic = "{topic}" ORDER BY RAND() LIMIT 1'
+        sql = f'SELECT path, taken FROM dbx_pictures WHERE topic = "{topic}" ORDER BY RAND() LIMIT 1'
         log.info(sql)
         cursor = self.db.cursor()
         cursor.execute(sql)
-        path = cursor.fetchone()[0]
-
-        md = self.dbx.files_get_metadata(path, include_media_info=True)
-        date_obj = md.media_info.get_metadata().time_taken
+        path, date_obj = cursor.fetchone()
         timestamp = int(time.mktime(date_obj.timetuple()))
 
         response = self.dbx.sharing_create_shared_link(path)

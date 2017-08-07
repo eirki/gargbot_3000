@@ -7,15 +7,20 @@ from xml.dom.minidom import parseString
 import datetime as dt
 import re
 import asyncio
+import json
+import traceback
 
 from PIL import Image
+import dropbox
 
 import config
 
 
 class MSN:
-    @staticmethod
-    def main(cursor, db):
+    def __init__(self):
+        self.db = config.connect_to_database()
+
+    def main(self, cursor):
         for fname in os.listdir(os.path.join(config.home, "data", "logs")):
             if not fname.lower().endswith(".xml"):
                 continue
@@ -24,7 +29,7 @@ class MSN:
             for message_data in MSN.parse_log(fname):
                 MSN.add_entry(cursor, *message_data)
 
-        db.commit()
+        self.db.commit()
 
     @staticmethod
     def parse_log(fname):
@@ -96,6 +101,14 @@ class MSN:
 
 
 class DropPics:
+    def connect_to_database(self):
+        self.db = config.connect_to_database()
+
+    def connect_dbx(self):
+        self.dbx = dropbox.Dropbox(config.dropbox_token)
+        self.dbx.users_get_current_account()
+        log.info("Connected to dbx")
+
     def main(self):
         self.check_relevant_imgs()
 
@@ -165,3 +178,32 @@ class DropPics:
         im = Image.open(fileobject)
         exif = im._getexif()
         return exif[40094].decode("utf-16").rstrip("\x00")
+    def add_date_to_db_pics(self):
+        sql = f'SELECT pic_id, path FROM dbx_pictures where taken IS NULL'
+        cursor = self.db.cursor()
+        cursor.execute(sql)
+        all_pics = cursor.fetchall()
+        print(len(all_pics))
+        errors = []
+        for pic_id, path in all_pics:
+            try:
+                print(path)
+                md = self.dbx.files_get_metadata(path, include_media_info=True)
+                date_obj = md.media_info.get_metadata().time_taken
+                timestr = date_obj.strftime('%Y-%m-%d %H:%M:%S')
+                sql_command = "UPDATE dbx_pictures SET taken = %(timestr)s WHERE pic_id = %(pic_id)s"
+                data = {
+                    "timestr": timestr,
+                    "pic_id": pic_id
+                }
+
+                log.info(sql_command % data)
+                cursor.execute(sql_command, data)
+            except Exception as exc:
+                errors.append([pic_id, path, exc])
+                traceback.print_exc()
+        self.db.commit()
+        if errors:
+            print("ERRORS:")
+            print(errors)
+
