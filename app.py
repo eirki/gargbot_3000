@@ -26,26 +26,34 @@ def command_handler_wrapper(quotes_db, drop_pics):
         response = {"text": "GargBot 3000 is active. Beep boop beep"}
         return response
 
-    def cmd_pic(topic=None):
+    def cmd_pic(*args):
         """if command is 'pic'"""
-        if topic is not None:
-            picurl, timestamp = drop_pics.get_pic(topic)
+        text = {}
+        if args:
+            picurl, timestamp, pic_random = drop_pics.get_pic(*args)
+            if pic_random:
+                text = {"text": f"Fant ikke bilde med {args}'. Her er et tilfeldig bilde i stedet:"}
         else:
-            picurl, timestamp = drop_pics.get_pic()
-        response = {"attachments": [{"fallback":  picurl, "image_url": picurl, "ts": timestamp}]}
+            picurl, timestamp, _ = drop_pics.get_pic()
+
+        response = {"attachments": [{"fallback":  picurl,
+                                     "image_url": picurl,
+                                     "ts": timestamp,
+                                     **text}]}
         return response
 
-    def cmd_quote(user=None):
+    def cmd_quote(*user):
         """if command is 'quote'"""
-        if user is not None:
-            response = {"text": quotes_db.garg("quote", user)}
+        if user:
+            response = {"text": quotes_db.garg("quote", *user)}
         else:
             response = {"text": quotes_db.garg("quote")}
         return response
 
     def cmd_random():
         """if command is '/random'"""
-        response = {"attachments": [{"fallback":  quotes_db.garg("random"), "image_url": quotes_db.garg("random")}]}
+        response = {"attachments": [{"fallback":  quotes_db.garg("random"),
+                                     "image_url": quotes_db.garg("random")}]}
         return response
 
     def cmd_vidoi():
@@ -53,10 +61,10 @@ def command_handler_wrapper(quotes_db, drop_pics):
         response = {"text": quotes_db.garg("vidoi")}
         return response
 
-    def cmd_msn(user=None):
+    def cmd_msn(*user):
         """if command is 'msn'"""
-        if user is not None:
-            date, text = quotes_db.msn(user)
+        if user:
+            date, text = quotes_db.msn(*user)
         else:
             date, text = quotes_db.msn()
 
@@ -92,7 +100,7 @@ def command_handler_wrapper(quotes_db, drop_pics):
 def cmd_not_found(command):
     text = (
         f"Beep boop beep! Nôt sure whåt you mean by {command}. Dette er kommandoene jeg skjønner:\n"
-        "`@gargbot_3000 pic [lark/fe/skating/henging]`: viser random Larkollen/Forsterka Enhet/skate/henge bilde\n"
+        "`@gargbot_3000 pic [lark/fe/skating/henging] [gargling] [år]`: viser random bilde\n"
         "`@gargbot_3000 quote [garling]`: henter tilfedlig sitat fra forumet\n"
         "`@gargbot_3000 vidoi`: viser tilfedlig musikkvideo fra muzakvidois tråden på forumet\n"
         "`@gargbot_3000 /random`: viser tilfedlig bilde fra \\random tråden på forumet\n"
@@ -124,7 +132,8 @@ def filter_slack_output(slack_rtm_output):
     if output_list and len(output_list) > 0:
         for output in output_list:
             if output and "text" in output and AT_BOT in output["text"]:
-                return output["text"].replace(AT_BOT, "").strip().lower(), output["channel"], output["user"]
+                return (output["text"].replace(AT_BOT, "").strip().lower(),
+                        output["channel"], output["user"])
     return None, None, None
 
 
@@ -180,6 +189,7 @@ def main():
 
             command, *args = text.split()
             log.info(f"command: {command}")
+            log.info(f"args: {args}")
 
             try:
                 command_function = command_switch[command]

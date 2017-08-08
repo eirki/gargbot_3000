@@ -239,3 +239,46 @@ class DropPics:
             cursor.execute(sql_command, data)
         self.db.commit()
 
+    def add_faces(self):
+        cursor = self.db.cursor()
+        for garg_id, slack_nick in config.garg_ids_to_slack_nicks.items():
+            sql_command = """INSERT INTO faces (garg_id, name)
+            VALUES (%(garg_id)s,
+                   %(name)s);"""
+            data = {
+                "garg_id": garg_id,
+                "name": slack_nick,
+            }
+            print(sql_command % data)
+            cursor.execute(sql_command, data)
+        self.db.commit()
+
+    def add_faces_pics(self):
+        with open(os.path.join(config.home, "data", "garg_faces all.json")) as j:
+            all_faces = json.load(j)
+
+        cursor = self.db.cursor()
+
+        for path, faces in all_faces.items():
+            sql_command = 'SELECT pic_id FROM dbx_pictures WHERE path = %(path)s'
+            data = {"path": path}
+            print(sql_command % data)
+            cursor.execute(sql_command, data)
+            try:
+                pic_id = cursor.fetchone()[0]
+            except TypeError:
+                print(f"pic not in db: {path}")
+                continue
+            for face in faces:
+                garg_id = config.slack_nicks_to_garg_ids[face]
+                sql_command = (
+                    "INSERT INTO dbx_pictures_faces (garg_id, pic_id)"
+                    "VALUES (%(garg_id)s, %(pic_id)s);"
+                )
+                data = {
+                    "garg_id": garg_id,
+                    "pic_id": pic_id,
+                }
+                print(sql_command % data)
+                cursor.execute(sql_command, data)
+        self.db.commit()
