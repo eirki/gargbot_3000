@@ -72,6 +72,14 @@ class DropPics:
         )
         return sql_command, data
 
+    def get_timestamp(self, date_obj):
+        return int(time.mktime(date_obj.timetuple()))
+
+    def get_url(self, path):
+        response = self.dbx.sharing_create_shared_link(path)
+        url = response.url.replace("?dl=0", "?raw=1")
+        return url
+
     def get_pic(self, *args):
         log.info(args)
 
@@ -100,18 +108,18 @@ class DropPics:
 
                 log.info(sql_command % data)
                 cursor.execute(sql_command, data)
-                try:
-                    path, date_obj = cursor.fetchone()
+                data = cursor.fetchone()
+                if data is not None:
+                    path, date_obj = data
+                    url = self.get_url(path)
+                    timestamp = self.get_timestamp(date_obj)
                     if invalid_args:
                         error_text += "Her er et bilde med '{}':".format(", ".join(valid_args))
-                except TypeError:
+                    return url, timestamp, error_text
+                else:
                     error_text += (
                         "Fant ikke bilde med '{}'. "
                         "Her er et tilfeldig bilde i stedet:").format(", ".join(valid_args))
-                else:
-
-                    timestamp, url = self.get_timestamp_url(path, date_obj)
-                    return url, timestamp, error_text
             else:
                 error_text += "Her er et tilfeldig bilde i stedet:"
 
@@ -124,16 +132,10 @@ class DropPics:
         log.info(sql_command % data)
         cursor.execute(sql_command, data)
         path, date_obj = cursor.fetchone()
-
-        timestamp, url = self.get_timestamp_url(path, date_obj)
+        url = self.get_url(path)
+        timestamp = self.get_timestamp(date_obj)
 
         return url, timestamp, error_text
-
-    def get_timestamp_url(self, path, date_obj):
-        timestamp = int(time.mktime(date_obj.timetuple()))
-        response = self.dbx.sharing_create_shared_link(path)
-        url = response.url.replace("?dl=0", "?raw=1")
-        return timestamp, url
 
 
 if __name__ == "__main__":
