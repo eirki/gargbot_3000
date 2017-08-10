@@ -47,7 +47,7 @@ class Garg:
     @staticmethod
     def quote(cursor, user=None):
         if user and user not in config.slack_nicks_to_garg_ids:
-            return f"Gargling not found: {user}. Husk å bruke slack id"
+            return f"Gargling not found: {user}. Husk å bruke slack nick"
 
         if user:
             garg_id = config.slack_nicks_to_garg_ids[user]
