@@ -91,20 +91,22 @@ class DropPics:
             invalid_args = args - self.possible_args
             valid_args = args - invalid_args
             if invalid_args:
+                invalid_args_fmt = ", ".join(f"`{arg}`" for arg in invalid_args)
+                years_fmt = ", ".join(f"`{year}`" for year in sorted(self.years))
+                topics_fmt = ", ".join(f"`{topic}`" for topic in self.topics)
+                slack_nicks_fmt = ", ".join(f"`{user}`" for user in
+                                            config.slack_nicks_to_garg_ids.keys())
                 error_text = (
-                    "Skjønte ikke '{invalid_args}'.\n"
-                    "Jeg skjønner år: {years},\n"
-                    "emner: {topics},\n"
-                    "samt garlings - husk å bruke slack nick: {slack_nicks}\n"
-                ).format(
-                    invalid_args=", ".join(invalid_args),
-                    years=", ".join(sorted(self.years)),
-                    topics=", ".join(self.topics),
-                    slack_nicks=", ".join(config.slack_nicks_to_garg_ids.keys()),
+                    f"Im so stoopid! Skjønte ikke {invalid_args_fmt}. =( Jeg skjønner bare "
+                    f"\n*år*: {years_fmt};\n"
+                    f"*emner*: {topics_fmt};\n"
+                    f"samt *garlings* - husk å bruke slack nick: {slack_nicks_fmt}\n"
                 )
 
             if valid_args:
                 sql_command, data = self.get_sql_for_args(valid_args)
+
+                valid_args_fmt = ", ".join(f"`{arg}`" for arg in valid_args)
 
                 log.info(sql_command % data)
                 cursor.execute(sql_command, data)
@@ -114,12 +116,13 @@ class DropPics:
                     url = self.get_url(path)
                     timestamp = self.get_timestamp(date_obj)
                     if invalid_args:
-                        error_text += "Her er et bilde med '{}':".format(", ".join(valid_args))
+                        error_text += f"Her er et bilde med {valid_args_fmt}:"
                     return url, timestamp, error_text
                 else:
                     error_text += (
-                        "Fant ikke bilde med '{}'. "
-                        "Her er et tilfeldig bilde i stedet:").format(", ".join(valid_args))
+                        f"Fant ikke bilde med {valid_args_fmt}. "
+                        "Her er et tilfeldig bilde i stedet:"
+                    )
             else:
                 error_text += "Her er et tilfeldig bilde i stedet:"
 

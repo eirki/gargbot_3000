@@ -33,7 +33,7 @@ def command_handler_wrapper(quotes_db, drop_pics):
                                      "image_url": picurl,
                                      "ts": timestamp}]}
         if error_text:
-            response["attachments"][0]["text"] = error_text
+            response["text"] = error_text
 
         return response
 
