@@ -182,15 +182,15 @@ def main():
             if not (text and channel):
                 continue
 
-            command, *args = text.split()
-            log.info(f"command: {command}")
+            command_str, *args = text.split()
+            log.info(f"command: {command_str}")
             log.info(f"args: {args}")
 
             try:
-                command_function = command_switch[command]
+                command_function = command_switch[command_str]
             except KeyError:
                 command_function = cmd_not_found
-                args = [command]
+                args = [command_str]
 
             try:
                 response = command_function(*args)
