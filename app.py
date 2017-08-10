@@ -28,18 +28,13 @@ def command_handler_wrapper(quotes_db, drop_pics):
 
     def cmd_pic(*args):
         """if command is 'pic'"""
-        text = {}
-        if args:
-            picurl, timestamp, pic_random = drop_pics.get_pic(*args)
-            if pic_random:
-                text = {"text": f"Fant ikke bilde med {args}'. Her er et tilfeldig bilde i stedet:"}
-        else:
-            picurl, timestamp, _ = drop_pics.get_pic()
-
+        picurl, timestamp, error_text = drop_pics.get_pic(*args)
         response = {"attachments": [{"fallback":  picurl,
                                      "image_url": picurl,
-                                     "ts": timestamp,
-                                     **text}]}
+                                     "ts": timestamp}]}
+        if error_text:
+            response["attachments"][0]["text"] = error_text
+
         return response
 
     def cmd_quote(*user):
