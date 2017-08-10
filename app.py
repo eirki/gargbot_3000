@@ -195,9 +195,8 @@ def main():
             try:
                 response = command_function(*args)
             except MySQLdb.OperationalError:
-                db_connection = config.connect_to_database()
-                quotes_db.db = db_connection
-                drop_pics.db = db_connection
+                log.info("Server error. Trying to reconnect")
+                db_connection.ping(True)
                 response = command_function(*args)
             except Exception as exc:
                 log.error(traceback.format_exc())
