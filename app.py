@@ -116,20 +116,33 @@ def cmd_panic(exc):
     return response
 
 
-def filter_slack_output(slack_rtm_output):
+def wait_for_slack_output(slack_client):
     """
         The Slack Real Time Messaging API is an events firehose.
-        this parsing function returns None unless a message is
+        This parsing function returns when a message is
         directed at the Bot, based on its ID.
     """
     AT_BOT = f"<@{config.bot_id}>"
-    output_list = slack_rtm_output
-    if output_list and len(output_list) > 0:
-        for output in output_list:
-            if output and "text" in output and AT_BOT in output["text"]:
-                return (output["text"].replace(AT_BOT, "").strip().lower(),
-                        output["channel"], output["user"])
-    return None, None, None
+    while True:
+        time.sleep(1)
+        try:
+            output_list = slack_client.rtm_read()
+        except websocket.WebSocketConnectionClosedException:
+            slack_client.rtm_connect()
+            continue
+        if not (output_list or len(output_list) > 0):
+            continue
+        try:
+            bot_msg = next(
+                output for output in output_list
+                if output and "text" in output and AT_BOT in output["text"]
+            )
+        except StopIteration:
+            continue
+
+        text = bot_msg["text"].replace(AT_BOT, "").strip().lower()
+        channel = bot_msg["channel"]
+        return text, channel
 
 
 def send_response(slack_client, response, channel):
@@ -179,14 +192,7 @@ def main():
     try:
         while True:
             time.sleep(1)
-            try:
-                text, channel, user = filter_slack_output(slack_client.rtm_read())
-            except websocket.WebSocketConnectionClosedException:
-                slack_client.rtm_connect()
-                continue
-
-            if not (text and channel):
-                continue
+            text, channel = wait_for_slack_output(slack_client)
 
             command_str, *args = text.split()
             log.info(f"command: {command_str}")
