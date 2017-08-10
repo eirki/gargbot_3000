@@ -12,26 +12,75 @@ import traceback
 
 from PIL import Image
 import dropbox
+import MySQLdb
 
 import config
 
 
+class DatabaseManager:
+    def __init__(self):
+        self.cursor = None
+        self.connection = None
+
+    def connect(self):
+        self.connection = MySQLdb.connect(
+            host=config.db_host, user=config.db_user,
+            passwd=config.db_passwd, db=config.db_name, charset="utf8"
+        )
+
+    def get_cursor(self):
+        self.cursor = self.connection.cursor()
+
+    def execute(self, sql_command, data=None):
+        cursor = self.connection.cursor() if self.cursor is None else self.cursor
+
+        log.info(sql_command % data)
+        try:
+            cursor.execute(sql_command, data)
+        except MySQLdb.OperationalError:
+            log.info("Database error. Attempting reconnect")
+            self.reconnect_if_disconnected()
+            cursor.execute(sql_command, data)
+
+        if self.cursor is None:
+            cursor.close()
+            cursor = None
+
+    def reconnect_if_disconnected(self):
+        try:
+            self.connection.ping(reconnect=True)
+        except MySQLdb.OperationalError:
+            self.connect()
+
+    def close_cursor(self):
+        self.connection.cursor.close()
+
+    def commit(self):
+        self.connection.commit()
+
+    def close(self):
+        self.connection.close()
+
+
 class MSN:
     def __init__(self):
-        self.db = config.connect_to_database()
+        self.db = DatabaseManager()
+        self.db.connect()
 
     def main(self, cursor):
+        self.db.get_cursor()
         for fname in os.listdir(os.path.join(config.home, "data", "logs")):
             if not fname.lower().endswith(".xml"):
                 continue
 
             log.info(fname)
-            for message_data in MSN.parse_log(fname):
-                MSN.add_entry(cursor, *message_data)
+            for message_data in self.parse_log(fname):
+                self.add_entry(*message_data)
 
+        self.db.close_cursor()
         self.db.commit()
+        self.db.close()
 
-    @staticmethod
     def parse_log(fname):
         with open(os.path.join(config.home, "data", "logs", fname), encoding="utf8") as infile:
             txt = infile.read()
@@ -74,8 +123,7 @@ class MSN:
             yield (session_ID, msg_type, msg_time, msg_source,
                    msg_color, from_user, to_users, msg_text)
 
-    @staticmethod
-    def add_entry(cursor, session_ID, msg_type, msg_time, msg_source,
+    def add_entry(self, session_ID, msg_type, msg_time, msg_source,
                   msg_color, from_user, to_users, msg_text):
         sql_command = (
             "INSERT INTO msn_messages (session_ID, msg_type, msg_source, "
@@ -94,7 +142,7 @@ class MSN:
             "msg_text": msg_text
         }
         try:
-            cursor.execute(sql_command, data)
+            self.db.execute(sql_command, data)
         except:
             print(sql_command % data)
             raise
@@ -282,3 +330,6 @@ class DropPics:
                 print(sql_command % data)
                 cursor.execute(sql_command, data)
         self.db.commit()
+
+
+database_manager = DatabaseManager()
