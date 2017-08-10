@@ -150,7 +150,7 @@ def handle_congrats(slack_client):
         send_response(slack_client, response=response, channel=channel)
 
 
-def main():
+def setup():
     db_connection = config.connect_to_database()
 
     quotes_db = quotes.Quotes(db=db_connection)
@@ -165,11 +165,17 @@ def main():
 
     command_switch = command_handler_wrapper(quotes_db, drop_pics)
 
+    return slack_client, command_switch, db_connection
+
+
+def main():
+    slack_client, command_switch, db_connection = setup()
+    log.info("GargBot 3000 is operational!")
+
     congrats_thread = threading.Thread(target=handle_congrats, args=(slack_client,))
     congrats_thread.daemon = True
     congrats_thread.start()
 
-    log.info("GargBot 3000 is operational!")
     try:
         while True:
             time.sleep(1)
