@@ -4,9 +4,8 @@ from logger import log
 
 import random
 import time
-import re
 import itertools
-
+import contextlib
 import dropbox
 
 import config
@@ -42,23 +41,26 @@ class DropPics:
         sql_filter = []
         data = {}
 
-        topic = next((arg for arg in args if arg in self.topics), None)
-        if topic:
+        with contextlib.suppress(StopIteration):
+            topic = next(arg for arg in args if arg in self.topics)
             sql_filter.append("p.topic = %(topic)s")
             data["topic"] = topic
 
-        year = next((arg for arg in args if arg in self.years), None)
-        if year:
+        with contextlib.suppress(StopIteration):
+            year = next(arg for arg in args if arg in self.years)
             sql_filter.append("YEAR(p.taken) = %(year)s")
             data["year"] = year
 
-        for user, garg_id in config.slack_nicks_to_garg_ids.items():
-            if user in args:
-                sql_filter.append("f.garg_id = %(garg_id)s")
-                data["garg_id"] = garg_id
-                join = 'LEFT JOIN dbx_pictures_faces as f ON p.pic_id = f.pic_id'
-                break
-        else:
+        try:
+            garg_id = next(
+                garg_id
+                for user, garg_id in config.slack_nicks_to_garg_ids.items()
+                if user in args
+            )
+            sql_filter.append("f.garg_id = %(garg_id)s")
+            data["garg_id"] = garg_id
+            join = 'LEFT JOIN dbx_pictures_faces as f ON p.pic_id = f.pic_id'
+        except StopIteration:
             join = ""
 
         if sql_filter:
@@ -94,14 +96,14 @@ class DropPics:
                 )
 
             if valid_args:
-                sql_command, data = self.get_sql_for_args(args)
+                sql_command, data = self.get_sql_for_args(valid_args)
 
                 log.info(sql_command % data)
                 cursor.execute(sql_command, data)
                 try:
                     path, date_obj = cursor.fetchone()
-                    error_text += "Her er et bilde med '{}':".format(", ".join(valid_args))
-
+                    if invalid_args:
+                        error_text += "Her er et bilde med '{}':".format(", ".join(valid_args))
                 except TypeError:
                     error_text += (
                         "Fant ikke bilde med '{}'. "
