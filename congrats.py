@@ -3,7 +3,6 @@
 from logger import log
 
 import datetime as dt
-import pytz
 from operator import attrgetter
 import json
 from os import path
