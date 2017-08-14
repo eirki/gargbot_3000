@@ -81,11 +81,9 @@ class DropPics:
         return url
 
     def get_pic(self, *args):
-        log.info(args)
-
         error_text = ""
-
         cursor = self.db.cursor()
+
         if args:
             args = set(args)
             invalid_args = args - self.possible_args
