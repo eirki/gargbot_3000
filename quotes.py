@@ -151,15 +151,3 @@ class Quotes:
         result = MSN.quote(c, user)
         c.close()
         return result
-
-
-if __name__ == "__main__":
-    db_connection = database_manager.connect_to_database()
-    quotes_db = Quotes(db=db_connection)
-    try:
-        log.info(quotes_db.garg("quote"))
-        log.info(quotes_db.garg("vidoi"))
-        log.info(quotes_db.garg("random"))
-        log.info(quotes_db.msn(user="cmr"))
-    finally:
-        db_connection.close()

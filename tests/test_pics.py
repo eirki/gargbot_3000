@@ -1,16 +1,11 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-import sys
-import os
 import itertools
 from collections import namedtuple
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest
 
-import config
-import droppics
-import database_manager
+from context import config, droppics, database_manager
 
 
 class MockDropbox:
@@ -23,9 +18,9 @@ class MockDropbox:
 @pytest.fixture
 def drop_pics():
     db_connection = database_manager.connect_to_database()
-    drop_pics = droppics.DropPics(db=db_connection)
-    drop_pics.dbx = MockDropbox()
-    yield drop_pics
+    inited_drop_pics = droppics.DropPics(db=db_connection)
+    inited_drop_pics.dbx = MockDropbox()
+    yield inited_drop_pics
     db_connection.close()
 
 
