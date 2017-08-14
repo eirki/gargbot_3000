@@ -16,7 +16,8 @@ class DropPics:
         cursor = self.db.cursor()
         self.years = self.get_years(cursor)
         self.topics = self.get_topics(cursor)
-        self.possible_args = self.topics | self.years | set(config.slack_nicks_to_garg_ids.keys())
+        self.users = self.get_users(cursor)
+        self.possible_args = self.topics | self.years | set(self.users)
 
     def get_years(self, cursor):
         sql_command = "SELECT DISTINCT YEAR(taken) FROM dbx_pictures ORDER BY YEAR(taken)"
@@ -27,6 +28,11 @@ class DropPics:
         sql_command = "SELECT topic FROM dbx_pictures"
         cursor.execute(sql_command)
         return set(topic[0] for topic in cursor.fetchall())
+
+    def get_users(self, cursor):
+        sql_command = "SELECT slack_nick, db_id FROM user_ids"
+        cursor.execute(sql_command)
+        return dict(cursor.fetchall())
 
     def connect_dbx(self):
         self.dbx = dropbox.Dropbox(config.dropbox_token)
@@ -48,13 +54,13 @@ class DropPics:
             data["year"] = year
 
         try:
-            garg_id = next(
-                garg_id
-                for user, garg_id in config.slack_nicks_to_garg_ids.items()
+            db_id = next(
+                db_id
+                for user, db_id in self.users.items()
                 if user in args
             )
-            sql_filter.append("f.garg_id = %(garg_id)s")
-            data["garg_id"] = garg_id
+            sql_filter.append("f.db_id = %(db_id)s")
+            data["db_id"] = db_id
             join = 'LEFT JOIN dbx_pictures_faces as f ON p.pic_id = f.pic_id'
         except StopIteration:
             join = ""
@@ -89,7 +95,7 @@ class DropPics:
                 years_fmt = ", ".join(f"`{year}`" for year in sorted(self.years))
                 topics_fmt = ", ".join(f"`{topic}`" for topic in self.topics)
                 slack_nicks_fmt = ", ".join(f"`{user}`" for user in
-                                            config.slack_nicks_to_garg_ids.keys())
+                                            self.users.keys())
                 error_text = (
                     f"Im so stoopid! Skjønte ikke {invalid_args_fmt}. =( Jeg skjønner bare "
                     f"\n*år*: {years_fmt};\n"

@@ -293,3 +293,44 @@ class DropPics:
                 }
                 cursor.execute(sql_command, data)
         self.db.commit()
+
+
+def add_user_ids_table():
+    db = connect_to_database()
+    users = [
+    ]
+    cursor = db.cursor()
+    for slack_id, db_id, slack_nick, first_name in users:
+        sql_command = (
+            "INSERT INTO user_ids (db_id, slack_id, slack_nick, first_name) "
+            "VALUES (%(db_id)s, %(slack_id)s, %(slack_nick)s, %(first_name)s)"
+        )
+        data = {
+            "slack_nick": slack_nick,
+            "slack_id": slack_id,
+            "db_id": db_id,
+            "first_name": first_name
+        }
+        cursor.execute(sql_command, data)
+    db.commit()
+    db.close()
+
+def add_user_ids_to_msn():
+    db = connect_to_database()
+
+    cursor = db.cursor()
+    sql_command = "SELECT slack_nick, db_id FROM user_ids"
+    cursor.execute(sql_command)
+    users = cursor.fetchall()
+    for slack_nick, db_id in users:
+        msn_nicks = config.slack_to_msn_nicks[slack_nick]
+        for msn_nick in msn_nicks:
+            sql_command = (
+                f"UPDATE msn_messages SET db_id = {db_id} "
+                f'WHERE from_user LIKE "%{msn_nick}%"'
+            )
+            cursor.execute(sql_command)
+    db.commit()
+    db.close()
+
+# add_user_ids_to_msn()

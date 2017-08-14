@@ -8,3 +8,5 @@ msg_color CHAR(10),
 from_user CHAR(200),
 to_users TEXT,
 msg_text TEXT);
+
+ALTER TABLE msn_messages ADD db_id mediumint(8) unsigned NOT NULL;

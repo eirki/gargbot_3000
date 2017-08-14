@@ -35,3 +35,5 @@ CREATE TABLE `phpbb_posts` (
   KEY `post_username` (`post_username`),
   KEY `tid_post_time` (`topic_id`,`post_time`)
 ) ENGINE=MyISAM AUTO_INCREMENT=25421 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+ALTER TABLE phpbb_posts CHANGE poster_id db_id mediumint(8) unsigned NOT NULL;

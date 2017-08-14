@@ -13,7 +13,12 @@ garg_id INT PRIMARY KEY,
 name char(30)
 );
 
+ALTER TABLE faces CHANGE garg_id db_id INT;
+
+
 CREATE TABLE dbx_pictures_faces (
 garg_id INT,
 pic_id INT
 );
+
+ALTER TABLE dbx_pictures_faces CHANGE `garg_id` `db_id` INT;
