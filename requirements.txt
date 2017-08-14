@@ -1,6 +1,7 @@
 mysqlclient
 requests
 SlackClient
+websocket-client
 dropbox
 Pillow
 pytz
