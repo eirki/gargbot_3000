@@ -15,6 +15,7 @@ from slackclient import SlackClient
 import websocket
 
 import config
+import database_manager
 import droppics
 import quotes
 import congrats
@@ -164,7 +165,7 @@ def handle_congrats(slack_client):
 
 
 def setup():
-    db_connection = config.connect_to_database()
+    db_connection = database_manager.connect_to_database()
 
     quotes_db = quotes.Quotes(db=db_connection)
 

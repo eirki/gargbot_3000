@@ -10,6 +10,7 @@ from operator import itemgetter
 import requests
 
 import config
+import database_manager
 
 
 class Garg:
@@ -93,18 +94,16 @@ class MSN:
     def quote(cursor, user=None):
         if user is not None:
             user_nicks = config.slack_to_msn_nicks[user]
-            filter = " WHERE " + " OR ".join([f'from_user LIKE "%{name}%"'
-                                              for name in user_nicks])
+            user_filter = " WHERE " + " OR ".join([f'from_user LIKE "%{name}%"'
+                                                   for name in user_nicks])
         else:
-            filter = ""
-        sql = f"SELECT session_ID FROM msn_messages {filter} ORDER BY RAND() LIMIT 1"
-        log.info(sql)
+            user_filter = ""
+        sql = f"SELECT session_ID FROM msn_messages {user_filter} ORDER BY RAND() LIMIT 1"
         cursor.execute(sql)
         session_ID = cursor.fetchone()[0]
         log.info(session_ID)
         sql = ("SELECT msg_time, from_user, to_users, msg_text, msg_color "
                f'FROM msn_messages WHERE session_ID = "{session_ID}"')
-        log.info(sql)
         cursor.execute(sql)
         messages = list(cursor.fetchall())
         messages.sort(key=itemgetter(0))
@@ -155,7 +154,7 @@ class Quotes:
 
 
 if __name__ == "__main__":
-    db_connection = config.connect_to_database()
+    db_connection = database_manager.connect_to_database()
     quotes_db = Quotes(db=db_connection)
     try:
         log.info(quotes_db.garg("quote"))

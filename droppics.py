@@ -9,10 +9,10 @@ import contextlib
 import dropbox
 
 import config
+import database_manager
 
 
 class DropPics:
-
     def __init__(self, db):
         self.db = db
         cursor = self.db.cursor()
@@ -22,13 +22,11 @@ class DropPics:
 
     def get_years(self, cursor):
         sql_command = "SELECT DISTINCT YEAR(taken) FROM dbx_pictures ORDER BY YEAR(taken)"
-        log.info(sql_command)
         cursor.execute(sql_command)
         return set(str(year[0]) for year in cursor.fetchall())
 
     def get_topics(self, cursor):
         sql_command = "SELECT topic FROM dbx_pictures"
-        log.info(sql_command)
         cursor.execute(sql_command)
         return set(topic[0] for topic in cursor.fetchall())
 
@@ -106,7 +104,6 @@ class DropPics:
 
                 valid_args_fmt = ", ".join(f"`{arg}`" for arg in valid_args)
 
-                log.info(sql_command % data)
                 cursor.execute(sql_command, data)
                 data = cursor.fetchone()
                 if data is not None:
@@ -130,7 +127,6 @@ class DropPics:
         )
         data = {"topic": random.choice(list(self.topics))}
 
-        log.info(sql_command % data)
         cursor.execute(sql_command, data)
         path, date_obj = cursor.fetchone()
         url = self.get_url(path)
@@ -140,7 +136,7 @@ class DropPics:
 
 
 if __name__ == "__main__":
-    db_connection = config.connect_to_database()
+    db_connection = database_manager.connect_to_database()
     drop_pics = DropPics(db=db_connection)
     drop_pics.connect_dbx()
     # drop_pics.db_setup()

@@ -10,15 +10,39 @@ import asyncio
 import json
 import traceback
 
+import MySQLdb
+from MySQLdb.cursors import Cursor
 from PIL import Image
 import dropbox
 
 import config
 
 
+class LoggingCursor(Cursor):
+    def execute(self, query, args=None):
+        log.info(query % args if args else query)
+        super().execute(query, args)
+
+    def executemany(self, query, args=None):
+        log.info(query % args if args else query)
+        super().executemany(query, args)
+
+
+def connect_to_database():
+    connection = MySQLdb.connect(
+        host=config.db_host,
+        user=config.db_user,
+        passwd=config.db_passwd,
+        db=config.db_name,
+        charset="utf8",
+        cursorclass=LoggingCursor
+    )
+    return connection
+
+
 class MSN:
     def __init__(self):
-        self.db = config.connect_to_database()
+        self.db = connect_to_database()
 
     def main(self, cursor):
         for fname in os.listdir(os.path.join(config.home, "data", "logs")):
@@ -93,16 +117,12 @@ class MSN:
             "to_users": str(to_users),
             "msg_text": msg_text
         }
-        try:
-            cursor.execute(sql_command, data)
-        except:
-            print(sql_command % data)
-            raise
+        cursor.execute(sql_command, data)
 
 
 class DropPics:
     def connect_to_database(self):
-        self.db = config.connect_to_database()
+        self.db = connect_to_database()
 
     def connect_dbx(self):
         self.dbx = dropbox.Dropbox(config.dropbox_token)
@@ -128,11 +148,7 @@ class DropPics:
             "path": path,
             "topic": topic
         }
-        try:
-            log.info(sql_command % data)
-            cursor.execute(sql_command, data)
-        except:
-            raise
+        cursor.execute(sql_command, data)
 
     def dbx_file_path_generator(self, dir):
         query = self.dbx.files_list_folder(dir, recursive=True)
@@ -143,12 +159,15 @@ class DropPics:
                 break
             query = self.dbx.files_list_folder_continue(query.cursor)
 
+    def get_topics(self):
+        cursor = self.db.cursor()
+        cursor.execute("SELECT topic FROM dbx_pictures")
+        return [topic[0] for topic in cursor.fetchall()]
+
     def check_relevant_imgs(self):
-        self.paths = {
-            "skate": [],
-            "fe": [],
-            "lark": [],
-        }
+        self.topics = self.get_topics()
+
+        self.paths = {topic: [] for topic in self.topics}
 
         loop = asyncio.get_event_loop()
         tasks = [loop.create_task(self.check_relevance(entry, loop))
@@ -166,12 +185,9 @@ class DropPics:
         tag = DropPics.get_tag(response.raw)
         if not tag:
             return
-        elif "Forsterka Enhet" in tag:
-            self.paths["fe"].append(entry.path_lower)
-        elif "Skating" in tag:
-            self.paths["skate"].append(entry.path_lower)
-        elif "Larkollen" in tag:
-            self.paths["lark"].append(entry.path_lower)
+        for topic, pathlist in self.paths.items():
+            if topic in tag:
+                pathlist.append(entry.path_lower)
 
     @staticmethod
     def get_tag(fileobject):
@@ -205,7 +221,6 @@ class DropPics:
                     "pic_id": pic_id
                 }
 
-                log.info(sql_command % data)
                 cursor.execute(sql_command, data)
             except Exception as exc:
                 errors.append([pic_id, path, exc])
@@ -235,7 +250,6 @@ class DropPics:
                 "topic": topic,
                 "taken": timestr
             }
-            print(sql_command % data)
             cursor.execute(sql_command, data)
         self.db.commit()
 
@@ -249,7 +263,6 @@ class DropPics:
                 "garg_id": garg_id,
                 "name": slack_nick,
             }
-            print(sql_command % data)
             cursor.execute(sql_command, data)
         self.db.commit()
 
@@ -262,7 +275,6 @@ class DropPics:
         for path, faces in all_faces.items():
             sql_command = 'SELECT pic_id FROM dbx_pictures WHERE path = %(path)s'
             data = {"path": path}
-            print(sql_command % data)
             cursor.execute(sql_command, data)
             try:
                 pic_id = cursor.fetchone()[0]
@@ -279,6 +291,5 @@ class DropPics:
                     "garg_id": garg_id,
                     "pic_id": pic_id,
                 }
-                print(sql_command % data)
                 cursor.execute(sql_command, data)
         self.db.commit()
