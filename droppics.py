@@ -4,12 +4,10 @@ from logger import log
 
 import random
 import time
-import itertools
 import contextlib
 import dropbox
 
 import config
-import database_manager
 
 
 class DropPics:
@@ -133,35 +131,3 @@ class DropPics:
         timestamp = self.get_timestamp(date_obj)
 
         return url, timestamp, error_text
-
-
-if __name__ == "__main__":
-    db_connection = database_manager.connect_to_database()
-    drop_pics = DropPics(db=db_connection)
-    drop_pics.connect_dbx()
-    # drop_pics.db_setup()
-    try:
-        log.info(drop_pics.get_pic(*[]))
-
-        topics = list(drop_pics.topics)
-        for topic in topics[0:2]:
-            log.info(drop_pics.get_pic(*[topic]))
-
-        years = list(drop_pics.years)
-        for year in years[0:2]:
-            log.info(drop_pics.get_pic(*[year]))
-
-        users = list(config.slack_nicks_to_garg_ids.keys())
-        for user in users[0:2]:
-            log.info(drop_pics.get_pic(*[user]))
-
-        all_args = [topics, years, users]
-        for permutation in list(itertools.product(*all_args),)[0:2]:
-            log.info(drop_pics.get_pic(*permutation))
-
-        # Errors:
-        log.info(drop_pics.get_pic(*["2000"]))
-
-        log.info(drop_pics.get_pic(*["2000", users[0]]))
-    finally:
-        db_connection.close()
