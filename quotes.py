@@ -129,12 +129,15 @@ class MSN:
 class Quotes:
     def __init__(self, db):
         self.db = db
-        Garg.slack_nicks_to_db_ids = self.get_users()
-        MSN.slack_nicks_to_db_ids = self.get_users()
-        Garg.db_ids_to_slack_nicks = {
+        self.slack_nicks_to_db_ids = self.get_users()
+        self.db_ids_to_slack_nicks = {
             nick: db_id for db_id, nick in
-            Garg.slack_nicks_to_db_ids.items()
+            self.slack_nicks_to_db_ids.items()
         }
+
+        MSN.slack_nicks_to_db_ids = self.slack_nicks_to_db_ids
+        Garg.slack_nicks_to_db_ids = self.slack_nicks_to_db_ids
+        Garg.db_ids_to_slack_nicks = self.db_ids_to_slack_nicks
 
     def get_users(self):
         cursor = self.db.cursor()

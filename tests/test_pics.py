@@ -5,7 +5,7 @@ from collections import namedtuple
 
 import pytest
 
-from context import config, droppics, database_manager
+from context import droppics, database_manager
 
 
 class MockDropbox:
@@ -48,7 +48,7 @@ def test_year(drop_pics):
 
 
 def test_user(drop_pics):
-    user = list(config.slack_nicks_to_db_ids.keys())[0]
+    user = list(drop_pics.users)[0]
     url, timestamp, error_text = drop_pics.get_pic(*[user])
     assert_valid_returns(url, timestamp, error_text)
 
@@ -56,8 +56,8 @@ def test_user(drop_pics):
 def test_multiple_args(drop_pics):
     all_args = [
         list(drop_pics.years)
-        + list(config.slack_nicks_to_db_ids.keys())
-        + list(config.slack_nicks_to_db_ids.keys())
+        + list(drop_pics.topics)
+        + list(drop_pics.users)
     ]
     permutation = list(itertools.product(*all_args),)[0]
     url, timestamp, error_text = drop_pics.get_pic(*permutation)
@@ -74,7 +74,7 @@ def test_error_txt(drop_pics):
 
 
 def test_error_txt_with_valid(drop_pics):
-    user = list(config.slack_nicks_to_db_ids.keys())[0]
+    user = list(drop_pics.users)[0]
     url, timestamp, error_text = drop_pics.get_pic(*["2000", user])
     assert url.startswith("https")
     assert type(timestamp) == int

@@ -6,11 +6,20 @@ from context import config, quotes, database_manager
 
 
 @pytest.fixture
-def quotes_db():
+def db_connection():
     db_connection = database_manager.connect_to_database()
-    inited_quotes_db = quotes.Quotes(db=db_connection)
-    yield inited_quotes_db
+    yield db_connection
     db_connection.close()
+
+
+@pytest.fixture
+def quotes_db(db_connection):
+    return quotes.Quotes(db=db_connection)
+
+
+@pytest.fixture
+def slack_nick_to_db_id(quotes_db):
+    return quotes_db.get_users()
 
 
 def test_garg_vidoi(quotes_db):
@@ -28,8 +37,8 @@ def test_garg_quote_random(quotes_db):
     assert "------\n- " in text
 
 
-def test_garg_quote_user(quotes_db):
-    user = list(config.slack_id_to_nick.values())[0]
+def test_garg_quote_user(quotes_db, slack_nick_to_db_id):
+    user = list(slack_nick_to_db_id.keys())[0]
     text = quotes_db.garg("quote", user)
     assert f"------\n- {user}" in text
 
@@ -40,8 +49,8 @@ def test_msn_random(quotes_db):
     assert type(conv) == list
 
 
-def test_msn_user(quotes_db):
-    user = list(config.slack_id_to_nick.values())[0]
+def test_msn_user(quotes_db, slack_nick_to_db_id):
+    user = list(slack_nick_to_db_id.keys())[0]
     date, conv = quotes_db.msn(user)
     assert type(date) == str
     assert type(conv) == list
