@@ -70,11 +70,27 @@ def get_birthdays():
     return birthdays
 
 
-def get_greeting(person):
+def get_greeting(person, drop_pics):
     greeting = random.choice(greetings)
     jab = random.choice(jabs)
-    text = f"Hurra! Vår felles venn <@{person.slack_id}> fyller {person.age} i dag!\n {greeting}, {jab}"
-    return text
+    text = (
+        f"Hurra! Vår felles venn <@{person.slack_id}> fyller {person.age} i dag!\n"
+        f" {greeting}, {jab}"
+    )
+
+    picurl, timestamp, error_text = drop_pics.get_pic(person.nick)
+    response = {
+        "text": text,
+        "attachments": [
+            {"fallback":  picurl,
+             "image_url": picurl,
+             "ts": timestamp},
+            {"fallback":  "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg",
+             "image_url": "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"}
+        ]
+    }
+
+    return response
 
 
 if __name__ == '__main__':
