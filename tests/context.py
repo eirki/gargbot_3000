@@ -8,3 +8,4 @@ import config
 import droppics
 import database_manager
 import quotes
+import congrats
