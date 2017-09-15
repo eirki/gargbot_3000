@@ -8,6 +8,8 @@ import json
 from os import path
 import random
 
+import MySQLdb
+
 import config
 
 
@@ -77,16 +79,19 @@ def get_greeting(person, drop_pics):
         f"Hurra! Vår felles venn <@{person.slack_id}> fyller {person.age} i dag!\n"
         f" {greeting}, {jab}"
     )
+    congrats_picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
 
-    picurl, timestamp, error_text = drop_pics.get_pic(person.nick)
+    try:
+        person_picurl, timestamp, error_text = drop_pics.get_pic(person.nick)
+    except MySQLdb.OperationalError:
+        drop_pics.db.ping(True)
+        person_picurl, timestamp, error_text = drop_pics.get_pic(person.nick)
+
     response = {
         "text": text,
         "attachments": [
-            {"fallback":  picurl,
-             "image_url": picurl,
-             "ts": timestamp},
-            {"fallback":  "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg",
-             "image_url": "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"}
+            {"fallback": person_picurl, "image_url": person_picurl, "ts": timestamp},
+            {"fallback": congrats_picurl, "image_url": congrats_picurl}
         ]
     }
 
