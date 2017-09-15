@@ -212,11 +212,11 @@ def main():
                 try:
                     db_connection.ping()
                 except MySQLdb.OperationalError:
-                    log.info("Server disconnected. Trying to reconnect")
+                    log.info("Database disconnected. Trying to reconnect")
                     db_connection.ping(True)
                     response = command_function(*args)
                 else:
-                    # OperationalError not caused by connection issue. raise error
+                    # OperationalError not caused by connection issue. Reraise error to log below
                     raise op_exc
             except Exception as exc:
                 log.error(traceback.format_exc())
