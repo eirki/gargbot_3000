@@ -24,33 +24,33 @@ def drop_pics():
     db_connection.close()
 
 
-def assert_valid_returns(url, timestamp, error_text):
+def assert_valid_returns(url, timestamp, description):
     assert url.startswith("https")
     assert type(timestamp) == int
-    assert error_text == ''
+    assert description == '' or description.startswith("Her er et bilde med")
 
 
 def test_random(drop_pics):
-    url, timestamp, error_text = drop_pics.get_pic(*[])
-    assert_valid_returns(url, timestamp, error_text)
+    url, timestamp, description = drop_pics.get_pic(*[])
+    assert_valid_returns(url, timestamp, description)
 
 
 def test_topic(drop_pics):
     topic = list(drop_pics.topics)[0]
-    url, timestamp, error_text = drop_pics.get_pic(*[topic])
-    assert_valid_returns(url, timestamp, error_text)
+    url, timestamp, description = drop_pics.get_pic(*[topic])
+    assert_valid_returns(url, timestamp, description)
 
 
 def test_year(drop_pics):
     year = list(drop_pics.years)[0]
-    url, timestamp, error_text = drop_pics.get_pic(*[year])
-    assert_valid_returns(url, timestamp, error_text)
+    url, timestamp, description = drop_pics.get_pic(*[year])
+    assert_valid_returns(url, timestamp, description)
 
 
 def test_user(drop_pics):
     user = list(drop_pics.users)[0]
-    url, timestamp, error_text = drop_pics.get_pic(*[user])
-    assert_valid_returns(url, timestamp, error_text)
+    url, timestamp, description = drop_pics.get_pic(*[user])
+    assert_valid_returns(url, timestamp, description)
 
 
 def test_multiple_args(drop_pics):
@@ -60,23 +60,31 @@ def test_multiple_args(drop_pics):
         + list(drop_pics.users)
     ]
     permutation = list(itertools.product(*all_args),)[0]
-    url, timestamp, error_text = drop_pics.get_pic(*permutation)
-    assert_valid_returns(url, timestamp, error_text)
+    url, timestamp, description = drop_pics.get_pic(*permutation)
+    assert_valid_returns(url, timestamp, description)
 
 
 # Errors:
 def test_error_txt(drop_pics):
-    url, timestamp, error_text = drop_pics.get_pic(*["2000"])
+    url, timestamp, description = drop_pics.get_pic(*["2000"])
     assert url.startswith("https")
     assert type(timestamp) == int
-    assert error_text.startswith("Im so stoopid")
-    assert error_text.endswith("Her er et tilfeldig bilde i stedet:")
+    assert description.startswith("Im so stoopid")
+    assert description.endswith("Her er et tilfeldig bilde i stedet:")
 
 
 def test_error_txt_with_valid(drop_pics):
     user = list(drop_pics.users)[0]
-    url, timestamp, error_text = drop_pics.get_pic(*["2000", user])
+    url, timestamp, description = drop_pics.get_pic(*["2000", user])
     assert url.startswith("https")
     assert type(timestamp) == int
-    assert error_text.startswith("Im so stoopid")
-    assert "Her er et bilde med" in error_text
+    assert description.startswith("Im so stoopid")
+    assert "Her er et bilde med" in description
+
+
+def test_error_txt_with_impossible_combination(drop_pics):
+    url, timestamp, description = drop_pics.get_pic(*["2002", "fe"])
+    assert url.startswith("https")
+    assert type(timestamp) == int
+    assert description.startswith("Fant ikke")
+    assert "Her er et bilde med" in description
