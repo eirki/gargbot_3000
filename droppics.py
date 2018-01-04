@@ -5,6 +5,8 @@ from logger import log
 import random
 import time
 import contextlib
+import itertools
+
 import dropbox
 
 import config
@@ -141,20 +143,19 @@ class DropPics:
             url = self.get_url_for_dbx_path(path)
             timestamp = self.get_timestamp(date_obj)
             return url, timestamp, description
-        else:
-            # No pics found for arg-combination. Reduce args until pic found
-            valid_args_fmt = ", ".join(f"`{arg}`" for arg in valid_args)
-            description += f"Fant ikke bilde med {valid_args_fmt}. "
-            used_args = valid_args.copy()
-            for arg in reversed(list(valid_args)):
-                valid_args.remove(arg)
-                sql_command, data = self.get_sql_for_args(valid_args)
+
+        # No pics found for arg-combination. Reduce args until pic found
+        valid_args_fmt = ", ".join(f"`{arg}`" for arg in valid_args)
+        description += f"Fant ikke bilde med {valid_args_fmt}. "
+        for length in reversed(range(1, len(valid_args))):
+            for arg_combination in itertools.combinations(valid_args, length):
+                sql_command, data = self.get_sql_for_args(arg_combination)
                 db_data = self.get_dbx_path_sql_cmd(cursor, sql_command, data)
                 if db_data is None:
                     continue
 
-                valid_args_fmt = ", ".join(f"`{arg}`" for arg in valid_args)
-                description += f"Her er et bilde med {valid_args_fmt} i stedet:"
+                arg_combination_fmt = ", ".join(f"`{arg}`" for arg in arg_combination)
+                description += f"Her er et bilde med {arg_combination_fmt} i stedet:"
                 path, date_obj = db_data
                 url = self.get_url_for_dbx_path(path)
                 timestamp = self.get_timestamp(date_obj)
