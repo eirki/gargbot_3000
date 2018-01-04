@@ -6,6 +6,7 @@ import random
 import time
 import contextlib
 import itertools
+import string
 
 import dropbox
 
@@ -58,33 +59,41 @@ class DropPics:
         sql_filter = []
         sql_data = {}
 
+        # topic arg
         with contextlib.suppress(StopIteration):
             topic = next(arg for arg in args if arg in self.topics)
-            sql_filter.append("p.topic = %(topic)s")
+            sql_filter.append("a.topic = %(topic)s")
             sql_data["topic"] = topic
 
+        # year arg
         with contextlib.suppress(StopIteration):
             year = next(arg for arg in args if arg in self.years)
-            sql_filter.append("YEAR(p.taken) = %(year)s")
+            sql_filter.append("YEAR(a.taken) = %(year)s")
             sql_data["year"] = year
 
-        try:
-            db_id = next(
-                db_id
-                for user, db_id in self.users.items()
-                if user in args
-            )
-            sql_filter.append("f.db_id = %(db_id)s")
-            sql_data["db_id"] = db_id
-            join = 'LEFT JOIN dbx_pictures_faces as f ON p.pic_id = f.pic_id'
-        except StopIteration:
+        # face arg(s)
+        db_ids = [
+            db_id
+            for user, db_id in self.users.items()
+            if user in args
+        ]
+        if len(db_ids) == 0:
             join = ""
+        elif len(db_ids) == 1:
+            db_id = db_ids[0]
+            sql_filter.append("b.db_id = %(db_id)s")
+            sql_data["db_id"] = db_id
+            join = 'LEFT JOIN dbx_pictures_faces as b ON a.pic_id = b.pic_id'
+        elif len(db_ids) > 1:
+            join = ""
+            for db_id, letter in zip(db_ids, string.ascii_lowercase[1:]):
+                sql_filter.append(f"{letter}.db_id = %({letter}.db_id)s")
+                sql_data[f"{letter}.db_id"] = db_id
+                join += f'LEFT JOIN dbx_pictures_faces as {letter} ON a.pic_id = {letter}.pic_id '
 
-        if sql_filter:
-            sql_filter = "WHERE " + " AND ".join(sql_filter)
-
+        sql_filter = "WHERE " + " AND ".join(sql_filter)
         sql_command = (
-            'SELECT p.path, p.taken FROM dbx_pictures as p '
+            'SELECT a.path, a.taken FROM dbx_pictures as a '
             f'{join} {sql_filter} ORDER BY RAND() LIMIT 1'
         )
         return sql_command, sql_data
