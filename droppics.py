@@ -159,5 +159,3 @@ class DropPics:
                 url = self.get_url_for_dbx_path(path)
                 timestamp = self.get_timestamp(date_obj)
                 return url, timestamp, description
-            else:
-                raise Exception("Valid args {v")
