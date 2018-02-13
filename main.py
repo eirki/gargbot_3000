@@ -116,7 +116,7 @@ def command_handler_wrapper(quotes_db, drop_pics):
 
 def cmd_not_found(command):
     text = (
-        f"Beep boop beep! Nôt sure whåt you mean by {command}. "
+        f"Beep boop beep! Nôt sure whåt you mean by `{command}`. "
         "Dette er kommandoene jeg skjønner:\n"
         + command_explanation
     )
