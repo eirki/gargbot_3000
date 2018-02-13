@@ -21,10 +21,30 @@ import quotes
 import congrats
 
 
+command_explanation = (
+    "`@gargbot_3000 pic [lark/fe/skating/henging] [gargling] [år]`: viser random bilde\n"
+    "`@gargbot_3000 quote [garling]`: henter tilfeldig sitat fra forumet\n"
+    "`@gargbot_3000 vidoi`: viser tilfeldig musikkvideo fra muzakvidois tråden på forumet\n"
+    "`@gargbot_3000 /random`: viser tilfeldig bilde fra \\random tråden på forumet\n"
+    "`@gargbot_3000 Hvem [spørsmål]`: svarer på spørsmål om garglings \n"
+    "`@gargbot_3000 msn [garling]`: utfrag fra tilfeldig msn samtale\n"
+)
+
+
 def command_handler_wrapper(quotes_db, drop_pics):
     def cmd_ping():
         """if command is 'ping' """
         response = {"text": "GargBot 3000 is active. Beep boop beep"}
+        return response
+
+    def cmd_welcome():
+        """when joining new channel"""
+        text = (
+            "Hei hei kjære alle sammen!\n"
+            "Dette er kommandoene jeg skjønner:\n"
+            + command_explanation
+        )
+        response = {"text": text}
         return response
 
     def cmd_pic(*args):
@@ -83,6 +103,7 @@ def command_handler_wrapper(quotes_db, drop_pics):
 
     switch = {
         "ping": cmd_ping,
+        "new_channel": cmd_welcome,
         "pic": cmd_pic,
         "quote": cmd_quote,
         "/random": cmd_random,
@@ -95,13 +116,9 @@ def command_handler_wrapper(quotes_db, drop_pics):
 
 def cmd_not_found(command):
     text = (
-        f"Beep boop beep! Nôt sure whåt you mean by {command}. Dette er kommandoene jeg skjønner:\n"
-        "`@gargbot_3000 pic [lark/fe/skating/henging] [gargling] [år]`: viser random bilde\n"
-        "`@gargbot_3000 quote [garling]`: henter tilfedlig sitat fra forumet\n"
-        "`@gargbot_3000 vidoi`: viser tilfedlig musikkvideo fra muzakvidois tråden på forumet\n"
-        "`@gargbot_3000 /random`: viser tilfedlig bilde fra \\random tråden på forumet\n"
-        "`@gargbot_3000 Hvem [spørsmål]`: svarer på spørsmål om garglings \n"
-        "`@gargbot_3000 msn [garling]`: utfrag fra tilfeldig msn samtale\n"
+        f"Beep boop beep! Nôt sure whåt you mean by {command}. "
+        "Dette er kommandoene jeg skjønner:\n"
+        + command_explanation
     )
     response = {"text": text}
     return response
@@ -110,7 +127,7 @@ def cmd_not_found(command):
 def cmd_panic(exc):
     text = (
         f"Error, error! Noe har gått fryktelig galt: {str(exc)}! Ææææææ. Ta kontakt"
-        " med systemadministrator ummidelbart, før det er for sent. "
+        " med systemadministrator umiddelbart, før det er for sent. "
         "HJELP MEG. If I don't survive, tell mrs. gargbot... 'Hello'"
     )
     response = {"text": text}
@@ -142,6 +159,7 @@ def wait_for_slack_output(slack_client):
             continue
 
         text = bot_msg["text"].replace(AT_BOT, "").strip().lower()
+        text = text.replace("has joined the group", "new_channel")
         channel = bot_msg["channel"]
         return text, channel
 
