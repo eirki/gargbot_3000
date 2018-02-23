@@ -159,7 +159,8 @@ def wait_for_slack_output(slack_client):
             continue
 
         text = bot_msg["text"].replace(AT_BOT, "").strip().lower()
-        text = text.replace("has joined the group", "new_channel")
+        if "has joined the " in text:
+            text = "new_channel"
         channel = bot_msg["channel"]
         return text, channel
 
