@@ -19,6 +19,7 @@ import database_manager
 import droppics
 import quotes
 import congrats
+import games
 
 
 command_explanation = (
@@ -31,7 +32,7 @@ command_explanation = (
 )
 
 
-def command_handler_wrapper(quotes_db, drop_pics):
+def command_handler_wrapper(quotes_db, drop_pics, games):
     def cmd_ping():
         """if command is 'ping' """
         response = {"text": "GargBot 3000 is active. Beep boop beep"}
@@ -45,6 +46,22 @@ def command_handler_wrapper(quotes_db, drop_pics):
             + command_explanation
         )
         response = {"text": text}
+        return response
+
+    def cmd_games(user, *args):
+        """if command is 'game'"""
+        output = games.main(user, *args)
+        if isinstance(output, str) or output is None:
+            response = {"text": output}
+        else:
+            response = {"attachments":
+                        [{"title": (":star2: " * stars) + name,
+                          "author_icon": picurl,
+                          "fallback": url,
+                          "text": f"Votes: {votes}. (Game #{game_number})"}
+                         for game_number, name, url, picurl, votes, stars in output]
+                        }
+            return response
         return response
 
     def cmd_pic(*args):
@@ -104,6 +121,7 @@ def command_handler_wrapper(quotes_db, drop_pics):
     switch = {
         "ping": cmd_ping,
         "new_channel": cmd_welcome,
+        "games": cmd_games,
         "pic": cmd_pic,
         "quote": cmd_quote,
         "/random": cmd_random,
@@ -158,11 +176,12 @@ def wait_for_slack_output(slack_client):
         except StopIteration:
             continue
 
-        text = bot_msg["text"].replace(AT_BOT, "").strip().lower()
+        text = bot_msg["text"].replace(AT_BOT, "").strip()
         if "has joined the " in text:
             text = "new_channel"
         channel = bot_msg["channel"]
-        return text, channel
+        user = bot_msg["user"]
+        return text, channel, user
 
 
 def send_response(slack_client, response, channel):
@@ -189,12 +208,14 @@ def setup():
     drop_pics = droppics.DropPics(db=db_connection)
     drop_pics.connect_dbx()
 
+    games_db = games.Games(db=db_connection)
+
     slack_client = SlackClient(config.slack_token)
     connected = slack_client.rtm_connect()
     if not connected:
         raise Exception("Connection failed. Invalid Slack token or bot ID?")
 
-    command_switch = command_handler_wrapper(quotes_db, drop_pics)
+    command_switch = command_handler_wrapper(quotes_db, drop_pics, games_db)
 
     congrats_thread = threading.Thread(
         target=handle_congrats,
@@ -213,10 +234,13 @@ def main():
     try:
         while True:
             time.sleep(1)
-            text, channel = wait_for_slack_output(slack_client)
+            text, channel, user = wait_for_slack_output(slack_client)
 
             command_str, *args = text.split()
+            command_str = command_str.lower()
             log.info(f"command: {command_str}")
+            if command_str == "games":
+                args.insert(0, user)
             log.info(f"args: {args}")
 
             try:
