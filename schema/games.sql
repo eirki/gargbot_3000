@@ -2,8 +2,6 @@ DROP TABLE IF EXISTS games;
 CREATE TABLE games (
 game_id mediumint(8) unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT,
 name CHAR(50),
-url CHAR(255) DEFAULT '',
-pic_url CHAR(255) DEFAULT ''
 );
 
 DROP TABLE IF EXISTS games_votes;

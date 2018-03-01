@@ -23,6 +23,7 @@ import games
 
 
 command_explanation = (
+    "`@gargbot_3000 games`: viser liste over spillnight-spill\n"
     "`@gargbot_3000 pic [lark/fe/skating/henging] [gargling] [år]`: viser random bilde\n"
     "`@gargbot_3000 quote [garling]`: henter tilfeldig sitat fra forumet\n"
     "`@gargbot_3000 vidoi`: viser tilfeldig musikkvideo fra muzakvidois tråden på forumet\n"
@@ -32,7 +33,7 @@ command_explanation = (
 )
 
 
-def command_handler_wrapper(quotes_db, drop_pics, games):
+def command_handler_wrapper(quotes_db, drop_pics, games_db):
     def cmd_ping():
         """if command is 'ping' """
         response = {"text": "GargBot 3000 is active. Beep boop beep"}
@@ -50,16 +51,17 @@ def command_handler_wrapper(quotes_db, drop_pics, games):
 
     def cmd_games(user, *args):
         """if command is 'game'"""
-        output = games.main(user, *args)
-        if isinstance(output, str) or output is None:
+        output = games_db.main(user, *args)
+        if output is None:
+            return
+        elif isinstance(output, str):
             response = {"text": output}
         else:
-            response = {"attachments":
+            response = {"text": games.command_explanation,
+                        "attachments":
                         [{"title": (":star2: " * stars) + name,
-                          "author_icon": picurl,
-                          "fallback": url,
                           "text": f"Votes: {votes}. (Game #{game_number})"}
-                         for game_number, name, url, picurl, votes, stars in output]
+                         for game_number, name, votes, stars in output]
                         }
             return response
         return response
@@ -264,6 +266,9 @@ def main():
             except Exception as exc:
                 log.error(traceback.format_exc())
                 response = cmd_panic(exc)
+
+            if response is None:
+                continue
 
             send_response(slack_client, response, channel)
 
