@@ -59,10 +59,10 @@ def command_handler_wrapper(quotes_db, drop_pics, games_db):
         else:
             response = {"text": games.command_explanation,
                         "attachments":
-                        [{"title": (":star2: " * stars) + name,
-                          "text": f"Votes: {votes}. (Game #{game_number})",
-                          "color": color}
-                         for game_number, name, votes, stars, color in output]
+                        [{"title": f"{game.stars} {game.name}",
+                          "text": f"Votes: {game.votes}. (Game #{game.number})",
+                          "color": game.color}
+                         for game in output]
                         }
             return response
         return response

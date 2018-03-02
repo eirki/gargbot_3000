@@ -3,8 +3,7 @@
 from logger import log
 
 import random
-from operator import itemgetter
-from collections import Counter
+from operator import attrgetter
 
 import MySQLdb
 
@@ -128,23 +127,29 @@ class Games:
 
     def list(self):
         with self.db as cursor:
-            sql_cmd = "SELECT game_id, name, color FROM games"
+            sql_cmd = (
+                "SELECT g.game_id, g.name, g.color, v.votes, s.stars FROM games as g "
+                "LEFT JOIN (SELECT COUNT(*) as votes, game_id FROM games_votes GROUP BY game_id) "
+                "as v ON g.game_id = v.game_id "
+                "LEFT JOIN (SELECT COUNT(*) as stars, game_id FROM games_stars GROUP BY game_id) "
+                "as s ON g.game_id = s.game_id;"
+            )
             cursor.execute(sql_cmd)
-            games = cursor.fetchall()
+            result = cursor.fetchall()
 
-            sql_cmd = "SELECT game_id FROM games_votes"
-            cursor.execute(sql_cmd)
-            votes = Counter([vote[0] for vote in cursor.fetchall()])
+        class Game:
+            def __init__(self, number, name, color, votes, stars):
+                self.number = number
+                self.name = name
+                self.votes = votes if votes is not None else 0
+                self.n_stars = stars if stars is not None else 0
+                self.stars = " ".join([":star2:"] * stars) if stars is not None else ""
+                self.color = f"#{color}"
 
-            sql_cmd = "SELECT game_id FROM games_stars"
-            cursor.execute(sql_cmd)
-            stars = Counter([star[0] for star in cursor.fetchall()])
-        entries = [
-            (game_number, name,  votes.get(game_number, 0), stars.get(game_number, 0), f"#{color}")
-            for game_number, name, color in games
-        ]
-        entries.sort(key=itemgetter(3, 2, 0), reverse=True)
-        return entries
+        games = [Game(*game) for game in result]
+        games.sort(key=attrgetter("name"))
+        games.sort(key=attrgetter("n_stars", "votes"), reverse=True)
+        return games
 
     def main(self, user, *args):
         print(user, args)
