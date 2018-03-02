@@ -34,44 +34,44 @@ class Games:
     def add(self, *args):
         name = " ".join(args)
         data = {"name": name}
-        sql_cmd = "INSERT INTO games (name) VALUES (%(name)s)"
+        sql_cmd1 = "INSERT INTO games (name) VALUES (%(name)s)"
         with self.db as cursor:
-            cursor.execute(sql_cmd, data)
+            cursor.execute(sql_cmd1, data)
 
-    def modify(self, game_number, game_name):
-        exists = self._get_name_if_exists(game_number)
-        if exists is None:
+        sql_cmd2 = "SELECT game_id from games WHERE (name = %(name)s)"
+        with self.db as cursor:
+            cursor.execute(sql_cmd2, data)
+            result = cursor.fetchone()
+        game_id = result[0]
+        return f"{name} added with game_number {game_id}"
+
+    def modify(self, game_number, new_name):
+        old_name = self._get_name_if_exists(game_number)
+        if old_name is None:
             error_msg = f"Game # {game_number} finnes ikke =("
             return error_msg
 
         data = {
             "game_id": game_number,
-            "game_name": game_name,
+            "new_name": new_name,
         }
 
-        sql_cmd = "UPDATE games SET game_name = %(game_name)s WHERE game_id = %(game_id)s"
+        sql_cmd = "UPDATE games SET name = %(new_name)s WHERE game_id = %(game_id)s"
         with self.db as cursor:
             cursor.execute(sql_cmd, data)
-            try:
-                cursor.execute(sql_cmd, data)
-                return f"{game_name} added!"
-            except MySQLdb.IntegrityError:
-                return f"{game_name} already added!"
+        return f"{old_name} changed to {new_name}!"
 
     def remove(self, game_number):
-        exists = self._get_name_if_exists(game_number)
-        if exists is None:
+        game_name = self._get_name_if_exists(game_number)
+        if game_name is None:
             error_msg = f"Game # {game_number} finnes ikke =( Husk å bruke spill nummer"
             return error_msg
 
         data = {"game_id": game_number}
         sql_cmd1 = "DELETE FROM games WHERE game_id = %(game_id)s"
-        sql_cmd2 = "DELETE FROM games_votes WHERE game_id = %(game_id)s"
-        sql_cmd3 = "DELETE FROM games_stars WHERE game_id = %(game_id)s"
         with self.db as cursor:
             cursor.execute(sql_cmd1, data)
-            cursor.execute(sql_cmd2, data)
-            cursor.execute(sql_cmd3, data)
+        return f"{game_name} removed!"
 
     def vote(self, gargling, game_number):
         game_name = self._get_name_if_exists(game_number)
@@ -113,6 +113,7 @@ class Games:
         with self.db as cursor:
             try:
                 cursor.execute(sql_cmd, data)
+                return f":star2: for {game_name}!"
             except MySQLdb.IntegrityError:
                 error_msg = "Du har allerede stemt på den. Einstein."
                 return error_msg
