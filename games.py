@@ -107,7 +107,7 @@ class Games:
             error_msg = f"Game # {game_number} finnes ikke =( Husk å bruke spill nummer"
             return error_msg
 
-        self.unstar(gargling)
+        self._unstar(gargling)
         data = {"game_id": game_number, "slack_id": gargling}
         sql_cmd = "INSERT INTO games_stars (game_id,  slack_id) VALUES (%(game_id)s,  %(slack_id)s)"
         with self.db as cursor:
@@ -116,6 +116,12 @@ class Games:
             except MySQLdb.IntegrityError:
                 error_msg = "Du har allerede stemt på den. Einstein."
                 return error_msg
+
+    def _unstar(self, gargling):
+        data = {"slack_id": gargling}
+        sql_cmd = "DELETE FROM games_stars WHERE slack_id = %(slack_id)s"
+        with self.db as cursor:
+            cursor.execute(sql_cmd, data)
 
     def list(self):
         with self.db as cursor:
