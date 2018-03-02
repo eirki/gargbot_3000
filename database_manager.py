@@ -11,14 +11,14 @@ import json
 import traceback
 
 import MySQLdb
-from MySQLdb.cursors import Cursor
+from MySQLdb.cursors import DictCursor
 import PIL
 import dropbox
 
 import config
 
 
-class LoggingCursor(Cursor):
+class LoggingCursor(DictCursor):
     def execute(self, query, args=None):
         log.info(query % args if args else query)
         super().execute(query, args)

@@ -32,10 +32,13 @@ class Garg:
 
     @staticmethod
     def _fetch_url(cursor, topic_id, extract_func):
-        sql = f"SELECT post_text, bbcode_uid FROM phpbb_posts WHERE topic_id = {topic_id} ORDER BY RAND() LIMIT 1"
+        data = {"topic_id": topic_id}
+        sql = f"SELECT post_text, bbcode_uid FROM phpbb_posts WHERE topic_id = %(topic_id)s ORDER BY RAND() LIMIT 1"
         for _ in range(20):
-            cursor.execute(sql)
-            post_text, bbcode_uid = cursor.fetchall()[0]
+            cursor.execute(sql, data)
+            result = cursor.fetchone()
+            post_text = result["post_text"]
+            bbcode_uid = result["bbcode_uid"]
             sanitized = Garg._sanitize(post_text, bbcode_uid)
             try:
                 url = extract_func(sanitized)
@@ -58,9 +61,11 @@ class Garg:
                f"FROM phpbb_posts WHERE db_id {user_filter} ORDER BY RAND() LIMIT 1")
 
         cursor.execute(sql)
-        db_id, post_text, post_time, post_id, bbcode_uid = cursor.fetchall()[0]
+        result = cursor.fetchone()
+        db_id = result["db_id"]
+        post_id = result["post_id"]
         user = user if user is not None else config.db_ids_to_slack_nicks[db_id]
-        post = Garg._sanitize(post_text, bbcode_uid)
+        post = Garg._sanitize(result["post_text"], result["bbcode_uid"])
         quote = (
             f"{post}\n"
             "------\n"
@@ -97,31 +102,31 @@ class MSN:
             user_filter = ""
         sql = f"SELECT session_ID FROM msn_messages {user_filter} ORDER BY RAND() LIMIT 1"
         cursor.execute(sql)
-        session_ID = cursor.fetchone()[0]
+        session_ID = cursor.fetchone()["session_ID"]
         log.info(session_ID)
         sql = ("SELECT msg_time, from_user, to_users, msg_text, msg_color, db_id "
                f'FROM msn_messages WHERE session_ID = "{session_ID}"')
         cursor.execute(sql)
         messages = list(cursor.fetchall())
-        messages.sort(key=itemgetter(0))
+        messages.sort(key=itemgetter("msg_time"))
         if user is not None:
-            first = next(i for i, message in enumerate(messages) if message[5] == db_id)
+            first = next(i for i, message in enumerate(messages) if message["db_id"] == db_id)
         elif len(messages) <= 10:
             first = 0
         else:
             first = random.randint(0, len(messages)-10)
-        chosen = messages[first:first+10]
+        chosen_messages = messages[first:first+10]
 
-        date = chosen[0][0].strftime("%d.%m.%y %H:%M")
+        date = chosen_messages[0]["msg_time"].strftime("%d.%m.%y %H:%M")
 
         convo = []
-        for msg_time, from_user, to_users, msg_text, msg_color, db_id in chosen:
+        for message in chosen_messages:
             if convo:
                 prev_from_user, prev_msg_text, prev_msg_color = convo[-1]
-                if from_user == prev_from_user:
-                    convo[-1][1] = "\n".join([prev_msg_text, msg_text])
+                if message["from_user"] == prev_from_user:
+                    convo[-1][1] = "\n".join([prev_msg_text, message["msg_text"]])
                     continue
-            convo.append([from_user, msg_text, msg_color])
+            convo.append([message["from_user"], message["msg_text"], message["msg_color"]])
 
         return date, convo
 
@@ -143,7 +148,7 @@ class Quotes:
         cursor = self.db.cursor()
         sql_command = "SELECT slack_nick, db_id FROM user_ids"
         cursor.execute(sql_command)
-        return dict(cursor.fetchall())
+        return {row['slack_nick']: row['db_id'] for row in cursor.fetchall()}
 
     def garg(self, func, *args):
         c = self.db.cursor()

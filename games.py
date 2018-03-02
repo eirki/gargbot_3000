@@ -3,7 +3,7 @@
 from logger import log
 
 import random
-from operator import attrgetter
+from operator import itemgetter
 
 import MySQLdb
 
@@ -29,7 +29,7 @@ class Games:
         with self.db as cursor:
             cursor.execute(sql_cmd, data)
             result = cursor.fetchone()
-        return result[0] if result is not None else result
+        return result['name'] if result is not None else None
 
     def add(self, *args):
         name = " ".join(args)
@@ -43,7 +43,7 @@ class Games:
         with self.db as cursor:
             cursor.execute(sql_cmd2, data)
             result = cursor.fetchone()
-        game_id = result[0]
+        game_id = result['game_id']
         return f"{name} added with game_number {game_id}"
 
     def modify(self, game_number, new_name):
@@ -135,20 +135,18 @@ class Games:
                 "as s ON g.game_id = s.game_id;"
             )
             cursor.execute(sql_cmd)
-            result = cursor.fetchall()
+            games = list(cursor.fetchall())
+        for game in games:
+            game["color"] = f"#{game['color']}"
+            if game["votes"] is None:
+                game["votes"] = 0
+            if game["stars"] is None:
+                game["stars"] = 0
+            game["stars_str"] = " ".join([":star2:"] * game["stars"])
 
-        class Game:
-            def __init__(self, number, name, color, votes, stars):
-                self.number = number
-                self.name = name
-                self.votes = votes if votes is not None else 0
-                self.n_stars = stars if stars is not None else 0
-                self.stars = " ".join([":star2:"] * stars) if stars is not None else ""
-                self.color = f"#{color}"
-
-        games = [Game(*game) for game in result]
-        games.sort(key=attrgetter("name"))
-        games.sort(key=attrgetter("n_stars", "votes"), reverse=True)
+        games.sort(key=itemgetter("name"))
+        games.sort(key=itemgetter("stars", "votes"), reverse=True)
+        print(games)
         return games
 
     def main(self, user, *args):

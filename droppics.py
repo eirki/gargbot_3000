@@ -25,19 +25,19 @@ class DropPics:
         self.possible_args = self.topics | self.years | set(self.users)
 
     def get_years(self, cursor):
-        sql_command = "SELECT DISTINCT YEAR(taken) FROM dbx_pictures ORDER BY YEAR(taken)"
+        sql_command = "SELECT DISTINCT YEAR(taken) as year FROM dbx_pictures ORDER BY YEAR(taken)"
         cursor.execute(sql_command)
-        return set(str(year[0]) for year in cursor.fetchall())
+        return set(str(row['year']) for row in cursor.fetchall())
 
     def get_topics(self, cursor):
         sql_command = "SELECT topic FROM dbx_pictures"
         cursor.execute(sql_command)
-        return set(topic[0] for topic in cursor.fetchall())
+        return set(row['topic'] for row in cursor.fetchall())
 
     def get_users(self, cursor):
         sql_command = "SELECT slack_nick, db_id FROM user_ids"
         cursor.execute(sql_command)
-        return dict(cursor.fetchall())
+        return {row['slack_nick']: row['db_id'] for row in cursor.fetchall()}
 
     def connect_dbx(self):
         self.dbx = dropbox.Dropbox(config.dropbox_token)
@@ -120,7 +120,9 @@ class DropPics:
         data = {"topic": random.choice(list(self.topics))}
 
         cursor.execute(sql_command, data)
-        path, date_obj = cursor.fetchone()
+        result = cursor.fetchone()
+        path = result["path"]
+        date_obj = result["taken"]
         url = self.get_url_for_dbx_path(path)
         timestamp = self.get_timestamp(date_obj)
         return url, timestamp
@@ -149,7 +151,8 @@ class DropPics:
         if db_data is not None:
             valid_args_fmt = ", ".join(f"`{arg}`" for arg in valid_args)
             description += f"Her er et bilde med {valid_args_fmt}:"
-            path, date_obj = db_data
+            path = db_data["path"]
+            date_obj = db_data["taken"]
             url = self.get_url_for_dbx_path(path)
             timestamp = self.get_timestamp(date_obj)
             return url, timestamp, description
@@ -166,7 +169,8 @@ class DropPics:
 
                 arg_combination_fmt = ", ".join(f"`{arg}`" for arg in arg_combination)
                 description += f"Her er et bilde med {arg_combination_fmt} i stedet:"
-                path, date_obj = db_data
+                path = db_data["path"]
+                date_obj = db_data["taken"]
                 url = self.get_url_for_dbx_path(path)
                 timestamp = self.get_timestamp(date_obj)
                 return url, timestamp, description
