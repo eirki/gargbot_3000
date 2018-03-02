@@ -2,6 +2,7 @@
 # coding: utf-8
 from logger import log
 
+import random
 from operator import itemgetter
 from collections import Counter
 
@@ -33,8 +34,9 @@ class Games:
 
     def add(self, *args):
         name = " ".join(args)
-        data = {"name": name}
-        sql_cmd = "INSERT INTO games (name) VALUES (%(name)s)"
+        color = "%06x" % random.randint(0, 0xFFFFFF)
+        data = {"name": name, "color": color}
+        sql_cmd = "INSERT INTO games (name, color) VALUES (%(name)s, %(color)s)"
         with self.db as cursor:
             cursor.execute(sql_cmd, data)
 
@@ -65,13 +67,9 @@ class Games:
             return error_msg
 
         data = {"game_id": game_number}
-        sql_cmd1 = "DELETE FROM games WHERE game_id = %(game_id)s"
-        sql_cmd2 = "DELETE FROM games_votes WHERE game_id = %(game_id)s"
-        sql_cmd3 = "DELETE FROM games_stars WHERE game_id = %(game_id)s"
+        sql_cmd = "DELETE FROM games WHERE game_id = %(game_id)s"
         with self.db as cursor:
-            cursor.execute(sql_cmd1, data)
-            cursor.execute(sql_cmd2, data)
-            cursor.execute(sql_cmd3, data)
+            cursor.execute(sql_cmd, data)
 
     def vote(self, gargling, game_number):
         game_name = self._get_name_if_exists(game_number)
@@ -125,7 +123,7 @@ class Games:
 
     def list(self):
         with self.db as cursor:
-            sql_cmd = "SELECT game_id, name FROM games"
+            sql_cmd = "SELECT game_id, name, color FROM games"
             cursor.execute(sql_cmd)
             games = cursor.fetchall()
 
@@ -137,8 +135,8 @@ class Games:
             cursor.execute(sql_cmd)
             stars = Counter([star[0] for star in cursor.fetchall()])
         entries = [
-            (game_number, name,  votes.get(game_number, 0), stars.get(game_number, 0))
-            for game_number, name, in games
+            (game_number, name,  votes.get(game_number, 0), stars.get(game_number, 0), f"#{color}")
+            for game_number, name, color in games
         ]
         entries.sort(key=itemgetter(3, 2, 0), reverse=True)
         return entries
