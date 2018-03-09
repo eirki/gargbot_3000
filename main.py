@@ -239,7 +239,12 @@ def main():
             time.sleep(1)
             text, channel, user = wait_for_slack_output(slack_client)
 
-            command_str, *args = text.split()
+            try:
+                command_str, *args = text.split()
+            except ValueError:
+                command_str = ""
+                args = []
+
             command_str = command_str.lower()
             log.info(f"command: {command_str}")
             if command_str == "games":
