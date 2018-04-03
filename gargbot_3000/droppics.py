@@ -11,9 +11,13 @@ import dropbox
 
 from gargbot_3000 import config
 
+from typing import Set, Tuple
+from MySQLdb.connections import Connection
+from database_manager import LoggingCursor
+import datetime as dt
 
 class DropPics:
-    def __init__(self, db):
+    def __init__(self, db: Connection):
         self.db = db
         cursor = self.db.cursor()
         self.years = self.get_years(cursor)
@@ -24,17 +28,17 @@ class DropPics:
         self.users_fmt = ", ".join(f"`{user}`" for user in self.users.keys())
         self.possible_args = self.topics | self.years | set(self.users)
 
-    def get_years(self, cursor):
+    def get_years(self, cursor: LoggingCursor):
         sql_command = "SELECT DISTINCT YEAR(taken) as year FROM dbx_pictures ORDER BY YEAR(taken)"
         cursor.execute(sql_command)
         return set(str(row['year']) for row in cursor.fetchall())
 
-    def get_topics(self, cursor):
+    def get_topics(self, cursor: LoggingCursor):
         sql_command = "SELECT topic FROM dbx_pictures"
         cursor.execute(sql_command)
         return set(row['topic'] for row in cursor.fetchall())
 
-    def get_users(self, cursor):
+    def get_users(self, cursor: LoggingCursor):
         sql_command = "SELECT slack_nick, db_id FROM user_ids"
         cursor.execute(sql_command)
         return {row['slack_nick']: row['db_id'] for row in cursor.fetchall()}
@@ -44,7 +48,7 @@ class DropPics:
         self.dbx.users_get_current_account()
         log.info("Connected to dbx")
 
-    def get_description_for_invalid_args(self, invalid_args):
+    def get_description_for_invalid_args(self, invalid_args: Set[str]):
         invalid_args_fmt = ", ".join(f"`{arg}`" for arg in invalid_args)
         description = (
             f"Im so stoopid! Skjønte ikke {invalid_args_fmt}. =( Jeg skjønner bare "
@@ -54,7 +58,7 @@ class DropPics:
         )
         return description
 
-    def get_sql_for_args(self, args):
+    def get_sql_for_args(self, args: Set[str]):
         sql_filter = []
         sql_data = {}
 
@@ -92,27 +96,27 @@ class DropPics:
                 sql_filter.append(f"FIND_IN_SET('%(db_id{db_id})s',f.db_ids)")
                 sql_data[f"db_id{db_id}"] = db_id
 
-        sql_filter = "WHERE " + " AND ".join(sql_filter)
+        sql_filter_str = "WHERE " + " AND ".join(sql_filter)
         sql_command = (
             'SELECT p.path, p.taken FROM dbx_pictures as p '
-            f'{join} {sql_filter} ORDER BY RAND() LIMIT 1'
+            f'{join} {sql_filter_str} ORDER BY RAND() LIMIT 1'
         )
         return sql_command, sql_data
 
-    def get_timestamp(self, date_obj):
+    def get_timestamp(self, date_obj: dt.datetime):
         return int(time.mktime(date_obj.timetuple()))
 
-    def get_url_for_dbx_path(self, path):
+    def get_url_for_dbx_path(self, path: str):
         response = self.dbx.sharing_create_shared_link(path)
         url = response.url.replace("?dl=0", "?raw=1")
         return url
 
-    def get_dbx_path_sql_cmd(self, cursor, sql_command, sql_data):
+    def get_dbx_path_sql_cmd(self, cursor: LoggingCursor, sql_command: str, sql_data: dict):
         cursor.execute(sql_command, sql_data)
         db_data = cursor.fetchone()
         return db_data
 
-    def get_random_pic(self, cursor):
+    def get_random_pic(self, cursor: LoggingCursor):
         sql_command = (
             'SELECT path, taken FROM dbx_pictures '
             'WHERE topic = %(topic)s ORDER BY RAND() LIMIT 1'
@@ -127,15 +131,15 @@ class DropPics:
         timestamp = self.get_timestamp(date_obj)
         return url, timestamp
 
-    def get_pic(self, *args):
+    def get_pic(self, *arg_list: list) -> Tuple[str, int, str]:
         description = ""
         cursor = self.db.cursor()
 
-        if not args:
+        if not arg_list:
             url, timestamp = self.get_random_pic(cursor)
             return url, timestamp, description
 
-        args = set(args)
+        args = set(arg_list)
         invalid_args = args - self.possible_args
         valid_args = args - invalid_args
 

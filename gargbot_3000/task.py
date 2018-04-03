@@ -21,6 +21,8 @@ from gargbot_3000 import quotes
 from gargbot_3000 import congrats
 from gargbot_3000 import games
 
+from typing import Dict, Tuple, Callable
+from MySQLdb.connections import Connection
 
 command_explanation = (
     "`@gargbot_3000 games`: viser liste over spillnight-spill\n"
@@ -33,13 +35,17 @@ command_explanation = (
 )
 
 
-def command_handler_wrapper(quotes_db, drop_pics, games_db):
-    def cmd_ping():
+def command_handler_wrapper(
+        quotes_db: quotes.Quotes,
+        drop_pics: droppics.DropPics,
+        games_db: games.Games) -> Dict[str, Callable]:
+
+    def cmd_ping() -> Dict:
         """if command is 'ping' """
         response = {"text": "GargBot 3000 is active. Beep boop beep"}
         return response
 
-    def cmd_welcome():
+    def cmd_welcome() -> Dict:
         """when joining new channel"""
         text = (
             "Hei hei kjære alle sammen!\n"
@@ -49,7 +55,7 @@ def command_handler_wrapper(quotes_db, drop_pics, games_db):
         response = {"text": text}
         return response
 
-    def cmd_games(user, *args):
+    def cmd_games(user: str, *args) -> Dict:
         """if command is 'game'"""
         output = games_db.main(user, *args)
         if output is None:
@@ -67,7 +73,7 @@ def command_handler_wrapper(quotes_db, drop_pics, games_db):
             return response
         return response
 
-    def cmd_pic(*args):
+    def cmd_pic(*args) -> Dict:
         """if command is 'pic'"""
         picurl, timestamp, error_text = drop_pics.get_pic(*args)
         response = {"attachments": [{"fallback":  picurl,
@@ -78,7 +84,7 @@ def command_handler_wrapper(quotes_db, drop_pics, games_db):
 
         return response
 
-    def cmd_quote(*user):
+    def cmd_quote(*user) -> Dict:
         """if command is 'quote'"""
         if user:
             response = {"text": quotes_db.garg("quote", *user)}
@@ -86,18 +92,18 @@ def command_handler_wrapper(quotes_db, drop_pics, games_db):
             response = {"text": quotes_db.garg("quote")}
         return response
 
-    def cmd_random():
+    def cmd_random() -> Dict:
         """if command is '/random'"""
         response = {"attachments": [{"fallback":  quotes_db.garg("random"),
                                      "image_url": quotes_db.garg("random")}]}
         return response
 
-    def cmd_vidoi():
+    def cmd_vidoi() -> Dict:
         """if command is 'vidoi'"""
         response = {"text": quotes_db.garg("vidoi")}
         return response
 
-    def cmd_msn(*user):
+    def cmd_msn(*user) -> Dict:
         """if command is 'msn'"""
         if user:
             date, text = quotes_db.msn(*user)
@@ -113,7 +119,7 @@ def command_handler_wrapper(quotes_db, drop_pics, games_db):
         response["attachments"][0]["pretext"] = date
         return response
 
-    def cmd_hvem(*qtn):
+    def cmd_hvem(*qtn) -> Dict:
         """if command.lower().startswith("hvem")"""
         user = random.choice(config.gargling_names)
         answ = " ".join(qtn).replace("?", "!")
@@ -135,7 +141,7 @@ def command_handler_wrapper(quotes_db, drop_pics, games_db):
     return switch
 
 
-def cmd_not_found(command):
+def cmd_not_found(command: str) -> Dict:
     text = (
         f"Beep boop beep! Nôt sure whåt you mean by `{command}`. "
         "Dette er kommandoene jeg skjønner:\n"
@@ -145,7 +151,7 @@ def cmd_not_found(command):
     return response
 
 
-def cmd_panic(exc):
+def cmd_panic(exc) -> Dict:
     text = (
         f"Error, error! Noe har gått fryktelig galt: {str(exc)}! Ææææææ. Ta kontakt"
         " med systemadministrator umiddelbart, før det er for sent. "
@@ -155,7 +161,7 @@ def cmd_panic(exc):
     return response
 
 
-def wait_for_slack_output(slack_client):
+def wait_for_slack_output(slack_client: SlackClient) -> Tuple[str, str, str]:
     """
         The Slack Real Time Messaging API is an events firehose.
         This parsing function returns when a message is
@@ -187,13 +193,13 @@ def wait_for_slack_output(slack_client):
         return text, channel, user
 
 
-def send_response(slack_client, response, channel):
+def send_response(slack_client: SlackClient, response: Dict, channel: str):
     log.info(dt.datetime.now())
     log.info(f"response: {response}")
     slack_client.api_call("chat.postMessage", channel=channel, as_user=True, **response)
 
 
-def handle_congrats(slack_client, drop_pics):
+def handle_congrats(slack_client: SlackClient, drop_pics):
     birthdays = congrats.get_birthdays()
     for birthday in itertools.cycle(birthdays):
         log.info(f"Next birthday: {birthday.nick}, at {birthday.next_bday}")
@@ -203,7 +209,7 @@ def handle_congrats(slack_client, drop_pics):
         send_response(slack_client, response=response, channel=config.main_channel)
 
 
-def setup():
+def setup() -> Tuple[SlackClient, Dict, Connection]:
     db_connection = database_manager.connect_to_database()
 
     quotes_db = quotes.Quotes(db=db_connection)
@@ -284,5 +290,5 @@ def main():
         db_connection.close()
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
