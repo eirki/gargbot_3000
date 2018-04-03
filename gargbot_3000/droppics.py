@@ -13,7 +13,7 @@ from gargbot_3000 import config
 
 from typing import Set, Tuple
 from MySQLdb.connections import Connection
-from database_manager import LoggingCursor
+from gargbot_3000.database_manager import LoggingCursor
 import datetime as dt
 
 class DropPics:
