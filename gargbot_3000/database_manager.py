@@ -1,6 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from logger import log
+from gargbot_3000.logger import log
 
 import os
 from xml.dom.minidom import parseString
@@ -15,7 +15,7 @@ from MySQLdb.cursors import DictCursor
 import PIL
 import dropbox
 
-import config
+from gargbot_3000 import config
 
 
 class LoggingCursor(DictCursor):
@@ -207,11 +207,11 @@ class DropPics:
         cursor = self.db.cursor()
         cursor.execute(sql)
         all_pics = cursor.fetchall()
-        print(len(all_pics))
+        log.info(len(all_pics))
         errors = []
         for pic_id, path in all_pics:
             try:
-                print(path)
+                log.info(path)
                 md = self.dbx.files_get_metadata(path, include_media_info=True)
                 date_obj = md.media_info.get_metadata().time_taken
                 timestr = date_obj.strftime('%Y-%m-%d %H:%M:%S')
@@ -224,11 +224,11 @@ class DropPics:
                 cursor.execute(sql_command, data)
             except Exception as exc:
                 errors.append([pic_id, path, exc])
-                traceback.print_exc()
+                traceback.log.info_exc()
         self.db.commit()
         if errors:
-            print("ERRORS:")
-            print(errors)
+            log.info("ERRORS:")
+            log.info(errors)
 
     def add_new_pics(self, folder, topic, root):
         cursor = self.db.cursor()
@@ -279,7 +279,7 @@ class DropPics:
             try:
                 pic_id = cursor.fetchone()[0]
             except TypeError:
-                print(f"pic not in db: {path}")
+                log.info(f"pic not in db: {path}")
                 continue
             for face in faces:
                 garg_id = config.slack_nicks_to_garg_ids[face]

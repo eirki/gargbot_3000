@@ -4,8 +4,9 @@
 # From https://help.pythonanywhere.com/pages/LongRunningTasks/
 import socket
 import sys
+import time
 
-import config
+from gargbot_3000 import config
 
 
 lock_socket = None  # we want to keep the socket open until the very end of
@@ -22,13 +23,28 @@ def is_lock_free():
         return True
     except socket.error:
         # socket already locked, task must already be running
-        print(f"Failed to acquire lock {lock_id}")
         return False
 
 
-if not is_lock_free():
-    sys.exit()
+def aquire_lock():
+    print("Trying to aquire lock")
+    for _ in range(59):
+        if is_lock_free():
+            break
+        time.sleep(60)
+    else:
+        print("Failed to acquire lock")
+        sys.exit()
 
 
-import main
-main.main()
+if len(sys.argv) >= 3 and sys.argv[2] == "aquire_lock":
+    aquire_lock()
+
+
+if sys.argv[1] == "task":
+    from kamera import task
+    task.main()
+
+elif sys.argv[1] == "server":
+    from kamera import server
+    server.main()

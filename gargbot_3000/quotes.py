@@ -1,6 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from logger import log
+from gargbot_3000.logger import log
 
 import re
 import html
@@ -9,7 +9,7 @@ from operator import itemgetter
 
 import requests
 
-import config
+from gargbot_3000 import config
 
 
 class Garg:

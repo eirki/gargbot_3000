@@ -1,6 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from logger import log
+from gargbot_3000.logger import log
 
 import random
 import time
@@ -9,7 +9,7 @@ import itertools
 
 import dropbox
 
-import config
+from gargbot_3000 import config
 
 
 class DropPics:

@@ -1,6 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from logger import log
+from gargbot_3000.logger import log
 
 import datetime as dt
 from operator import attrgetter
@@ -10,7 +10,7 @@ import random
 
 import MySQLdb
 
-import config
+from gargbot_3000 import config
 
 
 greetings = [
@@ -77,7 +77,7 @@ def get_greeting(person, drop_pics):
     jab = random.choice(jabs)
     text = (
         f"Hurra! Vår felles venn <@{person.slack_id}> fyller {person.age} i dag!\n"
-        f" {greeting}, {jab}"
+        f"{greeting}, {jab}"
     )
     congrats_picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
 

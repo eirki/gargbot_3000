@@ -1,6 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from logger import log
+from gargbot_3000.logger import log
 
 import datetime as dt
 import time
@@ -14,12 +14,12 @@ import MySQLdb
 from slackclient import SlackClient
 import websocket
 
-import config
-import database_manager
-import droppics
-import quotes
-import congrats
-import games
+from gargbot_3000 import config
+from gargbot_3000 import database_manager
+from gargbot_3000 import droppics
+from gargbot_3000 import quotes
+from gargbot_3000 import congrats
+from gargbot_3000 import games
 
 
 command_explanation = (

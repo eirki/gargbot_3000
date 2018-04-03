@@ -1,6 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from logger import log
+from gargbot_3000.logger import log
 
 import random
 from operator import itemgetter
@@ -146,11 +146,11 @@ class Games:
 
         games.sort(key=itemgetter("name"))
         games.sort(key=itemgetter("stars", "votes"), reverse=True)
-        print(games)
+        log.info(games)
         return games
 
     def main(self, user, *args):
-        print(user, args)
+        log.info(user, args)
         switch = {
             "add": self.add,
             "modify": self.modify,
