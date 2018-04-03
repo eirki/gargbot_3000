@@ -42,9 +42,9 @@ if len(sys.argv) >= 3 and sys.argv[2] == "aquire_lock":
 
 
 if sys.argv[1] == "task":
-    from kamera import task
+    from gargbot_3000 import task
     task.main()
 
 elif sys.argv[1] == "server":
-    from kamera import server
+    from gargbot_3000 import server
     server.main()
