@@ -17,13 +17,11 @@ from gargbot_3000 import database_manager
 from gargbot_3000 import droppics
 from gargbot_3000 import quotes
 from gargbot_3000 import congrats
-from gargbot_3000 import games
 
 from MySQLdb.connections import Connection
 from typing import Dict, List, Optional, Any
 
 command_explanation = (
-    "`@gargbot_3000 games`: viser liste over spillnight-spill\n"
     "`@gargbot_3000 pic [lark/fe/skating/henging] [gargling] [år]`: viser random bilde\n"
     "`@gargbot_3000 quote [garling]`: henter tilfeldig sitat fra forumet\n"
     "`@gargbot_3000 vidoi`: viser tilfeldig musikkvideo fra muzakvidois tråden på forumet\n"
@@ -33,7 +31,6 @@ command_explanation = (
 )
 
 db_commands = {
-    "games",
     "pic",
     "quote",
     "random",

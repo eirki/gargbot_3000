@@ -15,7 +15,6 @@ from gargbot_3000 import commands
 from gargbot_3000 import database_manager
 from gargbot_3000 import quotes
 from gargbot_3000 import droppics
-from gargbot_3000 import games
 
 import MySQLdb
 from slackclient import SlackClient
@@ -97,7 +96,6 @@ def setup() -> Tuple[SlackClient, Dict, Connection]:
         "ping": commands.cmd_ping,
         "new_channel": commands.cmd_welcome,
         "hvem": commands.cmd_hvem,
-        "games": partial(commands.cmd_games, db=db_connection),
         "pic": partial(commands.cmd_pic, db=db_connection, drop_pics=drop_pics),
         "quote": partial(commands.cmd_quote, db=db_connection, quotes_db=quotes_db),
         "/random": partial(commands.cmd_random, db=db_connection, quotes_db=quotes_db),
@@ -123,8 +121,6 @@ def main():
 
             command_str = command_str.lower()
             log.info(f"command: {command_str}")
-            if command_str == "games":
-                args.insert(0, user)
             log.info(f"args: {args}")
 
             try:
