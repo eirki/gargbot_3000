@@ -2,22 +2,27 @@
 # coding: utf-8
 from gargbot_3000.logger import log
 
-import traceback
 import time
 import sys
 import datetime as dt
 import threading
 import itertools
+from functools import partial
 
 from gargbot_3000 import config
 from gargbot_3000 import congrats
 from gargbot_3000 import commands
+from gargbot_3000 import database_manager
+from gargbot_3000 import quotes
+from gargbot_3000 import droppics
+from gargbot_3000 import games
 
 import MySQLdb
 from slackclient import SlackClient
 import websocket
 
 from typing import Tuple, Dict
+from MySQLdb.connections import Connection
 
 
 def wait_for_slack_output(slack_client: SlackClient) -> Tuple[str, str, str]:
@@ -58,18 +63,23 @@ def send_response(slack_client: SlackClient, response: Dict, channel: str):
     slack_client.api_call("chat.postMessage", channel=channel, as_user=True, **response)
 
 
-def handle_congrats(slack_client: SlackClient, drop_pics):
+def handle_congrats(db_connection, slack_client: SlackClient, drop_pics):
     birthdays = congrats.get_birthdays()
     for birthday in itertools.cycle(birthdays):
         log.info(f"Next birthday: {birthday.nick}, at {birthday.next_bday}")
         time.sleep(birthday.seconds_to_bday())
-        response = congrats.get_greeting(birthday, drop_pics)
+        response = congrats.get_greeting(birthday, db_connection, drop_pics)
 
         send_response(slack_client, response=response, channel=config.main_channel)
 
 
-def main():
-    command_switch, db_connection = commands.setup()
+def setup() -> Tuple[SlackClient, Dict, Connection]:
+    db_connection = database_manager.connect_to_database()
+
+    quotes_db = quotes.Quotes(db=db_connection)
+
+    drop_pics = droppics.DropPics(db=db_connection)
+    drop_pics.connect_dbx()
 
     slack_client = SlackClient(config.slack_token)
     connected = slack_client.rtm_connect()
@@ -78,13 +88,27 @@ def main():
 
     congrats_thread = threading.Thread(
         target=handle_congrats,
-        args=(slack_client, drop_pics)
+        args=(db_connection, slack_client, drop_pics)
     )
     congrats_thread.daemon = True
     congrats_thread.start()
 
+    command_switch = {
+        "ping": commands.cmd_ping,
+        "new_channel": commands.cmd_welcome,
+        "hvem": commands.cmd_hvem,
+        "games": partial(commands.cmd_games, db=db_connection),
+        "pic": partial(commands.cmd_pic, db=db_connection, drop_pics=drop_pics),
+        "quote": partial(commands.cmd_quote, db=db_connection, quotes_db=quotes_db),
+        "/random": partial(commands.cmd_random, db=db_connection, quotes_db=quotes_db),
+        "vidoi": partial(commands.cmd_vidoi, db=db_connection, quotes_db=quotes_db),
+        "msn": partial(commands.cmd_msn, db=db_connection, quotes_db=quotes_db),
+        }
 
-    log.info("GargBot 3000 is operational!")
+    return slack_client, command_switch, db_connection
+
+
+def main():
 
     try:
         while True:

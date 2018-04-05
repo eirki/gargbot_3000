@@ -11,6 +11,8 @@ import requests
 
 from gargbot_3000 import config
 
+from typing import Optional, List
+
 
 class Garg:
     @staticmethod
@@ -133,8 +135,8 @@ class MSN:
 
 class Quotes:
     def __init__(self, db):
-        self.db = db
-        self.slack_nicks_to_db_ids = self.get_users()
+        with db as cursor:
+            self.slack_nicks_to_db_ids = self._get_users(cursor)
         self.db_ids_to_slack_nicks = {
             nick: db_id for db_id, nick in
             self.slack_nicks_to_db_ids.items()
@@ -144,26 +146,25 @@ class Quotes:
         Garg.slack_nicks_to_db_ids = self.slack_nicks_to_db_ids
         Garg.db_ids_to_slack_nicks = self.db_ids_to_slack_nicks
 
-    def get_users(self):
-        cursor = self.db.cursor()
+    def _get_users(self, cursor):
         sql_command = "SELECT slack_nick, db_id FROM user_ids"
         cursor.execute(sql_command)
         return {row['slack_nick']: row['db_id'] for row in cursor.fetchall()}
 
-    def garg(self, func, *args):
-        c = self.db.cursor()
+    def garg(self, db, func, args: Optional[List[str]]):
+        user = args[0] if args else None
         switch = {
             "quote": Garg.quote,
             "random": Garg.random,
             "vidoi": Garg.vidoi,
         }
         selected = switch[func]
-        result = selected(c, *args)
-        c.close()
+        with db as cursor:
+            result = selected(cursor, user) if args else selected(cursor)
         return result
 
-    def msn(self, user=None):
-        c = self.db.cursor()
-        result = MSN.quote(c, user)
-        c.close()
+    def msn(self, db, args: Optional[List[str]]):
+        user = args[0] if args else None
+        with db as cursor:
+            result = MSN.quote(cursor, user)
         return result

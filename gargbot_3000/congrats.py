@@ -72,7 +72,7 @@ def get_birthdays():
     return birthdays
 
 
-def get_greeting(person, drop_pics):
+def get_greeting(person, db, drop_pics):
     greeting = random.choice(greetings)
     jab = random.choice(jabs)
     text = (
@@ -82,10 +82,10 @@ def get_greeting(person, drop_pics):
     congrats_picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
 
     try:
-        person_picurl, timestamp, error_text = drop_pics.get_pic(person.nick)
+        person_picurl, timestamp, error_text = drop_pics.get_pic(db, person.nick)
     except MySQLdb.OperationalError:
-        drop_pics.db.ping(True)
-        person_picurl, timestamp, error_text = drop_pics.get_pic(person.nick)
+        db.ping(True)
+        person_picurl, timestamp, error_text = drop_pics.get_pic(db, person.nick)
 
     response = {
         "text": text,

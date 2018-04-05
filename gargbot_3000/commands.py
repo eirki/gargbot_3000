@@ -5,10 +5,12 @@ from gargbot_3000.logger import log
 import datetime as dt
 import time
 import random
-import threading
 import itertools
+import contextlib
+import traceback
 
 from slackclient import SlackClient
+import MySQLdb
 
 from gargbot_3000 import config
 from gargbot_3000 import database_manager
@@ -17,8 +19,8 @@ from gargbot_3000 import quotes
 from gargbot_3000 import congrats
 from gargbot_3000 import games
 
-from typing import Dict, Tuple, Callable
 from MySQLdb.connections import Connection
+from typing import Dict, List, Optional, Any
 
 command_explanation = (
     "`@gargbot_3000 games`: viser liste over spillnight-spill\n"
@@ -30,116 +32,111 @@ command_explanation = (
     "`@gargbot_3000 msn [garling]`: utfrag fra tilfeldig msn samtale\n"
 )
 
-
-def command_handler_wrapper(
-        quotes_db: quotes.Quotes,
-        drop_pics: droppics.DropPics,
-        games_db: games.Games) -> Dict[str, Callable]:
-
-    def cmd_ping() -> Dict:
-        """if command is 'ping' """
-        response = {"text": "GargBot 3000 is active. Beep boop beep"}
-        return response
-
-    def cmd_welcome() -> Dict:
-        """when joining new channel"""
-        text = (
-            "Hei hei kjære alle sammen!\n"
-            "Dette er kommandoene jeg skjønner:\n"
-            + command_explanation
-        )
-        response = {"text": text}
-        return response
-
-    def cmd_games(user: str, *args) -> Dict:
-        """if command is 'game'"""
-        output = games_db.main(user, *args)
-        if output is None:
-            return
-        elif isinstance(output, str):
-            response = {"text": output}
-        else:
-            response = {"text": games.command_explanation,
-                        "attachments":
-                        [{"title": f"{game['stars_str']} {game['name']}",
-                          "text": f"Votes: {game['votes']}. (Game #{game['game_id']})",
-                          "color": game['color']}
-                         for game in output]
-                        }
-            return response
-        return response
-
-    def cmd_pic(*args) -> Dict:
-        """if command is 'pic'"""
-        picurl, timestamp, error_text = drop_pics.get_pic(*args)
-        response = {"attachments": [{"fallback":  picurl,
-                                     "image_url": picurl,
-                                     "ts": timestamp}]}
-        if error_text:
-            response["text"] = error_text
-
-        return response
-
-    def cmd_quote(*user) -> Dict:
-        """if command is 'quote'"""
-        if user:
-            response = {"text": quotes_db.garg("quote", *user)}
-        else:
-            response = {"text": quotes_db.garg("quote")}
-        return response
-
-    def cmd_random() -> Dict:
-        """if command is '/random'"""
-        response = {"attachments": [{"fallback":  quotes_db.garg("random"),
-                                     "image_url": quotes_db.garg("random")}]}
-        return response
-
-    def cmd_vidoi() -> Dict:
-        """if command is 'vidoi'"""
-        response = {"text": quotes_db.garg("vidoi")}
-        return response
-
-    def cmd_msn(*user) -> Dict:
-        """if command is 'msn'"""
-        if user:
-            date, text = quotes_db.msn(*user)
-        else:
-            date, text = quotes_db.msn()
-
-        response = {"attachments":
-                    [{"author_name": f"{msg_user}:",
-                      "text": msg_text,
-                      "color": msg_color}
-                     for msg_user, msg_text, msg_color in text]
-                    }
-        response["attachments"][0]["pretext"] = date
-        return response
-
-    def cmd_hvem(*qtn) -> Dict:
-        """if command.lower().startswith("hvem")"""
-        user = random.choice(config.gargling_names)
-        answ = " ".join(qtn).replace("?", "!")
-        text = f"{user} {answ}"
-        response = {"text": text}
-        return response
-
-    switch = {
-        "ping": cmd_ping,
-        "new_channel": cmd_welcome,
-        "games": cmd_games,
-        "pic": cmd_pic,
-        "quote": cmd_quote,
-        "/random": cmd_random,
-        "vidoi": cmd_vidoi,
-        "msn": cmd_msn,
-        "hvem": cmd_hvem,
-        }
-    return switch
+db_commands = {
+    "games",
+    "pic",
+    "quote",
+    "random",
+    "vidoi",
+    "msn",
+}
 
 
-def cmd_not_found(command: str) -> Dict:
+def cmd_ping() -> Dict:
+    """if command is 'ping' """
+    response = {"text": "GargBot 3000 is active. Beep boop beep"}
+    return response
+
+
+def cmd_welcome() -> Dict:
+    """when joining new channel"""
     text = (
-        f"Beep boop beep! Nôt sure whåt you mean by `{command}`. "
+        "Hei hei kjære alle sammen!\n"
+        "Dette er kommandoene jeg skjønner:\n"
+        + command_explanation
+    )
+    response = {"text": text}
+    return response
+
+
+def cmd_games(db: Connection, user: str, args: Optional[List[str]]=None) -> Optional[Dict[str, Any]]:
+    """if command is 'game'"""
+    output = games.main(db, user, args)
+    if output is None:
+        return None
+    elif isinstance(output, str):
+        response = {"text": output}
+    else:
+        response = {"text": games.command_explanation,
+                    "attachments":
+                    [{"title": f"{game['stars_str']} {game['name']}",
+                      "text": f"Votes: {game['votes']}. (Game #{game['game_id']})",
+                      "color": game['color']}
+                     for game in output]
+                    }
+        return response
+    return response
+
+
+def cmd_pic(db: Connection, drop_pics: droppics.DropPics, args: Optional[List[str]]=None) -> Dict:
+    """if command is 'pic'"""
+    picurl, timestamp, error_text = drop_pics.get_pic(db, args)
+    response = {"attachments": [{"fallback":  picurl,
+                                 "image_url": picurl,
+                                 "ts": timestamp}]}
+    if error_text:
+        response["text"] = error_text
+
+    return response
+
+
+def cmd_quote(db: Connection, quotes_db, args: Optional[List[str]]=None) -> Dict:
+    """if command is 'quote'"""
+    text = quotes_db.garg(db, "quote", args)
+    response = {"text": text}
+    return response
+
+
+def cmd_random(db: Connection, quotes_db) -> Dict:
+    """if command is '/random'"""
+    url = quotes_db.garg(db, "random")
+    response = {"attachments": [{"fallback":  url,
+                                 "image_url": url}]}
+    return response
+
+
+def cmd_vidoi(db: Connection, quotes_db) -> Dict:
+    """if command is 'vidoi'"""
+    response = {"text": quotes_db.garg(db, "vidoi")}
+    return response
+
+
+def cmd_msn(db: Connection, quotes_db, args: Optional[List[str]]=None) -> Dict:
+    """if command is 'msn'"""
+    date, text = quotes_db.msn(db, args)
+
+    response = {"attachments":
+                [{"author_name": f"{msg_user}:",
+                  "text": msg_text,
+                  "color": msg_color}
+                 for msg_user, msg_text, msg_color in text]
+                }
+    response["attachments"][0]["pretext"] = date
+    return response
+
+
+def cmd_hvem(args) -> Dict:
+    """if command.lower().startswith("hvem")"""
+    user = random.choice(config.gargling_names)
+    answ = " ".join(args).replace("?", "!")
+    text = f"{user} {answ}"
+    response = {"text": text}
+    return response
+
+
+def cmd_not_found(args: str) -> Dict:
+    text = (
+        f"Beep boop beep! Nôt sure whåt you mean by `{args}`. "
         "Dette er kommandoene jeg skjønner:\n"
         + command_explanation
     )
@@ -165,14 +162,15 @@ def send_response(slack_client: SlackClient, response: Dict, channel: str):
 
 def try_or_panic(command_function, args):
     try:
-        response = command_function(*args)
+        response = command_function(args=args) if args else command_function()
     except MySQLdb.OperationalError as op_exc:
+        db_connection = command_function.keywords["db"]
         try:
             db_connection.ping()
         except MySQLdb.OperationalError:
             log.info("Database disconnected. Trying to reconnect")
             db_connection.ping(True)
-            response = command_function(*args)
+            response = command_function(args=args) if args else command_function()
         else:
             # OperationalError not caused by connection issue. Reraise error to log below
             raise op_exc

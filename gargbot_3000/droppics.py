@@ -11,15 +11,15 @@ import dropbox
 
 from gargbot_3000 import config
 
-from typing import Set, Tuple
+from typing import Set, Tuple, Optional, List
 from MySQLdb.connections import Connection
 from gargbot_3000.database_manager import LoggingCursor
 import datetime as dt
 
+
 class DropPics:
-    def __init__(self, db: Connection):
-        self.db = db
-        cursor = self.db.cursor()
+    def __init__(self, db: Connection) -> None:
+        cursor = db.cursor()
         self.years = self.get_years(cursor)
         self.years_fmt = ", ".join(f"`{year}`" for year in sorted(self.years))
         self.topics = self.get_topics(cursor)
@@ -131,9 +131,9 @@ class DropPics:
         timestamp = self.get_timestamp(date_obj)
         return url, timestamp
 
-    def get_pic(self, *arg_list: list) -> Tuple[str, int, str]:
+    def get_pic(self, db, arg_list: Optional[List]=None) -> Tuple[str, int, str]:
         description = ""
-        cursor = self.db.cursor()
+        cursor = db.cursor()
 
         if not arg_list:
             url, timestamp = self.get_random_pic(cursor)
