@@ -33,7 +33,7 @@ def get_callbacks():
     callbacks = getattr(g, '_callbacks', None)
     if callbacks is None:
         callbacks = {}
-        g._database = callbacks
+        g._callbacks = callbacks
     return callbacks
 
 
