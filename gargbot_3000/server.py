@@ -71,6 +71,7 @@ def hello_world() -> str:
     return "home"
 
 
+@app.route('/interactive', methods=['POST'])
 def interactive(data, trigger_id):
     prev_request_data = get_callbacks()[trigger_id]
     if data["actions"][0]["value"] == "send":
@@ -82,12 +83,40 @@ def interactive(data, trigger_id):
             status=200,
             mimetype='application/json'
         )
+    elif data["actions"][0]["value"] == "avbryt":
+        return Response(
+            status=200,
+            mimetype='application/json'
+        )
     elif data["actions"][0]["value"] == "shuffle":
         command_str = prev_request_data["command_str"]
         args = prev_request_data["args"]
-        return command_str, args
-    elif data["actions"][0]["value"] == "avbryt":
+        # duplicate code follows
+        try:
+            command_function = commands.command_switch[command_str]
+        except KeyError:
+            command_function = commands.cmd_not_found
+            args = [command_str]
+
+        if command_str in {"msn", "quote", "pic"}:
+            db_connection = get_db()
+            command_function.keywords["db"] = db_connection
+
+        result = commands.try_or_panic(command_function, args)
+        result["response_type"] = "ephemeral"
+        attach_buttons(result, callback_id=trigger_id)
+
+        request_data = {
+            "result": result,
+            "command_str": command_str,
+            "args": args,
+        }
+        get_callbacks()[trigger_id] = request_data
+
+        log.info(f"result: {result}")
+
         return Response(
+            response=json.dumps(result),
             status=200,
             mimetype='application/json'
         )
@@ -101,18 +130,9 @@ def slash_cmds():
     if not data.get('token') == config.v2_verification_token:
         return
 
+    command_str = data["command"][1:]
+    args = data['text']
     trigger_id = data["trigger_id"]
-
-    if data.get('type') == "interactive_message":
-        log.info("request is interactive")
-        r = interactive(data, trigger_id)
-        if isinstance(r, Response):
-            return Response
-        else:
-            command_str, args = r
-    else:
-        command_str = data["command"][1:]
-        args = data['text']
     log.info(f"command: {command_str}")
     log.info(f"args: {args}")
     log.info(f"trigger_id: {trigger_id}")
