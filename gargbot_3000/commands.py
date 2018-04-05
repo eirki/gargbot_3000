@@ -59,25 +59,6 @@ def cmd_welcome() -> Dict:
     return response
 
 
-def cmd_games(db: Connection, user: str, args: Optional[List[str]]=None) -> Optional[Dict[str, Any]]:
-    """if command is 'game'"""
-    output = games.main(db, user, args)
-    if output is None:
-        return None
-    elif isinstance(output, str):
-        response = {"text": output}
-    else:
-        response = {"text": games.command_explanation,
-                    "attachments":
-                    [{"title": f"{game['stars_str']} {game['name']}",
-                      "text": f"Votes: {game['votes']}. (Game #{game['game_id']})",
-                      "color": game['color']}
-                     for game in output]
-                    }
-        return response
-    return response
-
-
 def cmd_pic(db: Connection, drop_pics: droppics.DropPics, args: Optional[List[str]]=None) -> Dict:
     """if command is 'pic'"""
     picurl, timestamp, error_text = drop_pics.get_pic(db, args)
