@@ -34,7 +34,7 @@ def hello_world() -> str:
     return "home"
 
 
-@app.route('/slash_cmds')
+@app.route('/slash_cmds', methods=['POST'])
 def slash_cmds():
     if not request.form.get('token') == config.v2_verification_token:
         return
