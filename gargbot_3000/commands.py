@@ -77,7 +77,7 @@ def cmd_msn(db: Connection, quotes_db, args: Optional[List[str]]=None) -> Dict:
 def cmd_hvem(args) -> Dict:
     """if command.lower().startswith("hvem")"""
     user = random.choice(config.gargling_names)
-    answ = " ".join(args).replace("?", "!")
+    answ = args.replace("?", "!")
     text = f"{user} {answ}"
     response = {"text": text}
     return response
