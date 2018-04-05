@@ -109,7 +109,7 @@ def main():
                 command_function = commands.cmd_not_found
                 args = [command_str]
 
-            response = command_function(*args)
+            response = commands.try_or_panic(command_function, db_connection, *args)
 
             if response is None:
                 continue

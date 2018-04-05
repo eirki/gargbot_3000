@@ -163,38 +163,20 @@ def send_response(slack_client: SlackClient, response: Dict, channel: str):
     slack_client.api_call("chat.postMessage", channel=channel, as_user=True, **response)
 
 
-def handle_congrats(slack_client: SlackClient, drop_pics):
-    birthdays = congrats.get_birthdays()
-    for birthday in itertools.cycle(birthdays):
-        log.info(f"Next birthday: {birthday.nick}, at {birthday.next_bday}")
-        time.sleep(birthday.seconds_to_bday())
-        response = congrats.get_greeting(birthday, drop_pics)
-
-        send_response(slack_client, response=response, channel=config.main_channel)
-
-
-def setup() -> Tuple[SlackClient, Dict, Connection]:
-    db_connection = database_manager.connect_to_database()
-
-    quotes_db = quotes.Quotes(db=db_connection)
-
-    drop_pics = droppics.DropPics(db=db_connection)
-    drop_pics.connect_dbx()
-
-    games_db = games.Games(db=db_connection)
-
-    slack_client = SlackClient(config.slack_token)
-    connected = slack_client.rtm_connect()
-    if not connected:
-        raise Exception("Connection failed. Invalid Slack token or bot ID?")
-
-    command_switch = command_handler_wrapper(quotes_db, drop_pics, games_db)
-
-    congrats_thread = threading.Thread(
-        target=handle_congrats,
-        args=(slack_client, drop_pics)
-    )
-    congrats_thread.daemon = True
-    congrats_thread.start()
-
-    return slack_client, command_switch, db_connection
+def try_or_panic(command_function, args):
+    try:
+        response = command_function(*args)
+    except MySQLdb.OperationalError as op_exc:
+        try:
+            db_connection.ping()
+        except MySQLdb.OperationalError:
+            log.info("Database disconnected. Trying to reconnect")
+            db_connection.ping(True)
+            response = command_function(*args)
+        else:
+            # OperationalError not caused by connection issue. Reraise error to log below
+            raise op_exc
+    except Exception as exc:
+        log.error(traceback.format_exc())
+        response = cmd_panic(exc)
+    return response
