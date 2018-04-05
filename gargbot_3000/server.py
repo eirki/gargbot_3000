@@ -46,19 +46,19 @@ def attach_buttons(result, callback_id):
                     "name": "Send",
                     "text": "send",
                     "type": "button",
-                    "value": "chess",
+                    "value": "send",
                     "style": "primary"
                 },
                 {
                     "name": "Shuffle",
                     "text": "shuffle",
                     "type": "button",
-                    "value": "chess"
+                    "value": "shuffle"
                 },
                 {
                     "name": "Avbryt",
                     "text": "avbryt",
-                    "value": "chess",
+                    "value": "avbryt",
                     "style": "danger"
                 },
             ]
