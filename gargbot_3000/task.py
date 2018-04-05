@@ -7,7 +7,6 @@ import sys
 import datetime as dt
 import threading
 import itertools
-from functools import partial
 
 from gargbot_3000 import config
 from gargbot_3000 import congrats
@@ -72,13 +71,19 @@ def handle_congrats(db_connection, slack_client: SlackClient, drop_pics):
         send_response(slack_client, response=response, channel=config.main_channel)
 
 
-def setup() -> Tuple[SlackClient, Dict, Connection]:
+def setup() -> Tuple[SlackClient, Connection]:
     db_connection = database_manager.connect_to_database()
+    commands.command_switch["msn"].keywords["db"] = db_connection
+    commands.command_switch["quote"].keywords["db"] = db_connection
+    commands.command_switch["pic"].keywords["db"] = db_connection
 
     quotes_db = quotes.Quotes(db=db_connection)
+    commands.command_switch["msn"].keywords["quotes_db"] = quotes_db
+    commands.command_switch["quote"].keywords["quotes_db"] = quotes_db
 
     drop_pics = droppics.DropPics(db=db_connection)
     drop_pics.connect_dbx()
+    commands.command_switch["pic"].keywords["drop_pics"] = drop_pics
 
     slack_client = SlackClient(config.slack_token)
     connected = slack_client.rtm_connect()
@@ -92,20 +97,11 @@ def setup() -> Tuple[SlackClient, Dict, Connection]:
     congrats_thread.daemon = True
     congrats_thread.start()
 
-    command_switch = {
-        "ping": commands.cmd_ping,
-        "new_channel": commands.cmd_welcome,
-        "hvem": commands.cmd_hvem,
-        "pic": partial(commands.cmd_pic, db=db_connection, drop_pics=drop_pics),
-        "quote": partial(commands.cmd_quote, db=db_connection, quotes_db=quotes_db),
-        "msn": partial(commands.cmd_msn, db=db_connection, quotes_db=quotes_db),
-        }
-
-    return slack_client, command_switch, db_connection
+    return slack_client, db_connection
 
 
 def main():
-    slack_client, command_switch, db_connection = setup()
+    slack_client, db_connection = setup()
 
     log.info("GargBot 3000 task operational!")
 
@@ -125,7 +121,7 @@ def main():
             log.info(f"args: {args}")
 
             try:
-                command_function = command_switch[command_str]
+                command_function = commands.command_switch[command_str]
             except KeyError:
                 command_function = commands.cmd_not_found
                 args = [command_str]

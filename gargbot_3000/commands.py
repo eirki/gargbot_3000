@@ -4,6 +4,7 @@ from gargbot_3000.logger import log
 
 import datetime as dt
 import random
+from functools import partial
 import traceback
 
 from slackclient import SlackClient
@@ -21,12 +22,6 @@ command_explanation = (
     "`@gargbot_3000 msn [garling]`: utfrag fra tilfeldig msn samtale\n"
     "`@gargbot_3000 Hvem [spørsmål]`: svarer på spørsmål om garglings \n"
 )
-
-db_commands = {
-    "pic",
-    "quote",
-    "msn",
-}
 
 
 def cmd_ping() -> Dict:
@@ -132,3 +127,14 @@ def try_or_panic(command_function, args):
         log.error(traceback.format_exc())
         response = cmd_panic(exc)
     return response
+
+
+command_switch = {
+    "ping": partial(cmd_ping),
+    "new_channel": partial(cmd_welcome),
+    "hvem": partial(cmd_hvem),
+    "pic": partial(cmd_pic),
+    "quote": partial(cmd_quote),
+    "msn": partial(cmd_msn),
+    }
+
