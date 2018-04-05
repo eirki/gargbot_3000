@@ -36,12 +36,17 @@ def hello_world() -> str:
 
 @app.route('/slash_cmds', methods=['POST'])
 def slash_cmds():
+    log.info("incoming request")
+
     if not request.form.get('token') == config.v2_verification_token:
         return
 
     data = request.form
     command_str = data["command"][1:]
     args = data['text']
+    log.info(f"command: {command_str}")
+    log.info(f"args: {args}")
+
     try:
         command_function = commands.command_switch[command_str]
     except KeyError:
@@ -54,6 +59,8 @@ def slash_cmds():
 
     result = commands.try_or_panic(command_function, args)
     result["response_type"] = "ephemeral"
+
+    log.info(f"result: {result}")
 
     response = Response(
         response=json.dumps(result),
