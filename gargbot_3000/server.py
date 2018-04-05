@@ -73,8 +73,9 @@ def hello_world() -> str:
 
 @app.route('/interactive', methods=['POST'])
 def interactive():
-    log.info("incoming interactive request")
+    log.info("incoming interactive request:")
     data = request.form
+    log.info(data)
     trigger_id = data["trigger_id"]
     prev_request_data = get_callbacks()[trigger_id]
     log.info(f"prev_request_data: {prev_request_data}")
@@ -129,8 +130,9 @@ def interactive():
 
 @app.route('/slash_cmds', methods=['POST'])
 def slash_cmds():
-    log.info("incoming request")
+    log.info("incoming request:")
     data = request.form
+    log.info(data)
 
     if not data.get('token') == config.v2_verification_token:
         return
