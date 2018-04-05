@@ -3,20 +3,14 @@
 from gargbot_3000.logger import log
 
 import datetime as dt
-import time
 import random
-import itertools
-import contextlib
 import traceback
 
 from slackclient import SlackClient
 import MySQLdb
 
 from gargbot_3000 import config
-from gargbot_3000 import database_manager
 from gargbot_3000 import droppics
-from gargbot_3000 import quotes
-from gargbot_3000 import congrats
 
 from MySQLdb.connections import Connection
 from typing import Dict, List, Optional, Any
@@ -24,17 +18,13 @@ from typing import Dict, List, Optional, Any
 command_explanation = (
     "`@gargbot_3000 pic [lark/fe/skating/henging] [gargling] [år]`: viser random bilde\n"
     "`@gargbot_3000 quote [garling]`: henter tilfeldig sitat fra forumet\n"
-    "`@gargbot_3000 vidoi`: viser tilfeldig musikkvideo fra muzakvidois tråden på forumet\n"
-    "`@gargbot_3000 /random`: viser tilfeldig bilde fra \\random tråden på forumet\n"
-    "`@gargbot_3000 Hvem [spørsmål]`: svarer på spørsmål om garglings \n"
     "`@gargbot_3000 msn [garling]`: utfrag fra tilfeldig msn samtale\n"
+    "`@gargbot_3000 Hvem [spørsmål]`: svarer på spørsmål om garglings \n"
 )
 
 db_commands = {
     "pic",
     "quote",
-    "random",
-    "vidoi",
     "msn",
 }
 
@@ -72,20 +62,6 @@ def cmd_quote(db: Connection, quotes_db, args: Optional[List[str]]=None) -> Dict
     """if command is 'quote'"""
     text = quotes_db.garg(db, "quote", args)
     response = {"text": text}
-    return response
-
-
-def cmd_random(db: Connection, quotes_db) -> Dict:
-    """if command is '/random'"""
-    url = quotes_db.garg(db, "random")
-    response = {"attachments": [{"fallback":  url,
-                                 "image_url": url}]}
-    return response
-
-
-def cmd_vidoi(db: Connection, quotes_db) -> Dict:
-    """if command is 'vidoi'"""
-    response = {"text": quotes_db.garg(db, "vidoi")}
     return response
 
 

@@ -26,16 +26,6 @@ def slack_nick_to_db_id(db_connection, quotes_db):
     return response
 
 
-def test_garg_vidoi(db_connection, quotes_db):
-    text = quotes_db.garg(db_connection, "vidoi")
-    assert text.startswith("https://www.youtube.com/watch?v=")
-
-
-def test_garg_random(db_connection, quotes_db):
-    text = quotes_db.garg(db_connection, "random")
-    assert text.startswith("http") or "www" in text
-
-
 def test_garg_quote_random(db_connection, quotes_db):
     text = quotes_db.garg(db_connection, "quote")
     assert "------\n- " in text

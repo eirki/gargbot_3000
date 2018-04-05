@@ -98,8 +98,6 @@ def setup() -> Tuple[SlackClient, Dict, Connection]:
         "hvem": commands.cmd_hvem,
         "pic": partial(commands.cmd_pic, db=db_connection, drop_pics=drop_pics),
         "quote": partial(commands.cmd_quote, db=db_connection, quotes_db=quotes_db),
-        "/random": partial(commands.cmd_random, db=db_connection, quotes_db=quotes_db),
-        "vidoi": partial(commands.cmd_vidoi, db=db_connection, quotes_db=quotes_db),
         "msn": partial(commands.cmd_msn, db=db_connection, quotes_db=quotes_db),
         }
 

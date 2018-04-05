@@ -7,8 +7,6 @@ import html
 import random
 from operator import itemgetter
 
-import requests
-
 from gargbot_3000 import config
 
 from typing import Optional, List
@@ -31,23 +29,6 @@ class Garg:
         inp = re.sub(youtube_embeds, r"https://www.youtube.com/watch?v=\1", inp)
 
         return inp
-
-    @staticmethod
-    def _fetch_url(cursor, topic_id, extract_func):
-        data = {"topic_id": topic_id}
-        sql = f"SELECT post_text, bbcode_uid FROM phpbb_posts WHERE topic_id = %(topic_id)s ORDER BY RAND() LIMIT 1"
-        for _ in range(20):
-            cursor.execute(sql, data)
-            result = cursor.fetchone()
-            post_text = result["post_text"]
-            bbcode_uid = result["bbcode_uid"]
-            sanitized = Garg._sanitize(post_text, bbcode_uid)
-            try:
-                url = extract_func(sanitized)
-                if requests.get(url).status_code == 200:
-                    return url
-            except (AttributeError, requests.exceptions.RequestException):
-                continue
 
     @staticmethod
     def quote(cursor, user=None):
@@ -74,24 +55,6 @@ class Garg:
             f"- {user}\n"
             f"http://eirik.stavestrand.no/gargen/viewtopic.php?p={post_id}#p{post_id}\n")
         return quote
-
-    @staticmethod
-    def random(cursor):
-        def extract(text):
-            match = re.search("(?P<url>https?://[^\s]+)", text)
-            return match.group("url")
-        url = Garg._fetch_url(cursor, topic_id=636, extract_func=extract)
-        return url
-
-    @staticmethod
-    def vidoi(cursor):
-        def extract(text):
-            match = re.search(r"//www.youtube.com/embed/(.{11})", text)
-            ytb_id = match.group(1)
-            ytb_url = f"https://www.youtube.com/watch?v={ytb_id}"
-            return ytb_url
-        url = Garg._fetch_url(cursor, topic_id=563, extract_func=extract)
-        return url
 
 
 class MSN:
@@ -153,14 +116,8 @@ class Quotes:
 
     def garg(self, db, func, args: Optional[List[str]]):
         user = args[0] if args else None
-        switch = {
-            "quote": Garg.quote,
-            "random": Garg.random,
-            "vidoi": Garg.vidoi,
-        }
-        selected = switch[func]
         with db as cursor:
-            result = selected(cursor, user) if args else selected(cursor)
+            result = Garg.quote(cursor, user)
         return result
 
     def msn(self, db, args: Optional[List[str]]):
