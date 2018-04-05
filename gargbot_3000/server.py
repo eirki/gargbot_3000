@@ -1,9 +1,11 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
 from gargbot_3000.logger import log
+import json
 
-from flask import Flask, request, g
+from flask import Flask, request, g, Response
 
+from gargbot_3000 import config
 from gargbot_3000 import commands
 from gargbot_3000 import database_manager
 from gargbot_3000 import quotes
@@ -34,6 +36,9 @@ def hello_world() -> str:
 
 @app.route('/slash_cmds')
 def slash_cmds():
+    if not request.form.get('token') == config.v2_verification_token:
+        return
+
     data = request.form
     command_str = data["command"][1:]
     args = data['text']
@@ -47,12 +52,16 @@ def slash_cmds():
         db_connection = get_db()
         command_function.keywords["db"] = db_connection
 
-    response = commands.try_or_panic(command_function, *args)
+    result = commands.try_or_panic(command_function, args)
+    result["response_type"] = "ephemeral"
+
+    response = Response(
+        response=json.dumps(result),
+        status=200,
+        mimetype='application/json'
+    )
 
     return response
-
-    if response is None:
-        return ""
 
 
 def setup():
