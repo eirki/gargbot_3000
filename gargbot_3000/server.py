@@ -72,8 +72,13 @@ def hello_world() -> str:
 
 
 @app.route('/interactive', methods=['POST'])
-def interactive(data, trigger_id):
+def interactive():
+    log.info("incoming interactive request")
+    data = request.form
+    trigger_id = data["trigger_id"]
     prev_request_data = get_callbacks()[trigger_id]
+    log.info(f"prev_request_data: {prev_request_data}")
+
     if data["actions"][0]["value"] == "send":
         result = prev_request_data["result"]
         result["response_type"] = "in_channel"
