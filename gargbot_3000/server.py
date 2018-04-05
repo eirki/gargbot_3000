@@ -29,23 +29,93 @@ def close_connection(exception):
         db_connection.close()
 
 
+def get_callbacks():
+    callbacks = getattr(g, '_database', None)
+    if callbacks is None:
+        callbacks = {}
+        g._database = callbacks
+    return callbacks
+
+
+def attach_buttons(result, callback_id):
+    result["attachments"] = [
+        {
+            "callback_id": callback_id,
+            "actions": [
+                {
+                    "name": "Send",
+                    "text": "send",
+                    "type": "button",
+                    "value": "chess",
+                    "style": "primary"
+                },
+                {
+                    "name": "Shuffle",
+                    "text": "shuffle",
+                    "type": "button",
+                    "value": "chess"
+                },
+                {
+                    "name": "Avbryt",
+                    "text": "avbryt",
+                    "value": "chess",
+                    "style": "danger"
+                },
+            ]
+        }
+    ]
+
+
 @app.route('/')
 def hello_world() -> str:
     return "home"
 
 
+def interactive(data, trigger_id):
+    prev_request_data = get_callbacks()[trigger_id]
+    if data["actions"][0]["value"] == "send":
+        result = prev_request_data["result"]
+        result["response_type"] = "in_channel"
+        # todo somehow delete buttons
+        return Response(
+            response=json.dumps(result),
+            status=200,
+            mimetype='application/json'
+        )
+    elif data["actions"][0]["value"] == "shuffle":
+        command_str = prev_request_data["command_str"]
+        args = prev_request_data["args"]
+        return command_str, args
+    elif data["actions"][0]["value"] == "avbryt":
+        return Response(
+            status=200,
+            mimetype='application/json'
+        )
+
+
 @app.route('/slash_cmds', methods=['POST'])
 def slash_cmds():
     log.info("incoming request")
+    data = request.form
 
-    if not request.form.get('token') == config.v2_verification_token:
+    if not data.get('token') == config.v2_verification_token:
         return
 
-    data = request.form
-    command_str = data["command"][1:]
-    args = data['text']
+    trigger_id = data["trigger_id"]
+
+    if data.get('type') == "interactive_message":
+        log.info("request is interactive")
+        r = interactive(data, trigger_id)
+        if isinstance(r, Response):
+            return Response
+        else:
+            command_str, args = r
+    else:
+        command_str = data["command"][1:]
+        args = data['text']
     log.info(f"command: {command_str}")
     log.info(f"args: {args}")
+    log.info(f"trigger_id: {trigger_id}")
 
     try:
         command_function = commands.command_switch[command_str]
@@ -59,16 +129,22 @@ def slash_cmds():
 
     result = commands.try_or_panic(command_function, args)
     result["response_type"] = "ephemeral"
+    attach_buttons(result, callback_id=trigger_id)
+
+    request_data = {
+        "result": result,
+        "command_str": command_str,
+        "args": args,
+    }
+    get_callbacks()[trigger_id] = request_data
 
     log.info(f"result: {result}")
 
-    response = Response(
+    return Response(
         response=json.dumps(result),
         status=200,
         mimetype='application/json'
     )
-
-    return response
 
 
 def setup():
