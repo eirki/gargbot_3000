@@ -30,7 +30,7 @@ def close_connection(exception):
 
 
 def get_callbacks():
-    callbacks = getattr(g, '_database', None)
+    callbacks = getattr(g, '_callbacks', None)
     if callbacks is None:
         callbacks = {}
         g._database = callbacks
