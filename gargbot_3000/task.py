@@ -107,6 +107,9 @@ def setup() -> Tuple[SlackClient, Dict, Connection]:
 
 
 def main():
+    slack_client, command_switch, db_connection = setup()
+
+    log.info("GargBot 3000 task operational!")
 
     try:
         while True:
@@ -117,7 +120,7 @@ def main():
                 command_str, *args = text.split()
             except ValueError:
                 command_str = ""
-                args = []
+                args = None
 
             command_str = command_str.lower()
             log.info(f"command: {command_str}")
@@ -129,7 +132,7 @@ def main():
                 command_function = commands.cmd_not_found
                 args = [command_str]
 
-            response = commands.try_or_panic(command_function, db_connection, *args)
+            response = commands.try_or_panic(command_function, args)
 
             if response is None:
                 continue
