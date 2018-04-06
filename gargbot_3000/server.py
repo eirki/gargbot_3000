@@ -2,6 +2,7 @@
 # coding: utf-8
 from gargbot_3000.logger import log
 import json
+from copy import deepcopy
 
 from flask import Flask, request, g, Response
 
@@ -42,7 +43,7 @@ def attach_buttons(result, func, args):
                 "name": "Shuffle",
                 "text": "shuffle",
                 "type": "button",
-                "value": {"original_response": result.copy()}
+                "value": {"original_response": deepcopy(result)}
             },
             {
                 "name": "Avbryt",
