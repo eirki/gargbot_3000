@@ -74,7 +74,7 @@ def interactive():
     log.info(f"prev_request_data: {prev_request_data}")
 
     if action == "Send":
-        result = data["actions"][0]["value"]["original_response"]
+        result = json.loads(data["actions"][0]["value"]["original_response"])
         result["response_type"] = "in_channel"
         del result["attachments"]["actions"]
         return Response(
@@ -95,8 +95,8 @@ def interactive():
             mimetype='application/json'
         )
     elif action == "Shuffle":
-        command_str = data["actions"][0]["value"]["original_func"]
-        args = data["actions"][0]["value"]["original_args"]
+        command_str = json.loads(data["actions"][0]["value"]["original_func"])
+        args = json.loads(data["actions"][0]["value"]["original_args"])
 
         # duplicate code follows
         try:
