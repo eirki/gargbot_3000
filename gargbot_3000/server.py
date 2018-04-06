@@ -37,13 +37,13 @@ def attach_buttons(callback_id, result, func, args):
                 "text": "send",
                 "type": "button",
                 "style": "primary",
-                "value": json.dumps({"original_func": func, "original_args": args})
+                "value": json.dumps({"original_response": result})
             },
             {
                 "name": "Shuffle",
                 "text": "shuffle",
                 "type": "button",
-                "value": json.dumps({"original_response": result})
+                "value": json.dumps({"original_func": func, "original_args": args})
             },
             {
                 "name": "Avbryt",
