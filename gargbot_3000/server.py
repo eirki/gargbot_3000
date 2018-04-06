@@ -29,36 +29,28 @@ def close_connection(exception):
         db_connection.close()
 
 
-def get_callbacks():
-    callbacks = getattr(g, '_callbacks', None)
-    if callbacks is None:
-        callbacks = {}
-        g._callbacks = callbacks
-    return callbacks
-
-
-def attach_buttons(result, callback_id):
+def attach_buttons(result, func, args):
     result["attachments"] = [
         {
-            "callback_id": callback_id,
             "actions": [
                 {
                     "name": "Send",
                     "text": "send",
                     "type": "button",
-                    "value": "send",
-                    "style": "primary"
+                    "style": "primary",
+                    "value": {"original_func": func, "original_args": args},
                 },
                 {
                     "name": "Shuffle",
                     "text": "shuffle",
                     "type": "button",
-                    "value": "shuffle"
+                    "value": {"original_response": result}
                 },
                 {
                     "name": "Avbryt",
                     "text": "avbryt",
                     "value": "avbryt",
+                    "type": "button",
                     "style": "danger"
                 },
             ]
@@ -76,27 +68,36 @@ def interactive():
     log.info("incoming interactive request:")
     data = request.form
     log.info(data)
-    trigger_id = data["trigger_id"]
-    prev_request_data = get_callbacks()[trigger_id]
+    if not data.get('token') == config.v2_verification_token:
+        return Response(status=403)
+    action = data["actions"][0]["name"]
     log.info(f"prev_request_data: {prev_request_data}")
 
-    if data["actions"][0]["value"] == "send":
-        result = prev_request_data["result"]
+    if action == "Send":
+        result = data["actions"][0]["value"]["original_response"]
         result["response_type"] = "in_channel"
-        # todo somehow delete buttons
+        del result["attachments"]["actions"]
         return Response(
             response=json.dumps(result),
             status=200,
             mimetype='application/json'
         )
-    elif data["actions"][0]["value"] == "avbryt":
+    elif action == "Avbryt":
+        #  Unfinished
+        result = {
+            "response_type": "ephemeral",
+            "replace_original": True,
+            "text": "Canceled!"
+        }
         return Response(
             status=200,
+            response=json.dumps(result),
             mimetype='application/json'
         )
-    elif data["actions"][0]["value"] == "shuffle":
-        command_str = prev_request_data["command_str"]
-        args = prev_request_data["args"]
+    elif action == "Shuffle":
+        command_str = data["actions"][0]["value"]["original_func"]
+        args = data["actions"][0]["value"]["original_args"]
+
         # duplicate code follows
         try:
             command_function = commands.command_switch[command_str]
@@ -110,17 +111,12 @@ def interactive():
 
         result = commands.try_or_panic(command_function, args)
         result["response_type"] = "ephemeral"
-        attach_buttons(result, callback_id=trigger_id)
-
-        request_data = {
-            "result": result,
-            "command_str": command_str,
-            "args": args,
-        }
-        get_callbacks()[trigger_id] = request_data
-
+        attach_buttons(
+            result=result,
+            func=command_str,
+            args=args
+        )
         log.info(f"result: {result}")
-
         return Response(
             response=json.dumps(result),
             status=200,
@@ -128,21 +124,18 @@ def interactive():
         )
 
 
-@app.route('/slash_cmds', methods=['POST'])
+@app.route('/slash', methods=['POST'])
 def slash_cmds():
     log.info("incoming request:")
     data = request.form
     log.info(data)
 
     if not data.get('token') == config.v2_verification_token:
-        return
-
+        return Response(status=403)
     command_str = data["command"][1:]
     args = data['text']
-    trigger_id = data["trigger_id"]
     log.info(f"command: {command_str}")
     log.info(f"args: {args}")
-    log.info(f"trigger_id: {trigger_id}")
 
     try:
         command_function = commands.command_switch[command_str]
@@ -156,17 +149,12 @@ def slash_cmds():
 
     result = commands.try_or_panic(command_function, args)
     result["response_type"] = "ephemeral"
-    attach_buttons(result, callback_id=trigger_id)
-
-    request_data = {
-        "result": result,
-        "command_str": command_str,
-        "args": args,
-    }
-    get_callbacks()[trigger_id] = request_data
-
+    attach_buttons(
+        result=result,
+        func=command_str,
+        args=args
+    )
     log.info(f"result: {result}")
-
     return Response(
         response=json.dumps(result),
         status=200,
