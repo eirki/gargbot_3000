@@ -74,7 +74,6 @@ def interactive():
         log.info("Interactive: Send")
         result = json.loads(data["actions"][0]["value"])["original_response"]
         result["response_type"] = "in_channel"
-        del result["attachments"]["actions"]
         return Response(
             response=json.dumps(result),
             status=200,
@@ -87,7 +86,7 @@ def interactive():
         result = {
             "response_type": "ephemeral",
             "replace_original": True,
-            "text": "Canceled!"
+            "text": "Canceled! Går fint det. Ikke noe problem for meg. Kødd."
         }
         return Response(
             status=200,
