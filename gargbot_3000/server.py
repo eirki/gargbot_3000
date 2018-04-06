@@ -69,6 +69,7 @@ def interactive():
     log.info(data)
     if not data.get('token') == config.v2_verification_token:
         return Response(status=403)
+    callback_id = data["callback_id"]
     action = data["actions"][0]["name"]
     log.info(f"prev_request_data: {prev_request_data}")
 
@@ -112,7 +113,7 @@ def interactive():
         if not result.get("text", "").startswith("Error"):
             result["response_type"] = "ephemeral"
             attach_buttons(
-                trigger_id=trigger_id
+                callback_id=callback_id,
                 result=result,
                 func=command_str,
                 args=args
@@ -130,7 +131,7 @@ def slash_cmds():
     log.info("incoming slash request:")
     data = request.form
     log.info(data)
-    callback_id = data["callback_id"]
+    trigger_id = data["trigger_id"]
 
     if not data.get('token') == config.v2_verification_token:
         return Response(status=403)
@@ -152,7 +153,7 @@ def slash_cmds():
     result = commands.try_or_panic(command_function, args)
     result["response_type"] = "ephemeral"
     attach_buttons(
-        callback_id=callback_id,
+        callback_id=trigger_id,
         result=result,
         func=command_str,
         args=args
