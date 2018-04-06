@@ -152,7 +152,7 @@ def get_and_execute_command(command_str, args, callback_id):
         command_function = commands.cmd_not_found
         args = [command_str]
 
-    if command_str in {"msn", "quote", "pic"}:
+    if command_str in commands.commands_using_db:
         db_connection = get_db()
         command_function.keywords["db"] = db_connection
 

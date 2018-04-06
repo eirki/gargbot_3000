@@ -73,9 +73,8 @@ def handle_congrats(db_connection, slack_client: SlackClient, drop_pics):
 
 def setup() -> Tuple[SlackClient, Connection]:
     db_connection = database_manager.connect_to_database()
-    commands.command_switch["msn"].keywords["db"] = db_connection
-    commands.command_switch["quote"].keywords["db"] = db_connection
-    commands.command_switch["pic"].keywords["db"] = db_connection
+    for command_str in commands.commands_using_db:
+        commands.command_switch[command_str].keywords["db"] = db_connection
 
     quotes_db = quotes.Quotes(db=db_connection)
     commands.command_switch["msn"].keywords["quotes_db"] = quotes_db

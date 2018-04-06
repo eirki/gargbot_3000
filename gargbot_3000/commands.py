@@ -24,6 +24,8 @@ command_explanation = (
     "`@gargbot_3000 Hvem [spørsmål]`: svarer på spørsmål om garglings \n"
 )
 
+commands_using_db = {"msn", "quote", "pic", "hvem"}
+
 
 def cmd_ping() -> Dict:
     """if command is 'ping' """
@@ -75,9 +77,13 @@ def cmd_msn(db: Connection, quotes_db, args: Optional[List[str]]=None) -> Dict:
     return response
 
 
-def cmd_hvem(args) -> Dict:
+def cmd_hvem(db: Connection, args) -> Dict:
     """if command.lower().startswith("hvem")"""
-    user = random.choice(config.gargling_names)
+    with db as cursor:
+        sql = "SELECT first_name FROM user_ids ORDER BY RAND() LIMIT 1"
+        cursor.execute(sql)
+        data = cursor.fetchone()
+        user = data["first_name"]
     answ = " ".join(args).replace("?", "!")
     text = f"{user} {answ}"
     response = {"text": text}
@@ -147,4 +153,3 @@ command_switch = {
     "quote": partial(cmd_quote),
     "msn": partial(cmd_msn),
     }
-
