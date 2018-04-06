@@ -156,7 +156,7 @@ def get_and_execute_command(command_str, args, callback_id):
 
     result = commands.try_or_panic(command_function, args)
     error = result.get("text", "").startswith("Error")
-    if command_str in {"hvem"} and error is False:
+    if command_str in {"ping", "hvem"} and error is False:
         result["response_type"] = "in_channel"
     elif error is False:
         result = attach_buttons(
