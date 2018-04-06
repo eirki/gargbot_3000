@@ -37,13 +37,13 @@ def attach_buttons(callback_id, result, func, args):
                 "text": "send",
                 "type": "button",
                 "style": "primary",
-                "value": {"original_func": func, "original_args": args},
+                "value": json.dumps({"original_func": func, "original_args": args})
             },
             {
                 "name": "Shuffle",
                 "text": "shuffle",
                 "type": "button",
-                "value": {"original_response": deepcopy(result)}
+                "value": json.dumps({"original_response": result})
             },
             {
                 "name": "Avbryt",
@@ -111,13 +111,13 @@ def interactive():
 
         result = commands.try_or_panic(command_function, args)
         if not result.get("text", "").startswith("Error"):
-            result["response_type"] = "ephemeral"
             attach_buttons(
                 callback_id=callback_id,
                 result=result,
                 func=command_str,
                 args=args
             )
+            result["response_type"] = "ephemeral"
         log.info(f"result: {result}")
         return Response(
             response=json.dumps(result),
