@@ -60,6 +60,7 @@ def attach_buttons(callback_id, result, func, args):
         result["attachments"] = [attachment]
     attachment["actions"] = actions
     attachment["callback_id"] = callback_id
+    result["response_type"] = "ephemeral"
     return result
 
 
@@ -154,8 +155,10 @@ def get_and_execute_command(command_str, args, callback_id):
         command_function.keywords["db"] = db_connection
 
     result = commands.try_or_panic(command_function, args)
-    result["response_type"] = "ephemeral"
-    if not result.get("text", "").startswith("Error"):
+    error = result.get("text", "").startswith("Error")
+    if command_str in {"hvem"} and error is False:
+        result["response_type"] = "in_channel"
+    elif error is False:
         result = attach_buttons(
             callback_id=callback_id,
             result=result,
