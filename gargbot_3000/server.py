@@ -74,25 +74,14 @@ def interactive():
         log.info("Interactive: Send")
         result = json.loads(data["actions"][0]["value"])["original_response"]
         result["response_type"] = "in_channel"
-        return Response(
-            response=json.dumps(result),
-            status=200,
-            mimetype='application/json'
-        )
 
     elif action == "Avbryt":
         log.info("Interactive: Avbryt")
-        #  Unfinished
         result = {
             "response_type": "ephemeral",
             "replace_original": True,
             "text": "Canceled! Går fint det. Ikke noe problem for meg. Kødd."
         }
-        return Response(
-            status=200,
-            response=json.dumps(result),
-            mimetype='application/json'
-        )
 
     elif action == "Shuffle":
         log.info("Interactive: Shuffle")
@@ -123,12 +112,12 @@ def interactive():
                 args=args
             )
             result["response_type"] = "ephemeral"
-        log.info(f"result: {result}")
-        return Response(
-            response=json.dumps(result),
-            status=200,
-            mimetype='application/json'
-        )
+    log.info(f"result: {result}")
+    return Response(
+        response=json.dumps(result),
+        status=200,
+        mimetype='application/json'
+    )
 
 
 @app.route('/slash', methods=['POST'])
