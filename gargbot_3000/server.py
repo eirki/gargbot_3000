@@ -30,32 +30,29 @@ def close_connection(exception):
 
 
 def attach_buttons(result, func, args):
-    result["attachments"] = [
-        {
-            "actions": [
-                {
-                    "name": "Send",
-                    "text": "send",
-                    "type": "button",
-                    "style": "primary",
-                    "value": {"original_func": func, "original_args": args},
-                },
-                {
-                    "name": "Shuffle",
-                    "text": "shuffle",
-                    "type": "button",
-                    "value": {"original_response": result.copy()}
-                },
-                {
-                    "name": "Avbryt",
-                    "text": "avbryt",
-                    "value": "avbryt",
-                    "type": "button",
-                    "style": "danger"
-                },
-            ]
-        }
+    actions = [
+            {
+                "name": "Send",
+                "text": "send",
+                "type": "button",
+                "style": "primary",
+                "value": {"original_func": func, "original_args": args},
+            },
+            {
+                "name": "Shuffle",
+                "text": "shuffle",
+                "type": "button",
+                "value": {"original_response": result.copy()}
+            },
+            {
+                "name": "Avbryt",
+                "text": "avbryt",
+                "value": "avbryt",
+                "type": "button",
+                "style": "danger"
+            },
     ]
+    result["attachments"][0]["actions"] = actions
 
 
 @app.route('/')
