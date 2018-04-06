@@ -141,7 +141,7 @@ def slash_cmds():
     if not data.get('token') == config.v2_verification_token:
         return Response(status=403)
     command_str = data["command"][1:]
-    args = data['text']
+    args = data['text'].split()
     log.info(f"command: {command_str}")
     log.info(f"args: {args}")
 
