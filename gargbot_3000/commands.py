@@ -9,6 +9,7 @@ import traceback
 
 from slackclient import SlackClient
 import MySQLdb
+from requests.exceptions import SSLError
 
 from gargbot_3000 import config
 from gargbot_3000 import droppics
@@ -111,7 +112,7 @@ def send_response(slack_client: SlackClient, response: Dict, channel: str):
 
 def try_or_panic(command_function, args):
     try:
-        response = command_function(args=args) if args else command_function()
+        return command_function(args=args) if args else command_function()
     except MySQLdb.OperationalError as op_exc:
         db_connection = command_function.keywords["db"]
         try:
@@ -119,14 +120,23 @@ def try_or_panic(command_function, args):
         except MySQLdb.OperationalError:
             log.info("Database disconnected. Trying to reconnect")
             db_connection.ping(True)
-            response = command_function(args=args) if args else command_function()
-        else:
-            # OperationalError not caused by connection issue. Reraise error to log below
-            raise op_exc
+            try:
+                return command_function(args=args) if args else command_function()
+            except Exception as exc:
+                # OperationalError not caused by connection issue. Reraise error to log below
+                log.error("Error in command execution", exc_info=True)
+                return cmd_panic(exc)
+    except SSLError as ssl_exc:
+        # Dropbox sometimes gives SSLerrors, try again:
+        try:
+            return command_function(args=args) if args else command_function()
+        except Exception as exc:
+            # SSLError fixed on retry. Reraise error to log below
+            log.error("Error in command execution", exc_info=True)
+            return cmd_panic(exc)
     except Exception as exc:
-        log.error(traceback.format_exc())
-        response = cmd_panic(exc)
-    return response
+        log.error("Error in command execution", exc_info=True)
+        return cmd_panic(exc)
 
 
 command_switch = {
