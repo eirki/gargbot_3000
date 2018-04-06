@@ -72,7 +72,7 @@ def interactive():
     action = data["actions"][0]["name"]
     if action == "Send":
         log.info("Interactive: Send")
-        result = json.loads(data["actions"][0]["value"]["original_response"])
+        result = json.loads(data["actions"][0]["value"])["original_response"]
         result["response_type"] = "in_channel"
         del result["attachments"]["actions"]
         return Response(
@@ -98,8 +98,8 @@ def interactive():
     elif action == "Shuffle":
         log.info("Interactive: Shuffle")
         callback_id = data["callback_id"]
-        command_str = json.loads(data["actions"][0]["value"]["original_func"])
-        args = json.loads(data["actions"][0]["value"]["original_args"])
+        command_str = json.loads(data["actions"][0]["value"])["original_func"]
+        args = json.loads(data["actions"][0]["value"])["original_args"]
 
         # duplicate code follows
         log.info(f"command: {command_str}")
