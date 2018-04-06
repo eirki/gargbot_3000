@@ -74,6 +74,7 @@ def interactive():
     log.info(f"prev_request_data: {prev_request_data}")
 
     if action == "Send":
+        log.info("Interactive: Send")
         result = json.loads(data["actions"][0]["value"]["original_response"])
         result["response_type"] = "in_channel"
         del result["attachments"]["actions"]
@@ -83,6 +84,7 @@ def interactive():
             mimetype='application/json'
         )
     elif action == "Avbryt":
+        log.info("Interactive: Avbryt")
         #  Unfinished
         result = {
             "response_type": "ephemeral",
@@ -95,10 +97,14 @@ def interactive():
             mimetype='application/json'
         )
     elif action == "Shuffle":
+        log.info("Interactive: Shuffle")
         command_str = json.loads(data["actions"][0]["value"]["original_func"])
         args = json.loads(data["actions"][0]["value"]["original_args"])
 
         # duplicate code follows
+        log.info(f"command: {command_str}")
+        log.info(f"args: {args}")
+
         try:
             command_function = commands.command_switch[command_str]
         except KeyError:
