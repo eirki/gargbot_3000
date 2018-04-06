@@ -57,6 +57,7 @@ def attach_buttons(callback_id, result, func, args):
     result["attachments"][0]["callback_id"] = callback_id
     return result
 
+
 @app.route('/')
 def hello_world() -> str:
     return "home"
@@ -75,7 +76,6 @@ def interactive():
         log.info("Interactive: Send")
         result = json.loads(data["actions"][0]["value"])["original_response"]
         result["response_type"] = "in_channel"
-        return result
 
     elif action == "Avbryt":
         log.info("Interactive: Avbryt")
