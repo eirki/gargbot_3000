@@ -53,8 +53,13 @@ def attach_buttons(callback_id, result, func, args):
                 "style": "danger"
             },
     ]
-    result["attachments"][0]["actions"] = actions
-    result["attachments"][0]["callback_id"] = callback_id
+    try:
+        attachment = result.get("attachments", [{}])[-1]
+    except KeyError:
+        attachment = {}
+        result["attachments"] = [attachment]
+    attachment["actions"] = actions
+    attachment["callback_id"] = callback_id
     return result
 
 
