@@ -6,3 +6,4 @@ slack_nick CHAR(50),
 first_name CHAR(50)
 );
 
+ALTER TABLE user_ids ADD bday DATE unsigned NOT NULL;

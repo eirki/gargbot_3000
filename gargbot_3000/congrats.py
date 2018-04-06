@@ -34,13 +34,13 @@ jabs = [
 
 
 class Birthday:
-    def __init__(self, nick, date):
+    def __init__(self, nick, slack_id, date):
         self.nick = nick
-        born_midnight_utc = dt.datetime.strptime(f"{date}.00.00.+0000", "%d.%m.%Y.%H.%M.%z")
+        born_midnight_utc = dt.datetime.combine(date, dt.datetime.min.time())
         born_midnight_local = born_midnight_utc.astimezone(config.tz)
         born_morning_local = born_midnight_local.replace(hour=7)
         self.born = born_morning_local
-        self.slack_id = config.slack_nick_to_id[nick]
+        self.slack_id = slack_id
 
     def __repr__(self):
         return f"{self.nick}, {self.age} years. Next bday: {self.next_bday}"
@@ -64,10 +64,12 @@ class Birthday:
         return next_bday
 
 
-def get_birthdays():
-    with open(path.join(config.home, "data", "birthdays.json")) as j:
-        data = json.load(j)
-    birthdays = [Birthday(nick, date) for nick, date in data]
+def get_birthdays(db):
+    with db as cursor:
+        sql_command = "SELECT slack_nick, slack_id, bday FROM user_ids"
+        cursor.execute(sql_command)
+    data = cursor.fetchall()
+    birthdays = [Birthday(row["slack_nick"], row["slack_id"], row["bday"]) for row in data]
     birthdays.sort(key=attrgetter("next_bday"))
     return birthdays
 

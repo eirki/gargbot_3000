@@ -62,7 +62,7 @@ def send_response(slack_client: SlackClient, response: Dict, channel: str):
 
 
 def handle_congrats(db_connection, slack_client: SlackClient, drop_pics):
-    birthdays = congrats.get_birthdays()
+    birthdays = congrats.get_birthdays(db_connection)
     for birthday in itertools.cycle(birthdays):
         log.info(f"Next birthday: {birthday.nick}, at {birthday.next_bday}")
         time.sleep(birthday.seconds_to_bday())
