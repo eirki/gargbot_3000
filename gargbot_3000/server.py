@@ -127,7 +127,9 @@ def slash_cmds():
         return Response(status=403)
 
     command_str = data["command"][1:]
-    args = data['text'].split()
+    args = data['text']
+    args = args.replace("@", "").split()
+
     trigger_id = data["trigger_id"]
 
     result = get_and_execute_command(command_str, args, trigger_id)
