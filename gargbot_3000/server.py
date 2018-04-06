@@ -54,7 +54,7 @@ def attach_buttons(callback_id, result, func, args):
             },
     ]
     try:
-        attachment = result.get("attachments", [{}])[-1]
+        attachment = result["attachments"][-1]
     except KeyError:
         attachment = {}
         result["attachments"] = [attachment]
