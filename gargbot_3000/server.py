@@ -107,12 +107,13 @@ def interactive():
             command_function.keywords["db"] = db_connection
 
         result = commands.try_or_panic(command_function, args)
-        result["response_type"] = "ephemeral"
-        attach_buttons(
-            result=result,
-            func=command_str,
-            args=args
-        )
+        if not result.get("text", "").startswith("Error"):
+            result["response_type"] = "ephemeral"
+            attach_buttons(
+                result=result,
+                func=command_str,
+                args=args
+            )
         log.info(f"result: {result}")
         return Response(
             response=json.dumps(result),
