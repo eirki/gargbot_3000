@@ -69,10 +69,7 @@ def interactive():
     log.info(data)
     if not data.get('token') == config.v2_verification_token:
         return Response(status=403)
-    callback_id = data["callback_id"]
     action = data["actions"][0]["name"]
-    log.info(f"prev_request_data: {prev_request_data}")
-
     if action == "Send":
         log.info("Interactive: Send")
         result = json.loads(data["actions"][0]["value"]["original_response"])
@@ -83,6 +80,7 @@ def interactive():
             status=200,
             mimetype='application/json'
         )
+
     elif action == "Avbryt":
         log.info("Interactive: Avbryt")
         #  Unfinished
@@ -96,8 +94,10 @@ def interactive():
             response=json.dumps(result),
             mimetype='application/json'
         )
+
     elif action == "Shuffle":
         log.info("Interactive: Shuffle")
+        callback_id = data["callback_id"]
         command_str = json.loads(data["actions"][0]["value"]["original_func"])
         args = json.loads(data["actions"][0]["value"]["original_args"])
 
