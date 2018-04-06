@@ -85,7 +85,7 @@ def setup() -> Tuple[SlackClient, Connection]:
     drop_pics.connect_dbx()
     commands.command_switch["pic"].keywords["drop_pics"] = drop_pics
 
-    slack_client = SlackClient(config.slack_token)
+    slack_client = SlackClient(config.slack_bot_user_token)
     connected = slack_client.rtm_connect()
     if not connected:
         raise Exception("Connection failed. Invalid Slack token or bot ID?")

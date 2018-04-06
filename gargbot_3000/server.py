@@ -74,7 +74,7 @@ def interactive():
     log.info("incoming interactive request:")
     data = json.loads(request.form['payload'])
     log.info(data)
-    if not data.get('token') == config.v2_verification_token:
+    if not data.get('token') == config.slack_verification_token:
         return Response(status=403)
     action = data["actions"][0]["name"]
 
@@ -123,7 +123,7 @@ def slash_cmds():
     data = request.form
     log.info(data)
 
-    if not data.get('token') == config.v2_verification_token:
+    if not data.get('token') == config.slack_verification_token:
         return Response(status=403)
 
     command_str = data["command"][1:]
