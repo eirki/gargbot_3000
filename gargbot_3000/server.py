@@ -72,7 +72,7 @@ def interactive():
         return Response(status=403)
     action = data["actions"][0]["name"]
 
-    if action == "Send":
+    if action == "Del i kanal":
         log.info("Interactive: Send")
         response_url = data["response_url"]
         delete_original = {
@@ -86,7 +86,6 @@ def interactive():
         result = json.loads(data["actions"][0]["value"])["original_response"]
         result['replace_original'] = False
         result["response_type"] = "in_channel"
-
 
     elif action == "Avbryt":
         log.info("Interactive: Avbryt")
