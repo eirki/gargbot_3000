@@ -163,11 +163,12 @@ def slash_cmds():
 
 
 def setup():
-    quotes_db = quotes.Quotes(db=get_db())
+    db_connection = database_manager.connect_to_database()
+    quotes_db = quotes.Quotes(db=db_connection)
     commands.command_switch["msn"].keywords["quotes_db"] = quotes_db
     commands.command_switch["quote"].keywords["quotes_db"] = quotes_db
 
-    drop_pics = droppics.DropPics(db=get_db())
+    drop_pics = droppics.DropPics(db=db_connection)
     drop_pics.connect_dbx()
     commands.command_switch["pic"].keywords["drop_pics"] = drop_pics
 
