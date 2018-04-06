@@ -33,21 +33,21 @@ def close_connection(exception):
 def attach_buttons(callback_id, result, func, args):
     actions = [
             {
-                "name": "Del i kanal",
-                "text": "send",
+                "name": "share",
+                "text": "Del i kanal",
                 "type": "button",
                 "style": "primary",
                 "value": json.dumps({"original_response": result})
             },
             {
-                "name": "Shuffle",
-                "text": "shuffle",
+                "name": "shuffle",
+                "text": "Shuffle",
                 "type": "button",
                 "value": json.dumps({"original_func": func, "original_args": args})
             },
             {
-                "name": "Avbryt",
-                "text": "avbryt",
+                "name": "cancel",
+                "text": "Avbryt",
                 "value": "avbryt",
                 "type": "button",
                 "style": "danger"
@@ -72,8 +72,8 @@ def interactive():
         return Response(status=403)
     action = data["actions"][0]["name"]
 
-    if action == "Del i kanal":
-        log.info("Interactive: Send")
+    if action == "share":
+        log.info("Interactive: share")
         response_url = data["response_url"]
         delete_original = {
             "response_type": "ephemeral",
@@ -87,16 +87,16 @@ def interactive():
         result['replace_original'] = False
         result["response_type"] = "in_channel"
 
-    elif action == "Avbryt":
-        log.info("Interactive: Avbryt")
+    elif action == "cancel":
+        log.info("Interactive: cancel")
         result = {
             "response_type": "ephemeral",
             "replace_original": True,
             "text": "Canceled! Går fint det. Ikke noe problem for meg. Hadde ikke lyst uansett."
         }
 
-    elif action == "Shuffle":
-        log.info("Interactive: Shuffle")
+    elif action == "shuffle":
+        log.info("Interactive: shuffle")
         command_str = json.loads(data["actions"][0]["value"])["original_func"]
         args = json.loads(data["actions"][0]["value"])["original_args"]
         callback_id = data["callback_id"]
