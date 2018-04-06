@@ -56,7 +56,7 @@ def cmd_pic(db: Connection, drop_pics: droppics.DropPics, args: Optional[List[st
 
 def cmd_quote(db: Connection, quotes_db, args: Optional[List[str]]=None) -> Dict:
     """if command is 'quote'"""
-    text = quotes_db.garg(db, "quote", args)
+    text = quotes_db.garg(db, args)
     response = {"text": text}
     return response
 
