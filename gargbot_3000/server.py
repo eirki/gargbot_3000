@@ -30,7 +30,7 @@ def close_connection(exception):
         db_connection.close()
 
 
-def attach_buttons(result, func, args):
+def attach_buttons(callback_id, result, func, args):
     actions = [
             {
                 "name": "Send",
@@ -54,6 +54,7 @@ def attach_buttons(result, func, args):
             },
     ]
     result["attachments"][0]["actions"] = actions
+    result["attachments"][0]["callback_id"] = callback_id
 
 
 @app.route('/')
@@ -111,6 +112,7 @@ def interactive():
         if not result.get("text", "").startswith("Error"):
             result["response_type"] = "ephemeral"
             attach_buttons(
+                trigger_id=trigger_id
                 result=result,
                 func=command_str,
                 args=args
@@ -125,9 +127,10 @@ def interactive():
 
 @app.route('/slash', methods=['POST'])
 def slash_cmds():
-    log.info("incoming request:")
+    log.info("incoming slash request:")
     data = request.form
     log.info(data)
+    callback_id = data["callback_id"]
 
     if not data.get('token') == config.v2_verification_token:
         return Response(status=403)
@@ -149,6 +152,7 @@ def slash_cmds():
     result = commands.try_or_panic(command_function, args)
     result["response_type"] = "ephemeral"
     attach_buttons(
+        callback_id=callback_id,
         result=result,
         func=command_str,
         args=args
