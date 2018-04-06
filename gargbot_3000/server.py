@@ -44,7 +44,7 @@ def attach_buttons(result, func, args):
                     "name": "Shuffle",
                     "text": "shuffle",
                     "type": "button",
-                    "value": {"original_response": result}
+                    "value": {"original_response": result.copy()}
                 },
                 {
                     "name": "Avbryt",
