@@ -65,7 +65,7 @@ def hello_world() -> str:
 @app.route('/interactive', methods=['POST'])
 def interactive():
     log.info("incoming interactive request:")
-    data = request.form
+    data = json.loads(request.form['payload'])
     log.info(data)
     if not data.get('token') == config.v2_verification_token:
         return Response(status=403)
