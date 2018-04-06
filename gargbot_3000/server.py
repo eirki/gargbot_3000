@@ -2,8 +2,8 @@
 # coding: utf-8
 from gargbot_3000.logger import log
 import json
-from copy import deepcopy
 
+import requests
 from flask import Flask, request, g, Response
 
 from gargbot_3000 import config
@@ -33,7 +33,7 @@ def close_connection(exception):
 def attach_buttons(callback_id, result, func, args):
     actions = [
             {
-                "name": "Send",
+                "name": "Del i kanal",
                 "text": "send",
                 "type": "button",
                 "style": "primary",
@@ -74,14 +74,26 @@ def interactive():
 
     if action == "Send":
         log.info("Interactive: Send")
+        response_url = data["response_url"]
+        delete_original = {
+            "response_type": "ephemeral",
+            "replace_original": True,
+            "text": "Sharing is caring!"
+        }
+        r = requests.post(response_url, json=delete_original)
+        log.info(r.text)
+
         result = json.loads(data["actions"][0]["value"])["original_response"]
+        result['replace_original'] = False
         result["response_type"] = "in_channel"
+
 
     elif action == "Avbryt":
         log.info("Interactive: Avbryt")
         result = {
             "response_type": "ephemeral",
-            "text": "Canceled! Går fint det. Ikke noe problem for meg. Kødd."
+            "replace_original": True,
+            "text": "Canceled! Går fint det. Ikke noe problem for meg. Hadde ikke lyst uansett."
         }
 
     elif action == "Shuffle":
@@ -90,8 +102,8 @@ def interactive():
         args = json.loads(data["actions"][0]["value"])["original_args"]
         callback_id = data["callback_id"]
         result = get_and_execute_command(command_str, args, callback_id)
+        result["replace_original"] = True
 
-    result["replace_original"] = True
     log.info(f"result: {result}")
     return Response(
         response=json.dumps(result),
