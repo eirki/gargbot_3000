@@ -71,18 +71,14 @@ def handle_congrats(db_connection, slack_client: SlackClient, drop_pics):
         send_response(slack_client, response=response, channel=config.main_channel)
 
 
-def setup() -> Tuple[SlackClient, Connection]:
+def setup() -> Tuple[SlackClient, Connection, droppics.DropPics, quotes.Quotes]:
     db_connection = database_manager.connect_to_database()
-    for command_str in commands.commands_using_db:
-        commands.command_switch[command_str].keywords["db"] = db_connection
-
-    quotes_db = quotes.Quotes(db=db_connection)
-    commands.command_switch["msn"].keywords["quotes_db"] = quotes_db
-    commands.command_switch["quote"].keywords["quotes_db"] = quotes_db
 
     drop_pics = droppics.DropPics(db=db_connection)
-    drop_pics.connect_dbx()
-    commands.command_switch["pic"].keywords["drop_pics"] = drop_pics
+
+    quotes_db = quotes.Quotes(db=db_connection)
+    # commands.command_switch["msn"].keywords["quotes_db"] = quotes_db
+    # commands.command_switch["quote"].keywords["quotes_db"] = quotes_db
 
     slack_client = SlackClient(config.slack_bot_user_token)
     connected = slack_client.rtm_connect()
@@ -96,11 +92,11 @@ def setup() -> Tuple[SlackClient, Connection]:
     congrats_thread.daemon = True
     congrats_thread.start()
 
-    return slack_client, db_connection
+    return slack_client, db_connection, drop_pics, quotes_db
 
 
 def main():
-    slack_client, db_connection = setup()
+    slack_client, db_connection, drop_pics, quotes_db = setup()
 
     log.info("GargBot 3000 task operational!")
 
@@ -113,22 +109,17 @@ def main():
                 command_str, *args = text.split()
             except ValueError:
                 command_str = ""
-                args = None
+                args = []
 
             command_str = command_str.lower()
-            log.info(f"command: {command_str}")
-            log.info(f"args: {args}")
 
-            try:
-                command_function = commands.command_switch[command_str]
-            except KeyError:
-                command_function = commands.cmd_not_found
-                args = [command_str]
-
-            response = commands.try_or_panic(command_function, args)
-
-            if response is None:
-                continue
+            response = commands.execute(
+                command_str=command_str,
+                args=args,
+                db_connection=db_connection,
+                drop_pics=drop_pics,
+                quotes_db=quotes_db,
+            )
 
             send_response(slack_client, response, channel)
 

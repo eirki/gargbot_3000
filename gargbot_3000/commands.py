@@ -15,16 +15,14 @@ from gargbot_3000 import config
 from gargbot_3000 import droppics
 
 from MySQLdb.connections import Connection
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 
 command_explanation = (
+    "`@gargbot_3000 Hvem [spørsmål]`: svarer på spørsmål om garglings \n"
     "`@gargbot_3000 pic [lark/fe/skating/henging] [gargling] [år]`: viser random bilde\n"
     "`@gargbot_3000 quote [garling]`: henter tilfeldig sitat fra forumet\n"
     "`@gargbot_3000 msn [garling]`: utfrag fra tilfeldig msn samtale\n"
-    "`@gargbot_3000 Hvem [spørsmål]`: svarer på spørsmål om garglings \n"
 )
-
-commands_using_db = {"msn", "quote", "pic", "hvem"}
 
 
 def cmd_ping() -> Dict:
@@ -44,7 +42,20 @@ def cmd_welcome() -> Dict:
     return response
 
 
-def cmd_pic(db: Connection, drop_pics: droppics.DropPics, args: Optional[List[str]]=None) -> Dict:
+def cmd_hvem(args: List[Optional[str]], db: Connection) -> Dict:
+    """if command.lower().startswith("hvem")"""
+    with db as cursor:
+        sql = "SELECT first_name FROM user_ids ORDER BY RAND() LIMIT 1"
+        cursor.execute(sql)
+        data = cursor.fetchone()
+        user = data["first_name"]
+    answ = " ".join(args).replace("?", "!")
+    text = f"{user} {answ}"
+    response = {"text": text}
+    return response
+
+
+def cmd_pic(args: List[Optional[str]], db: Connection, drop_pics: droppics.DropPics) -> Dict:
     """if command is 'pic'"""
     picurl, timestamp, error_text = drop_pics.get_pic(db, args)
     response = {"attachments": [{"fallback":  picurl,
@@ -56,14 +67,14 @@ def cmd_pic(db: Connection, drop_pics: droppics.DropPics, args: Optional[List[st
     return response
 
 
-def cmd_quote(db: Connection, quotes_db, args: Optional[List[str]]=None) -> Dict:
+def cmd_quote(args: List[Optional[str]], db: Connection, quotes_db: quotes.Quotes) -> Dict:
     """if command is 'quote'"""
     text = quotes_db.garg(db, args)
     response = {"text": text}
     return response
 
 
-def cmd_msn(db: Connection, quotes_db, args: Optional[List[str]]=None) -> Dict:
+def cmd_msn(args: List[Optional[str]], db: Connection, quotes_db: quotes.Quotes) -> Dict:
     """if command is 'msn'"""
     date, text = quotes_db.msn(db, args)
 
@@ -77,19 +88,6 @@ def cmd_msn(db: Connection, quotes_db, args: Optional[List[str]]=None) -> Dict:
     return response
 
 
-def cmd_hvem(db: Connection, args) -> Dict:
-    """if command.lower().startswith("hvem")"""
-    with db as cursor:
-        sql = "SELECT first_name FROM user_ids ORDER BY RAND() LIMIT 1"
-        cursor.execute(sql)
-        data = cursor.fetchone()
-        user = data["first_name"]
-    answ = " ".join(args).replace("?", "!")
-    text = f"{user} {answ}"
-    response = {"text": text}
-    return response
-
-
 def cmd_not_found(args: str) -> Dict:
     text = (
         f"Beep boop beep! Nôt sure whåt you mean by `{args}`. "
@@ -100,7 +98,7 @@ def cmd_not_found(args: str) -> Dict:
     return response
 
 
-def cmd_panic(exc) -> Dict:
+def cmd_panic(exc: Exception) -> Dict:
     text = (
         f"Error, error! Noe har gått fryktelig galt: {str(exc)}! Ææææææ. Ta kontakt"
         " med systemadministrator umiddelbart, før det er for sent. "
@@ -116,26 +114,43 @@ def send_response(slack_client: SlackClient, response: Dict, channel: str):
     slack_client.api_call("chat.postMessage", channel=channel, as_user=True, **response)
 
 
-def try_or_panic(command_function, args):
+def execute(
+        command_str: str,
+        args: List,
+        db_connection: Connection,
+        drop_pics: droppics.DropPics,
+        quotes_db: quotes.Quotes,
+        ) -> Dict:
+    log.info(f"command: {command_str}")
+    log.info(f"args: {args}")
+
+    switch = {
+        "ping": cmd_ping,
+        "new_channel": cmd_welcome,
+        "hvem": partial(cmd_hvem, args, db=db_connection),
+        "pic": partial(cmd_pic, args, db=db_connection, drop_pics=drop_pics),
+        "quote": partial(cmd_quote, args, db=db_connection, quotes_db=quotes_db),
+        "msn": partial(cmd_msn, args, db=db_connection, quotes_db=quotes_db),
+    }
     try:
-        return command_function(args=args) if args else command_function()
+        command_func = switch[command_str]
+    except KeyError:
+        command_func = partial(cmd_not_found, command_str)
+
+    try:
+        return command_func()
     except MySQLdb.OperationalError as op_exc:
-        db_connection = command_function.keywords["db"]
+        database_manager.reconnect_if_disconnected(db_connection)
         try:
-            db_connection.ping()
-        except MySQLdb.OperationalError:
-            log.info("Database disconnected. Trying to reconnect")
-            db_connection.ping(True)
-            try:
-                return command_function(args=args) if args else command_function()
-            except Exception as exc:
-                # OperationalError not caused by connection issue. Reraise error to log below
-                log.error("Error in command execution", exc_info=True)
-                return cmd_panic(exc)
+            return command_func()
+        except Exception as exc:
+            # OperationalError not caused by connection issue.
+            log.error("Error in command execution", exc_info=True)
+            return cmd_panic(exc)
     except SSLError as ssl_exc:
         # Dropbox sometimes gives SSLerrors, try again:
         try:
-            return command_function(args=args) if args else command_function()
+            return command_func()
         except Exception as exc:
             # SSLError fixed on retry. Reraise error to log below
             log.error("Error in command execution", exc_info=True)
@@ -143,13 +158,3 @@ def try_or_panic(command_function, args):
     except Exception as exc:
         log.error("Error in command execution", exc_info=True)
         return cmd_panic(exc)
-
-
-command_switch = {
-    "ping": partial(cmd_ping),
-    "new_channel": partial(cmd_welcome),
-    "hvem": partial(cmd_hvem),
-    "pic": partial(cmd_pic),
-    "quote": partial(cmd_quote),
-    "msn": partial(cmd_msn),
-    }

@@ -40,6 +40,14 @@ def connect_to_database():
     return connection
 
 
+def reconnect_if_disconnected(db_connection: MySQLdb.Connection):
+    try:
+        db_connection.ping()
+    except MySQLdb.OperationalError:
+        log.info("Database disconnected. Trying to reconnect")
+        db_connection.ping(True)
+
+
 class MSN:
     def __init__(self):
         self.db = connect_to_database()

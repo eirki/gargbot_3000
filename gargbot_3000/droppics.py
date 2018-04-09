@@ -11,7 +11,7 @@ import dropbox
 
 from gargbot_3000 import config
 
-from typing import Set, Tuple, Optional, List
+from typing import Set, Tuple, Optional, List, Iterable
 from MySQLdb.connections import Connection
 from gargbot_3000.database_manager import LoggingCursor
 import datetime as dt
@@ -27,6 +27,7 @@ class DropPics:
         self.users = self.get_users(cursor)
         self.users_fmt = ", ".join(f"`{user}`" for user in self.users.keys())
         self.possible_args = self.topics | self.years | set(self.users)
+        self._connect_dbx()
 
     def get_years(self, cursor: LoggingCursor):
         sql_command = "SELECT DISTINCT YEAR(taken) as year FROM dbx_pictures ORDER BY YEAR(taken)"
@@ -43,7 +44,7 @@ class DropPics:
         cursor.execute(sql_command)
         return {row['slack_nick']: row['db_id'] for row in cursor.fetchall()}
 
-    def connect_dbx(self):
+    def _connect_dbx(self):
         self.dbx = dropbox.Dropbox(config.dropbox_token)
         self.dbx.users_get_current_account()
         log.info("Connected to dbx")
@@ -58,7 +59,7 @@ class DropPics:
         )
         return description
 
-    def get_sql_for_args(self, args: Set[str]):
+    def get_sql_for_args(self, args: Iterable[str]):
         sql_filter = []
         sql_data = {}
 
@@ -131,7 +132,7 @@ class DropPics:
         timestamp = self.get_timestamp(date_obj)
         return url, timestamp
 
-    def get_pic(self, db, arg_list: Optional[List]=None) -> Tuple[str, int, str]:
+    def get_pic(self, db, arg_list: List[Optional[str]])-> Tuple[str, int, str]:
         description = ""
         cursor = db.cursor()
 
@@ -139,7 +140,7 @@ class DropPics:
             url, timestamp = self.get_random_pic(cursor)
             return url, timestamp, description
 
-        args = set(arg_list)
+        args = {arg.lower() for arg in arg_list}
         invalid_args = args - self.possible_args
         valid_args = args - invalid_args
 
