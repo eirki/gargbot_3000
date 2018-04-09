@@ -1,7 +1,8 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from gargbot_3000.logger import log
+from logger import log
 
+# Core
 import os
 from xml.dom.minidom import parseString
 import datetime as dt
@@ -10,12 +11,14 @@ import asyncio
 import json
 import traceback
 
+# Dependencies
 import MySQLdb
 from MySQLdb.cursors import DictCursor
 import PIL
 import dropbox
 
-from gargbot_3000 import config
+# Internal
+import config
 
 
 class LoggingCursor(DictCursor):

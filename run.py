@@ -1,14 +1,17 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
 
-# From https://help.pythonanywhere.com/pages/LongRunningTasks/
+# Core
 import socket
 import sys
 import time
 
-from gargbot_3000 import config
+
+# Internal
+import config
 
 
+# From https://help.pythonanywhere.com/pages/LongRunningTasks/
 lock_socket = None  # we want to keep the socket open until the very end of
                     # our script so we use a global variable to avoid going
                     # out of scope and being garbage-collected
@@ -42,9 +45,9 @@ if len(sys.argv) >= 3 and sys.argv[2] == "aquire_lock":
 
 
 if sys.argv[1] == "task":
-    from gargbot_3000 import task
+    import task
     task.main()
 
 elif sys.argv[1] == "server":
-    from gargbot_3000 import server
+    import server
     server.main()

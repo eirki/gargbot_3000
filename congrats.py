@@ -1,16 +1,17 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from gargbot_3000.logger import log
+from logger import log
 
+# Core
 import datetime as dt
 from operator import attrgetter
-import json
-from os import path
 import random
 
+# Dependencies
 import MySQLdb
 
-from gargbot_3000 import config
+# Internal
+import config
 
 
 greetings = [

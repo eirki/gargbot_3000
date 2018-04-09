@@ -1,24 +1,27 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from gargbot_3000.logger import log
+from logger import log
 
+# Core
 import time
 import sys
 import datetime as dt
 import threading
 import itertools
 
-from gargbot_3000 import config
-from gargbot_3000 import congrats
-from gargbot_3000 import commands
-from gargbot_3000 import database_manager
-from gargbot_3000 import quotes
-from gargbot_3000 import droppics
+# Dependencies
+import config
+import congrats
+import commands
+import database_manager
+import quotes
+import droppics
 
-import MySQLdb
+# Internal
 from slackclient import SlackClient
 import websocket
 
+# Typing
 from typing import Tuple, Dict
 from MySQLdb.connections import Connection
 

@@ -1,7 +1,8 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from gargbot_3000.logger import log
+from logger import log
 
+# Core
 import re
 import html
 import random

@@ -1,17 +1,22 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from gargbot_3000.logger import log
+from logger import log
+
+# Core
 import json
 
+# Dependencies
 import requests
 from flask import Flask, request, g, Response
 
-from gargbot_3000 import config
-from gargbot_3000 import commands
-from gargbot_3000 import database_manager
-from gargbot_3000 import quotes
-from gargbot_3000 import droppics
+# Internal
+import config
+import commands
+import database_manager
+import quotes
+import droppics
 
+# Typing
 from typing import Dict, List, Optional
 
 app = Flask(__name__)

@@ -1,19 +1,22 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from gargbot_3000.logger import log
+from logger import log
 
+# Core
 import datetime as dt
-import random
 from functools import partial
-import traceback
 
+# Dependencies
 from slackclient import SlackClient
 import MySQLdb
 from requests.exceptions import SSLError
 
-from gargbot_3000 import config
-from gargbot_3000 import droppics
+# Internal
+import database_manager
+import droppics
+import quotes
 
+# Typing
 from MySQLdb.connections import Connection
 from typing import Dict, List, Optional
 

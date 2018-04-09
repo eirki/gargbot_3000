@@ -1,10 +1,13 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
+
+# Core
 import logging
 import os
 import datetime as dt
 
-from gargbot_3000 import config
+# Internal
+import config
 
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
