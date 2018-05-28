@@ -18,7 +18,7 @@ import quotes
 
 # Typing
 from MySQLdb.connections import Connection
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Callable
 
 command_explanation = (
     "`@gargbot_3000 Hvem [spørsmål]`: svarer på spørsmål om garglings \n"
@@ -123,7 +123,7 @@ def execute(
         db_connection: Connection,
         drop_pics: droppics.DropPics,
         quotes_db: quotes.Quotes,
-        ) -> Dict:
+        ) -> Callable:
     log.info(f"command: {command_str}")
     log.info(f"args: {args}")
 

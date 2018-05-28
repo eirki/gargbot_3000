@@ -85,10 +85,10 @@ def get_greeting(person, db, drop_pics):
     congrats_picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
 
     try:
-        person_picurl, timestamp, error_text = drop_pics.get_pic(db, person.nick)
+        person_picurl, timestamp, _ = drop_pics.get_pic(db, [person.nick])
     except MySQLdb.OperationalError:
         db.ping(True)
-        person_picurl, timestamp, error_text = drop_pics.get_pic(db, person.nick)
+        person_picurl, timestamp, _ = drop_pics.get_pic(db, [person.nick])
 
     response = {
         "text": text,
