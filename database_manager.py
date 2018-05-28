@@ -14,7 +14,7 @@ import traceback
 # Dependencies
 import MySQLdb
 from MySQLdb.cursors import DictCursor
-import PIL
+from PIL import Image
 import dropbox
 
 # Internal
@@ -202,12 +202,12 @@ class DropPics:
 
     @staticmethod
     def get_tag(fileobject):
-        im = PIL.Image.open(fileobject)
+        im = Image.open(fileobject)
         exif = im._getexif()
         return exif[40094].decode("utf-16").rstrip("\x00")
 
     def get_date_taken(self, path):
-        im = PIL.Image.open(path)
+        im = Image.open(path)
         exif = im._getexif()
         date_str = exif[36867]
         date_obj = dt.datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
