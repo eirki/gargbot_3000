@@ -8,7 +8,7 @@ import time
 
 
 # Internal
-import config
+from gargbot_3000 import config
 
 
 # From https://help.pythonanywhere.com/pages/LongRunningTasks/
@@ -45,9 +45,9 @@ if len(sys.argv) >= 3 and sys.argv[2] == "aquire_lock":
 
 
 if sys.argv[1] == "task":
-    import task
+    from gargbot_3000 import task
     task.main()
 
 elif sys.argv[1] == "server":
-    import server
+    from gargbot_3000 import server
     server.main()

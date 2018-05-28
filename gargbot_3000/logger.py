@@ -7,7 +7,7 @@ import os
 import datetime as dt
 
 # Internal
-import config
+from gargbot_3000 import config
 
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)

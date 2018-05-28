@@ -1,6 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from logger import log
+from gargbot_3000.logger import log
 
 # Core
 import time
@@ -10,16 +10,17 @@ import threading
 import itertools
 
 # Dependencies
-import config
-import congrats
-import commands
-import database_manager
-import quotes
-import droppics
-
-# Internal
 from slackclient import SlackClient
 import websocket
+
+# Internal
+from gargbot_3000 import config
+from gargbot_3000 import congrats
+from gargbot_3000 import commands
+from gargbot_3000 import database_manager
+from gargbot_3000 import quotes
+from gargbot_3000 import droppics
+
 
 # Typing
 from typing import Tuple, Dict

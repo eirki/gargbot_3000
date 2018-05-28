@@ -1,6 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from logger import log
+from gargbot_3000.logger import log
 
 # Core
 import datetime as dt
@@ -12,9 +12,9 @@ import MySQLdb
 from requests.exceptions import SSLError
 
 # Internal
-import database_manager
-import droppics
-import quotes
+from gargbot_3000 import database_manager
+from gargbot_3000 import droppics
+from gargbot_3000 import quotes
 
 # Typing
 from MySQLdb.connections import Connection

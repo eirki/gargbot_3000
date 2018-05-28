@@ -1,6 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from logger import log
+from gargbot_3000.logger import log
 
 # Core
 import json
@@ -10,11 +10,11 @@ import requests
 from flask import Flask, request, g, Response
 
 # Internal
-import config
-import commands
-import database_manager
-import quotes
-import droppics
+from gargbot_3000 import config
+from gargbot_3000 import commands
+from gargbot_3000 import database_manager
+from gargbot_3000 import quotes
+from gargbot_3000 import droppics
 
 # Typing
 from typing import Dict, List, Optional
@@ -190,6 +190,13 @@ def slash_cmds():
     log.info(f"result: {result}")
     return json_response(result)
 
+
+@app.route("/countdown", methods=["GET"])
+def countdown():
+    pass
+    # https://github.com/helloflask/timer/blob/master/templates/index.html
+    # https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-xiii-dates-and-times
+    # https://stackoverflow.com/questions/16129157/countdown-timer-using-moment-js
 
 @app.before_first_request
 def setup():

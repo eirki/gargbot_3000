@@ -1,6 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from logger import log
+from gargbot_3000.logger import log
 
 # Core
 import os
@@ -18,7 +18,7 @@ from PIL import Image
 import dropbox
 
 # Internal
-import config
+from gargbot_3000 import config
 
 
 class LoggingCursor(DictCursor):

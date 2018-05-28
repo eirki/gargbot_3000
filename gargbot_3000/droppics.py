@@ -1,6 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from logger import log
+from gargbot_3000.logger import log
 
 # Core
 import random
@@ -12,13 +12,13 @@ import itertools
 import dropbox
 
 # Internal
-import config
+from gargbot_3000 import config
 
 # Typing
 from typing import Set, Tuple, Optional, List, Iterable
 from MySQLdb.connections import Connection
 import datetime as dt
-from database_manager import LoggingCursor
+from gargbot_3000.database_manager import LoggingCursor
 
 
 class DropPics:
