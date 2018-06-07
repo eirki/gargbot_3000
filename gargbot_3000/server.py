@@ -130,7 +130,7 @@ def shuffle(callback_id: str, original_func: str, original_args: List[Optional[s
     log.info("Interactive: shuffle")
     result = handle_command(original_func, original_args, callback_id)
     result["replace_original"] = True
-    return json_response(request)
+    return json_response(result)
 
 
 @app.route('/interactive', methods=['POST'])
