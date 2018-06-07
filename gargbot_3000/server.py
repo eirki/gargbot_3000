@@ -4,10 +4,11 @@ from gargbot_3000.logger import log
 
 # Core
 import json
+import datetime as dt
 
 # Dependencies
 import requests
-from flask import Flask, request, g, Response
+from flask import Flask, request, g, Response, render_template
 
 # Internal
 from gargbot_3000 import config
@@ -193,10 +194,19 @@ def slash_cmds():
 
 @app.route("/countdown", methods=["GET"])
 def countdown():
-    pass
-    # https://github.com/helloflask/timer/blob/master/templates/index.html
-    # https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-xiii-dates-and-times
-    # https://stackoverflow.com/questions/16129157/countdown-timer-using-moment-js
+    milli_timestamp = config.countdown_date.timestamp() * 1000
+    db = get_db()
+    drop_pics = get_pics()
+    pic_url, *_ = drop_pics.get_pic(db, arg_list=config.countdown_args)
+    return render_template(
+        'countdown.html',
+        date=milli_timestamp,
+        image_url=pic_url,
+        countdown_message=config.countdown_message,
+        ongoing_message=config.ongoing_message,
+        finished_message=config.finished_message
+    )
+
 
 @app.before_first_request
 def setup():

@@ -1,0 +1,66 @@
+@import url(https://fonts.googleapis.com/css?family=Titillium+Web:900);
+@import url(https://fonts.googleapis.com/css?family=Orbitron);
+
+.timer {
+    height: 85%;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    display: -webkit-box;
+    display: -moz-box;
+    display: -ms-flexbox;
+    display: -webkit-flex;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: FranklinGothic, Verdana, Arial, sans-serif;
+    font-size: 60px;
+    font-weight: bold;
+    text-shadow: 3px 3px 0px #000;
+    color: #ffffff;
+}
+
+h1 {
+    width:100%;
+    position:fixed;
+    bottom:0px;
+    text-align:center;
+    color: #ffffff;
+    text-shadow: 3px 3px 0px #000;
+  font-family: 'Titillium Web', sans-serif;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+
+body {
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-position: center;
+}
+
+/* responsive media queries */
+
+@media (min-width: 280px) {
+    .timer {
+        font-size: 35px;
+    }
+}
+
+@media (min-width: 768px) {
+    .timer {
+        font-size: 50px;
+    }
+}
+
+@media (min-width: 980px) {
+    .timer {
+        font-size: 60px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .timer {
+        font-size: 75px;
+    }
+}

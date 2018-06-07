@@ -1,0 +1,53 @@
+{% block head %}
+<title></title>
+<script src="static/js/countdown.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+<body background="{{ image_url }}">
+{% endblock %}
+
+
+
+{% block page_content %}
+<h1 id="message"></h1>
+<div class="timer">
+    <p id="time"></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // timer function
+    function startTimer(until_date, countdown_message, ongoing_message, finished_message) {
+        var message = document.getElementById("message")
+        var display = document.getElementById("time")
+        var refresh = setInterval(function () {
+            var timespan_obj = countdown( new Date(until_date) );
+            var timespan_sentence = timespan_obj.toString();
+            var timespan_sentence = timespan_sentence.replace(" and ", "<br>")
+            var timespan_lines = timespan_sentence.split(", ").join("<br>");
+            if (timespan_obj.value < 0) {
+                display.innerHTML = timespan_lines;
+                message.innerHTML = countdown_message;
+            }
+            else if (timespan_obj.value >= 0 && timespan_obj.value < 777600000) {
+                display.innerHTML = timespan_lines;
+                message.innerHTML = ongoing_message;
+            }
+            else {
+                display.innerHTML = "";
+                message.innerHTML = finished_message;
+                clearInterval(refresh);  // exit refresh loop
+            }
+        }, 1000);
+
+      }
+      var until_date = {{ date }};
+      var countdown_message = "{{ countdown_message }}";
+      var ongoing_message = "{{ ongoing_message }}";
+      var finished_message = "{{ finished_message }}";
+      startTimer(until_date, countdown_message, ongoing_message, finished_message);
+
+
+</script>
+{% endblock %}
