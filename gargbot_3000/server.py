@@ -128,7 +128,7 @@ def cancel():
 
 def shuffle(callback_id: str, original_func: str, original_args: List[Optional[str]]):
     log.info("Interactive: shuffle")
-    result = slash_cmds(original_func, original_args, callback_id)
+    result = handle_command(original_func, original_args, callback_id)
     result["replace_original"] = True
     return json_response(request)
 
@@ -174,7 +174,6 @@ def slash_cmds():
 
 
 def handle_command(command_str: str, args: List, trigger_id: str) -> Dict:
-
     result = commands.execute(
         command_str=command_str,
         args=args,
