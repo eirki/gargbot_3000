@@ -168,6 +168,12 @@ def slash_cmds():
     args = args.replace("@", "").split()
 
     trigger_id = data["trigger_id"]
+    result = handle_command(command_str, args, trigger_id)
+    log.info(f"result: {result}")
+    return json_response(result)
+
+
+def handle_command(command_str: str, args: List, trigger_id: str) -> Dict:
 
     result = commands.execute(
         command_str=command_str,
@@ -188,8 +194,7 @@ def slash_cmds():
             args=args
         )
 
-    log.info(f"result: {result}")
-    return json_response(result)
+    return result
 
 
 @app.route("/countdown", methods=["GET"])
