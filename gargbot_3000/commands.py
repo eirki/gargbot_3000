@@ -123,11 +123,11 @@ def execute(
         db_connection: Connection,
         drop_pics: droppics.DropPics,
         quotes_db: quotes.Quotes,
-        ) -> Callable:
+        ) -> Dict:
     log.info(f"command: {command_str}")
     log.info(f"args: {args}")
 
-    switch = {
+    switch: Dict[str, Callable] = {
         "ping": cmd_ping,
         "new_channel": cmd_welcome,
         "hvem": partial(cmd_hvem, args, db=db_connection),

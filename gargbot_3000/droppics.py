@@ -50,7 +50,6 @@ class DropPics:
 
     def _connect_dbx(self):
         self.dbx = dropbox.Dropbox(config.dropbox_token)
-        self.dbx.users_get_current_account()
         log.info("Connected to dbx")
 
     def get_description_for_invalid_args(self, invalid_args: Set[str]):
@@ -136,7 +135,7 @@ class DropPics:
         timestamp = self.get_timestamp(date_obj)
         return url, timestamp
 
-    def get_pic(self, db, arg_list: List[Optional[str]])-> Tuple[str, int, str]:
+    def get_pic(self, db, arg_list: Optional[List[str]])-> Tuple[str, int, str]:
         description = ""
         cursor = db.cursor()
 
