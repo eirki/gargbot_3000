@@ -101,7 +101,7 @@ def hello_world() -> str:
     return "home"
 
 
-def share(result, response_url):
+def share(response_url, result):
     log.info("Interactive: share")
     delete_original = {
         "response_type": "ephemeral",
