@@ -114,12 +114,6 @@ def cmd_panic(exc: Exception) -> Dict:
     return response
 
 
-def send_response(slack_client: SlackClient, response: Dict, channel: str):
-    log.info(dt.datetime.now())
-    log.info(f"response: {response}")
-    slack_client.api_call("chat.postMessage", channel=channel, as_user=True, **response)
-
-
 def execute(
         command_str: str,
         args: List,
