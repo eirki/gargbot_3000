@@ -4,7 +4,6 @@ from gargbot_3000.logger import log
 
 # Core
 import json
-import datetime as dt
 
 # Dependencies
 import requests
@@ -174,12 +173,15 @@ def slash_cmds():
 
 
 def handle_command(command_str: str, args: List, trigger_id: str) -> Dict:
+    db = get_db() if command_str in {"hvem", "pic", "quote", "msn"} else None
+    pic = get_pics() if command_str == "pic" else None
+    quotes = get_quotes() if command_str in {"quote", "msn"} else None
     result = commands.execute(
         command_str=command_str,
         args=args,
-        db_connection=get_db(),
-        drop_pics=get_pics(),
-        quotes_db=get_quotes(),
+        db_connection=db,
+        drop_pics=pic,
+        quotes_db=quotes,
     )
 
     error = result.get("text", "").startswith("Error")
@@ -210,13 +212,6 @@ def countdown():
         ongoing_message=config.ongoing_message,
         finished_message=config.finished_message
     )
-
-
-@app.before_first_request
-def setup():
-    get_db()
-    get_pics()
-    get_quotes()
 
 
 def main():

@@ -25,28 +25,28 @@ class DropPics:
     def __init__(self, db: Connection) -> None:
         cursor = db.cursor()
         self.years = self.get_years(cursor)
-        self.years_fmt = ", ".join(f"`{year}`" for year in sorted(self.years))
         self.topics = self.get_topics(cursor)
-        self.topics_fmt = ", ".join(f"`{topic}`" for topic in self.topics)
         self.users = self.get_users(cursor)
-        self.users_fmt = ", ".join(f"`{user}`" for user in self.users.keys())
         self.possible_args = self.topics | self.years | set(self.users)
         self._connect_dbx()
 
     def get_years(self, cursor: LoggingCursor):
         sql_command = "SELECT DISTINCT YEAR(taken) as year FROM dbx_pictures ORDER BY YEAR(taken)"
         cursor.execute(sql_command)
-        return set(str(row['year']) for row in cursor.fetchall())
+        years = set(str(row['year']) for row in cursor.fetchall())
+        return years
 
     def get_topics(self, cursor: LoggingCursor):
-        sql_command = "SELECT topic FROM dbx_pictures"
+        sql_command = "SELECT DISTINCT topic FROM dbx_pictures"
         cursor.execute(sql_command)
-        return set(row['topic'] for row in cursor.fetchall())
+        topics = set(row['topic'] for row in cursor.fetchall())
+        return topics
 
     def get_users(self, cursor: LoggingCursor):
         sql_command = "SELECT slack_nick, db_id FROM user_ids"
         cursor.execute(sql_command)
-        return {row['slack_nick']: row['db_id'] for row in cursor.fetchall()}
+        users = {row['slack_nick']: row['db_id'] for row in cursor.fetchall()}
+        return users
 
     def _connect_dbx(self):
         self.dbx = dropbox.Dropbox(config.dropbox_token)
@@ -54,11 +54,14 @@ class DropPics:
 
     def get_description_for_invalid_args(self, invalid_args: Set[str]):
         invalid_args_fmt = ", ".join(f"`{arg}`" for arg in invalid_args)
+        years_fmt = ", ".join(f"`{year}`" for year in sorted(self.years))
+        topics_fmt = ", ".join(f"`{topic}`" for topic in self.topics)
+        users_fmt = ", ".join(f"`{user}`" for user in self.users.keys())
         description = (
             f"Im so stoopid! Skjønte ikke {invalid_args_fmt}. =( Jeg skjønner bare "
-            f"\n*år*: {self.years_fmt};\n"
-            f"*emner*: {self.topics_fmt};\n"
-            f"samt *garlings* - husk å bruke slack nick: {self.users_fmt}\n"
+            f"\n*år*: {years_fmt};\n"
+            f"*emner*: {topics_fmt};\n"
+            f"samt *garlings* - husk å bruke slack nick: {users_fmt}\n"
         )
         return description
 
@@ -182,3 +185,7 @@ class DropPics:
                 url = self.get_url_for_dbx_path(path)
                 timestamp = self.get_timestamp(date_obj)
                 return url, timestamp, description
+
+        #  No pics found for any args
+        url, timestamp = self.get_random_pic(cursor)
+        return url, timestamp, description
