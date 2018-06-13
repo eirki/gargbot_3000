@@ -18,7 +18,7 @@ from gargbot_3000 import quotes
 
 # Typing
 from MySQLdb.connections import Connection
-from typing import Dict, List, Optional, Callable
+from typing import Dict, List, Optional, Callable, Any
 
 command_explanation = (
     "`@gargbot_3000 Hvem [spørsmål]`: svarer på spørsmål om garglings \n"
@@ -30,7 +30,7 @@ command_explanation = (
 
 def cmd_ping() -> Dict:
     """if command is 'ping' """
-    response = {"text": "GargBot 3000 is active. Beep boop beep"}
+    response: Dict[str, Any] = {"text": "GargBot 3000 is active. Beep boop beep"}
     return response
 
 
@@ -41,11 +41,11 @@ def cmd_welcome() -> Dict:
         "Dette er kommandoene jeg skjønner:\n"
         + command_explanation
     )
-    response = {"text": text}
+    response: Dict[str, Any] = {"text": text}
     return response
 
 
-def cmd_hvem(args: List[Optional[str]], db: Connection) -> Dict:
+def cmd_hvem(args: List[str], db: Connection) -> Dict:
     """if command.lower().startswith("hvem")"""
     with db as cursor:
         sql = "SELECT first_name FROM user_ids ORDER BY RAND() LIMIT 1"
@@ -54,39 +54,42 @@ def cmd_hvem(args: List[Optional[str]], db: Connection) -> Dict:
         user = data["first_name"]
     answ = " ".join(args).replace("?", "!")
     text = f"{user} {answ}"
-    response = {"text": text}
+    response: Dict[str, Any] = {"text": text}
     return response
 
 
-def cmd_pic(args: List[Optional[str]], db: Connection, drop_pics: droppics.DropPics) -> Dict:
+def cmd_pic(args: Optional[List[str]], db: Connection, drop_pics: droppics.DropPics) -> Dict:
     """if command is 'pic'"""
     picurl, timestamp, error_text = drop_pics.get_pic(db, args)
-    response = {"attachments": [{"fallback":  picurl,
-                                 "image_url": picurl,
-                                 "ts": timestamp}]}
+    response: Dict[str, Any] = {
+        "attachments": [{"fallback":  picurl,
+                         "image_url": picurl,
+                         "ts": timestamp}]
+    }
     if error_text:
         response["text"] = error_text
 
     return response
 
 
-def cmd_quote(args: List[Optional[str]], db: Connection, quotes_db: quotes.Quotes) -> Dict:
+def cmd_quote(args: Optional[List[str]], db: Connection, quotes_db: quotes.Quotes) -> Dict:
     """if command is 'quote'"""
     text = quotes_db.garg(db, args)
-    response = {"text": text}
+    response: Dict[str, Any] = {"text": text}
     return response
 
 
-def cmd_msn(args: List[Optional[str]], db: Connection, quotes_db: quotes.Quotes) -> Dict:
+def cmd_msn(args: Optional[List[str]], db: Connection, quotes_db: quotes.Quotes) -> Dict:
     """if command is 'msn'"""
     date, text = quotes_db.msn(db, args)
 
-    response = {"attachments":
-                [{"author_name": f"{msg_user}:",
-                  "text": msg_text,
-                  "color": msg_color}
-                 for msg_user, msg_text, msg_color in text]
-                }
+    response: Dict[str, Any] = {
+        "attachments":
+            [{"author_name": f"{msg_user}:",
+              "text": msg_text,
+              "color": msg_color}
+             for msg_user, msg_text, msg_color in text]
+    }
     response["attachments"][0]["pretext"] = date
     return response
 
@@ -97,7 +100,7 @@ def cmd_not_found(args: str) -> Dict:
         "Dette er kommandoene jeg skjønner:\n"
         + command_explanation
     )
-    response = {"text": text}
+    response: Dict[str, Any] = {"text": text}
     return response
 
 
@@ -107,7 +110,7 @@ def cmd_panic(exc: Exception) -> Dict:
         " med systemadministrator umiddelbart, før det er for sent. "
         "HJELP MEG. If I don't survive, tell mrs. gargbot... 'Hello'"
     )
-    response = {"text": text}
+    response: Dict[str, Any] = {"text": text}
     return response
 
 
