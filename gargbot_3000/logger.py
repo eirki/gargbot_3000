@@ -5,6 +5,7 @@
 import logging
 from pathlib import Path
 import os
+import sys
 import datetime as dt
 
 # Internal
@@ -14,11 +15,12 @@ log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
 formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-log_path = Path(config.home / "logs" / "gargbot.log")
+mode = sys.argv[1]
+log_path = Path(config.home / "logs" / f"gargbot_{mode}.log")
 
 if log_path.exists():
     now = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    os.rename(log_path, log_path.with_name(f"gargbot{now}.log"))
+    os.rename(log_path, log_path.with_name(f"gargbot_{mode}_{now}.log"))
 
 try:
     fh = logging.FileHandler(str(log_path))
