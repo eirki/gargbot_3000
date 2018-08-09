@@ -15,7 +15,7 @@ log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
 formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-mode = sys.argv[1]
+mode = Path(sys.argv[0]).stem
 log_path = Path(config.home / "logs" / f"gargbot_{mode}.log")
 
 if log_path.exists():
