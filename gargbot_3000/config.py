@@ -16,7 +16,7 @@ slack_bot_user_token = os.environ["slack_bot_user_token"]
 bot_id = os.environ["bot_id"]
 bot_name = os.environ["bot_name"]
 
-home = os.getenv("home_folder", os.getcwd())
+home = Path(os.getenv("home_folder", os.getcwd()))
 
 db_host = os.environ["db_host"]
 db_user = os.environ["db_user"]
