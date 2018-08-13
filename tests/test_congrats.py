@@ -1,29 +1,21 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-import pytest
+from gargbot_3000 import congrats
 
-from context import congrats, droppics, database_manager
-from test_pics import drop_pics, MockDropbox
-# from test_quotes import quotes_db
+from tests import conftest
 
-
-@pytest.fixture
-def db_connection():
-    db_connection = database_manager.connect_to_database()
-    try:
-        yield db_connection
-    finally:
-        db_connection.close()
+from gargbot_3000.droppics import DropPics
+from MySQLdb import connection
 
 
-@pytest.fixture
-def drop_pics(db_connection):
-    inited_drop_pics = droppics.DropPics(db=db_connection)
-    inited_drop_pics.dbx = MockDropbox()
-    yield inited_drop_pics
+def test_congrat(db_connection: connection, drop_pics: DropPics) -> None:
+    chosen_user = conftest.users[0]
+    birthdays = congrats.get_birthdays(db=db_connection)
+    person = next(person for person in birthdays if person.nick == chosen_user.slack_nick)
 
-
-def test_congrat(db_connection, drop_pics):
-    birthdays = congrats.get_birthdays()
-    response = congrats.get_greeting(birthdays[0], db_connection, drop_pics)
-    print(response)
+    response = congrats.get_greeting(person, db_connection, drop_pics)
+    image_url = response["attachments"][0]["image_url"]
+    response_pic = next(pic for pic in conftest.pics if image_url.endswith(pic.path))
+    assert chosen_user.slack_id in response["text"]
+    assert "28" in response["text"]
+    assert chosen_user.db_id in response_pic.faces

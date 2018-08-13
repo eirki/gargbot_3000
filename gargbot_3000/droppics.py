@@ -23,7 +23,7 @@ from gargbot_3000.database_manager import LoggingCursor
 
 class DropPics:
     def __init__(self, db: Connection) -> None:
-        cursor = db.cursor()
+        cursor = db.cursor(LoggingCursor)
         self.years = self.get_years(cursor)
         self.topics = self.get_topics(cursor)
         self.users = self.get_users(cursor)
@@ -140,7 +140,7 @@ class DropPics:
 
     def get_pic(self, db, arg_list: Optional[List[str]])-> Tuple[str, int, str]:
         description = ""
-        cursor = db.cursor()
+        cursor = db.cursor(LoggingCursor)
 
         if not arg_list:
             url, timestamp = self.get_random_pic(cursor)

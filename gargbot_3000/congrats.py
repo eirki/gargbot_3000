@@ -12,6 +12,7 @@ import MySQLdb
 
 # Internal
 from gargbot_3000 import config
+from gargbot_3000.database_manager import LoggingCursor
 
 
 greetings = [
@@ -66,10 +67,11 @@ class Birthday:
 
 
 def get_birthdays(db):
-    with db as cursor:
+    with db.cursor(LoggingCursor) as cursor:
         sql_command = "SELECT slack_nick, slack_id, bday FROM user_ids"
         cursor.execute(sql_command)
-    data = cursor.fetchall()
+        data = cursor.fetchall()
+    print(data)
     birthdays = [Birthday(row["slack_nick"], row["slack_id"], row["bday"]) for row in data]
     birthdays.sort(key=attrgetter("next_bday"))
     return birthdays
