@@ -71,7 +71,6 @@ def get_birthdays(db):
         sql_command = "SELECT slack_nick, slack_id, bday FROM user_ids"
         cursor.execute(sql_command)
         data = cursor.fetchall()
-    print(data)
     birthdays = [Birthday(row["slack_nick"], row["slack_id"], row["bday"]) for row in data]
     birthdays.sort(key=attrgetter("next_bday"))
     return birthdays
