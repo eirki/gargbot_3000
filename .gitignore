@@ -6,6 +6,7 @@ logs/*
 *.pyc
 *.pyo
 
+*.pytest_cache
 
 # Windows image file caches
 Thumbs.db
