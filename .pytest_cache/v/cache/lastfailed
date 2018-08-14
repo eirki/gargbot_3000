@@ -1,6 +1,0 @@
-{
-  "tests/test_pics.py::TestPic": true,
-  "tests/test_pics.py::TestUser": true,
-  "tests/test_pics.py::test_mysql_newfixture": true,
-  "tests/test_pics.py::test_using_mysql": true
-}
