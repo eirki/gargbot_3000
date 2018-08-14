@@ -8,13 +8,16 @@ import html
 import random
 from operator import itemgetter
 
+# Internal
+from gargbot_3000.database_manager import LoggingCursor
+
 # Typing
 from typing import Optional, List
 
 
 class Quotes:
     def __init__(self, db):
-        with db as cursor:
+        with db.cursor(LoggingCursor) as cursor:
             self.slack_nicks_to_db_ids = self._get_users(cursor)
         self.db_ids_to_slack_nicks = {
             nick: db_id for db_id, nick in
@@ -56,7 +59,7 @@ class Quotes:
         sql = ("SELECT db_id, post_text, post_time, post_id, bbcode_uid "
                f"FROM phpbb_posts WHERE db_id {user_filter} ORDER BY RAND() LIMIT 1")
 
-        cursor = db.cursor()
+        cursor = db.cursor(LoggingCursor)
         cursor.execute(sql)
         result = cursor.fetchone()
         db_id = result["db_id"]
@@ -78,11 +81,11 @@ class Quotes:
         else:
             user_filter = ""
         sql = f"SELECT session_ID FROM msn_messages {user_filter} ORDER BY RAND() LIMIT 1"
-        cursor = db.cursor()
+        cursor = db.cursor(LoggingCursor)
         cursor.execute(sql)
         session_ID = cursor.fetchone()["session_ID"]
         log.info(session_ID)
-        sql = ("SELECT msg_time, from_user, to_users, msg_text, msg_color, db_id "
+        sql = ("SELECT msg_time, from_user, msg_text, msg_color, db_id "
                f'FROM msn_messages WHERE session_ID = "{session_ID}"')
         cursor.execute(sql)
         messages = list(cursor.fetchall())

@@ -2,52 +2,37 @@
 # coding: utf-8
 import pytest
 
-from context import config, quotes, database_manager
+from gargbot_3000 import quotes
+from tests import conftest
+
+# Typing
+from MySQLdb import connection
 
 
 @pytest.fixture
-def db_connection():
-    db_connection = database_manager.connect_to_database()
-    try:
-        yield db_connection
-    finally:
-        db_connection.close()
-
-
-@pytest.fixture
-def quotes_db(db_connection):
+def quotes_db(db_connection: connection):
     return quotes.Quotes(db=db_connection)
 
 
-@pytest.fixture
-def slack_nick_to_db_id(db_connection, quotes_db):
-    with db_connection as cursor:
-        response = quotes_db._get_users(cursor)
-    return response
-
-
-def test_garg_quote_random(db_connection, quotes_db):
-    text = quotes_db.garg(db_connection, "quote")
+def test_garg_quote_random(db_connection: connection, quotes_db: quotes.Quotes):
+    text = quotes_db.garg(db_connection, args=None)
     assert "------\n- " in text
 
 
-def test_garg_quote_user(quotes_db, db_connection, slack_nick_to_db_id):
-    user = list(slack_nick_to_db_id.keys())[0]
-    text = quotes_db.garg(db_connection, "quote", user)
-    assert f"------\n- {user}" in text
+def test_garg_quote_user(db_connection: connection, quotes_db: quotes.Quotes):
+    user = conftest.users[0]
+    text = quotes_db.garg(db_connection, args=[user.slack_nick])
+    assert f"------\n- {user.slack_nick}" in text
 
 
-def test_msn_random(db_connection, quotes_db):
-    date, conv = quotes_db.msn(db_connection)
+def test_msn_random(db_connection: connection, quotes_db: quotes.Quotes):
+    date, conv = quotes_db.msn(db_connection, args=None)
     assert type(date) == str
     assert type(conv) == list
 
 
-def test_msn_user(quotes_db, db_connection, slack_nick_to_db_id):
-    user = list(slack_nick_to_db_id.keys())[0]
-    date, conv = quotes_db.msn(db_connection, user)
+def test_msn_user(db_connection: connection, quotes_db: quotes.Quotes):
+    user = conftest.users[0]
+    date, conv = quotes_db.msn(db_connection, args=[user.slack_nick])
     assert type(date) == str
     assert type(conv) == list
-    user_nicks = set(nick.lower() for nick in config.slack_to_msn_nicks[user])
-    conv_nicks = set(nick.lower() for nick, msg, color in conv)
-    assert user_nicks.intersection(conv_nicks)

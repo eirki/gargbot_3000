@@ -1,7 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
 from gargbot_3000 import congrats
-
 from tests import conftest
 
 from gargbot_3000.droppics import DropPics

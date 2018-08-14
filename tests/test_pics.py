@@ -1,6 +1,7 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
 from gargbot_3000.droppics import DropPics
+
 from MySQLdb import connection
 
 
@@ -35,13 +36,13 @@ def test_user(db_connection: connection, drop_pics: DropPics) -> None:
 
 
 def test_multiple_users(db_connection: connection, drop_pics: DropPics) -> None:
-    users = ["slack_nick1", "slack_nick3"]
+    users = ["slack_nick11", "slack_nick3"]
     url, timestamp, description = drop_pics.get_pic(db_connection, arg_list=users)
     assert_valid_returns(url, timestamp, description)
 
 
 def test_multiple_args(db_connection: connection, drop_pics: DropPics) -> None:
-    arg_list = ["slack_nick1", "topic1", "2001"]
+    arg_list = ["slack_nick2", "topic1", "2001"]
     url, timestamp, description = drop_pics.get_pic(db_connection, arg_list=arg_list)
     assert_valid_returns(url, timestamp, description)
 
