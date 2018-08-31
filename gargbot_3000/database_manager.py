@@ -20,6 +20,10 @@ import dropbox
 # Internal
 from gargbot_3000 import config
 
+# Typing
+from typing import Union, List
+from pathlib import Path
+
 
 class LoggingCursor(DictCursor):
     def execute(self, query, args=None):
@@ -130,180 +134,24 @@ class MSN:
         }
         cursor.execute(sql_command, data)
 
-
-class DropPics:
-    def connect_to_database(self):
-        self.db = connect_to_database()
-
-    def connect_dbx(self):
-        self.dbx = dropbox.Dropbox(config.dropbox_token)
-        self.dbx.users_get_current_account()
-        log.info("Connected to dbx")
-
-    def main(self):
-        self.check_relevant_imgs()
-
-        cursor = self.db.cursor()
-        for topic, paths in self.paths.items():
-            for path in paths:
-                self.add_entry(path, topic, cursor)
-
-        self.db.commit()
-
     @staticmethod
-    def add_entry(path, topic, cursor):
-        sql_command = """INSERT INTO dbx_pictures (path, topic)
-        VALUES (%(path)s,
-               %(topic)s);"""
-        data = {
-            "path": path,
-            "topic": topic
-        }
-        cursor.execute(sql_command, data)
+    def add_user_ids_to_msn():
+        db = connect_to_database()
 
-    def dbx_file_path_generator(self, dir):
-        query = self.dbx.files_list_folder(dir, recursive=True)
-        while True:
-            for entry in query.entries:
-                yield entry
-            if not query.has_more:
-                break
-            query = self.dbx.files_list_folder_continue(query.cursor)
-
-    def get_topics(self):
-        cursor = self.db.cursor()
-        cursor.execute("SELECT topic FROM dbx_pictures")
-        return [topic[0] for topic in cursor.fetchall()]
-
-    def check_relevant_imgs(self):
-        self.topics = self.get_topics()
-
-        self.paths = {topic: [] for topic in self.topics}
-
-        loop = asyncio.get_event_loop()
-        tasks = [loop.create_task(self.check_relevance(entry, loop))
-                 for entry in self.dbx_file_path_generator(config.kamera_paths)]
-
-        loop.run_until_complete(asyncio.wait(tasks))
-        loop.close()
-
-    async def check_relevance(self, entry, loop):
-        if not entry.path_lower.endswith(".jpg"):
-            return
-        metadata, response = await loop.run_in_executor(
-            None, self.dbx.files_download, entry.path_lower
-        )
-        tag = DropPics.get_tag(response.raw)
-        if not tag:
-            return
-        for topic, pathlist in self.paths.items():
-            if topic in tag:
-                pathlist.append(entry.path_lower)
-
-    @staticmethod
-    def get_tag(fileobject):
-        im = Image.open(fileobject)
-        exif = im._getexif()
-        return exif[40094].decode("utf-16").rstrip("\x00")
-
-    def get_date_taken(self, path):
-        im = Image.open(path)
-        exif = im._getexif()
-        date_str = exif[36867]
-        date_obj = dt.datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
-        return date_obj
-
-    def add_date_to_db_pics(self):
-        sql = f'SELECT pic_id, path FROM dbx_pictures where taken IS NULL'
-        cursor = self.db.cursor()
-        cursor.execute(sql)
-        all_pics = cursor.fetchall()
-        log.info(len(all_pics))
-        errors = []
-        for pic_id, path in all_pics:
-            try:
-                log.info(path)
-                md = self.dbx.files_get_metadata(path, include_media_info=True)
-                date_obj = md.media_info.get_metadata().time_taken
-                timestr = date_obj.strftime('%Y-%m-%d %H:%M:%S')
-                sql_command = "UPDATE dbx_pictures SET taken = %(timestr)s WHERE pic_id = %(pic_id)s"
-                data = {
-                    "timestr": timestr,
-                    "pic_id": pic_id
-                }
-
-                cursor.execute(sql_command, data)
-            except Exception as exc:
-                errors.append([pic_id, path, exc])
-                traceback.log.info_exc()
-        self.db.commit()
-        if errors:
-            log.info("ERRORS:")
-            log.info(errors)
-
-    def add_new_pics(self, folder, topic, root):
-        cursor = self.db.cursor()
-        for pic in os.listdir(folder):
-            if not pic.endswith((".jpg", ".jpeg")):
-                continue
-            disk_path = os.path.join(folder, pic)
-            db_path = "/".join([root, pic.lower()])
-
-            date_obj = self.get_date_taken(disk_path)
-            timestr = date_obj.strftime('%Y-%m-%d %H:%M:%S')
-
-            sql_command = """INSERT INTO dbx_pictures (path, topic, taken)
-            VALUES (%(path)s,
-                   %(topic)s,
-                   %(taken)s);"""
-            data = {
-                "path": db_path,
-                "topic": topic,
-                "taken": timestr
-            }
-            cursor.execute(sql_command, data)
-        self.db.commit()
-
-    def add_faces(self):
-        cursor = self.db.cursor()
-        for garg_id, slack_nick in config.garg_ids_to_slack_nicks.items():
-            sql_command = """INSERT INTO faces (garg_id, name)
-            VALUES (%(garg_id)s,
-                   %(name)s);"""
-            data = {
-                "garg_id": garg_id,
-                "name": slack_nick,
-            }
-            cursor.execute(sql_command, data)
-        self.db.commit()
-
-    def add_faces_pics(self):
-        with open(os.path.join(config.home, "data", "garg_faces all.json")) as j:
-            all_faces = json.load(j)
-
-        cursor = self.db.cursor()
-
-        for path, faces in all_faces.items():
-            sql_command = 'SELECT pic_id FROM dbx_pictures WHERE path = %(path)s'
-            data = {"path": path}
-            cursor.execute(sql_command, data)
-            try:
-                pic_id = cursor.fetchone()[0]
-            except TypeError:
-                log.info(f"pic not in db: {path}")
-                continue
-            for face in faces:
-                garg_id = config.slack_nicks_to_garg_ids[face]
+        cursor = db.cursor()
+        sql_command = "SELECT slack_nick, db_id FROM user_ids"
+        cursor.execute(sql_command)
+        users = cursor.fetchall()
+        for slack_nick, db_id in users:
+            msn_nicks = config.slack_to_msn_nicks[slack_nick]
+            for msn_nick in msn_nicks:
                 sql_command = (
-                    "INSERT INTO dbx_pictures_faces (garg_id, pic_id)"
-                    "VALUES (%(garg_id)s, %(pic_id)s);"
+                    f"UPDATE msn_messages SET db_id = {db_id} "
+                    f'WHERE from_user LIKE "%{msn_nick}%"'
                 )
-                data = {
-                    "garg_id": garg_id,
-                    "pic_id": pic_id,
-                }
-                cursor.execute(sql_command, data)
-        self.db.commit()
+                cursor.execute(sql_command)
+        db.commit()
+        db.close()
 
 
 def add_user_ids_table():
@@ -326,22 +174,108 @@ def add_user_ids_table():
     db.commit()
     db.close()
 
-def add_user_ids_to_msn():
-    db = connect_to_database()
 
-    cursor = db.cursor()
-    sql_command = "SELECT slack_nick, db_id FROM user_ids"
-    cursor.execute(sql_command)
-    users = cursor.fetchall()
-    for slack_nick, db_id in users:
-        msn_nicks = config.slack_to_msn_nicks[slack_nick]
-        for msn_nick in msn_nicks:
-            sql_command = (
-                f"UPDATE msn_messages SET db_id = {db_id} "
-                f'WHERE from_user LIKE "%{msn_nick}%"'
-            )
+class DropPics:
+    def __init__(self):
+        self.db = None
+        self.dbx = None
+        self._firstname_to_db_id = None
+
+    @property
+    def firstname_to_db_id(self):
+        if self._firstname_to_db_id is None:
+            cursor = self.db.cursor()
+            sql_command = "SELECT first_name, db_id FROM user_ids"
             cursor.execute(sql_command)
-    db.commit()
-    db.close()
+            self._firstname_to_db_id = {row['first_name']: row['db_id'] for row in cursor.fetchall()}
+        return self._firstname_to_db_id
 
-# add_user_ids_to_msn()
+    def connect_to_database(self):
+        self.db = connect_to_database()
+
+    def connect_dbx(self):
+        self.dbx = dropbox.Dropbox(config.dropbox_token)
+        self.dbx.users_get_current_account()
+        log.info("Connected to dbx")
+
+    @staticmethod
+    def get_tags(image: Union[Path, str]) -> List[str]:
+        im = Image.open(image)
+        exif = im._getexif()
+        return exif[40094].decode("utf-16").rstrip("\x00").split(";")
+
+    @staticmethod
+    def get_date_taken(image: Union[Path, str]) -> dt.datetime:
+        im = Image.open(image)
+        exif = im._getexif()
+        date_str = exif[36867]
+        date_obj = dt.datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
+        return date_obj
+
+    def add_faces_in_pic(self, cursor: LoggingCursor, pic: Path, dbx_path: str):
+        sql_command = 'SELECT pic_id FROM dbx_pictures WHERE path = %(path)s'
+        data = {"path": dbx_path}
+        cursor.execute(sql_command, data)
+        try:
+            pic_id = cursor.fetchone()["pic_id"]
+        except KeyError:
+            log.info(f"pic not in db: {dbx_path}")
+            return
+
+        sql_command = 'SELECT * FROM dbx_pictures_faces WHERE pic_id = %(pic_id)s'
+        data = {"pic_id": pic_id}
+        cursor.execute(sql_command, data)
+        result = cursor.fetchone()
+        if result is not None:
+            log.info(f"{dbx_path} pic faces already in db with id {pic_id}")
+            return
+
+        tags = DropPics.get_tags(pic)
+        faces = set(tags).intersection(self.firstname_to_db_id)
+        for face in faces:
+            db_id = self.firstname_to_db_id[face]
+            sql_command = (
+                "INSERT INTO dbx_pictures_faces (db_id, pic_id) "
+                "VALUES (%(db_id)s, %(pic_id)s);"
+            )
+            data = {
+                "db_id": db_id,
+                "pic_id": pic_id,
+            }
+            cursor.execute(sql_command, data)
+
+    def add_pics_in_folder(self, folder: List[Path], topic: str, dbx_folder: str) -> None:
+        cursor = self.db.cursor()
+        for pic in folder:
+            if not pic.suffix.lower() in {".jpg", ".jpeg"}:
+                continue
+            # disk_path = os.path.join(folder, pic)
+            dbx_path = dbx_folder + "/" + pic.name.lower()
+
+            date_obj = DropPics.get_date_taken(pic)
+            timestr = date_obj.strftime('%Y-%m-%d %H:%M:%S')
+
+            sql_command = """INSERT INTO dbx_pictures (path, topic, taken)
+            VALUES (%(path)s,
+                   %(topic)s,
+                   %(taken)s);"""
+            data = {
+                "path": dbx_path,
+                "topic": topic,
+                "taken": timestr
+            }
+            cursor.execute(sql_command, data)
+
+            self.add_faces_in_pic(cursor, pic, dbx_path)
+        self.db.commit()
+
+    def add_faces_to_existing_pics(self, folder: Path, dbx_folder: str):
+        self.connect_to_database()
+        try:
+            for pic in list(folder.iterdir()):
+                dbx_path = dbx_folder + "/" + pic.name.lower()
+                with self.db.cursor() as cursor:
+                    self.add_faces_in_pic(cursor, pic, dbx_path)
+        finally:
+            self.db.commit()
+            self.db.close()
