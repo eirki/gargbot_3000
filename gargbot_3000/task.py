@@ -81,8 +81,6 @@ def setup() -> Tuple[SlackClient, Connection, droppics.DropPics, quotes.Quotes]:
     drop_pics = droppics.DropPics(db=db_connection)
 
     quotes_db = quotes.Quotes(db=db_connection)
-    # commands.command_switch["msn"].keywords["quotes_db"] = quotes_db
-    # commands.command_switch["quote"].keywords["quotes_db"] = quotes_db
 
     slack_client = SlackClient(config.slack_bot_user_token)
     connected = slack_client.rtm_connect()
