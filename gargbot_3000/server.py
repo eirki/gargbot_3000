@@ -216,8 +216,7 @@ def countdown():
 
 def main():
     log.info("GargBot 3000 server operational!")
-    # app.run() uwsgi does this
-    pass
+    app.run()
 
 
 if __name__ == '__main__':
