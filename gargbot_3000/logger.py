@@ -3,36 +3,13 @@
 
 # Core
 import logging
-from pathlib import Path
 import os
-import sys
-import datetime as dt
-
-# Internal
-from gargbot_3000 import config
 
 log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+log.setLevel(os.environ.get("LOGLEVEL", "INFO"))
 
-formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-mode = Path(sys.argv[0]).stem
-log_path = Path(config.home / "logs" / f"gargbot_{mode}.log")
-
-if log_path.exists():
-    now = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    os.rename(log_path, log_path.with_name(f"gargbot_{mode}_{now}.log"))
-
-try:
-    fh = logging.FileHandler(str(log_path))
-except FileNotFoundError:
-    log_path.parent.mkdir()
-    fh = logging.FileHandler(str(log_path))
-
-fh.setLevel(logging.DEBUG)
-fh.setFormatter(formatter)
-log.addHandler(fh)
-
+formatter = logging.Formatter("%(filename)s %(levelname)s - %(message)s")
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(os.environ.get("LOGLEVEL", "INFO"))
 ch.setFormatter(formatter)
 log.addHandler(ch)

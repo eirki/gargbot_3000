@@ -25,6 +25,7 @@ from gargbot_3000 import droppics
 # Typing
 from typing import Tuple, Dict
 from MySQLdb.connections import Connection
+from sshtunnel import SSHTunnelForwarder
 
 
 def wait_for_slack_output(slack_client: SlackClient) -> Tuple[str, str, str]:
@@ -75,14 +76,12 @@ def handle_congrats(db_connection, slack_client: SlackClient, drop_pics):
         send_response(slack_client, response=response, channel=config.main_channel)
 
 
-def setup() -> Tuple[SlackClient, Connection, droppics.DropPics, quotes.Quotes]:
-    db_connection = database_manager.connect_to_database()
+def setup() -> Tuple[SlackClient, droppics.DropPics, quotes.Quotes, Connection, SSHTunnelForwarder,]:
+    db_connection, ssh_tunnel = database_manager.connect_to_database()
 
     drop_pics = droppics.DropPics(db=db_connection)
 
     quotes_db = quotes.Quotes(db=db_connection)
-    # commands.command_switch["msn"].keywords["quotes_db"] = quotes_db
-    # commands.command_switch["quote"].keywords["quotes_db"] = quotes_db
 
     slack_client = SlackClient(config.slack_bot_user_token)
     connected = slack_client.rtm_connect()
@@ -96,11 +95,11 @@ def setup() -> Tuple[SlackClient, Connection, droppics.DropPics, quotes.Quotes]:
     congrats_thread.daemon = True
     congrats_thread.start()
 
-    return slack_client, db_connection, drop_pics, quotes_db
+    return slack_client, drop_pics, quotes_db, db_connection, ssh_tunnel
 
 
 def main():
-    slack_client, db_connection, drop_pics, quotes_db = setup()
+    slack_client, drop_pics, quotes_db, db_connection, ssh_tunnel = setup()
 
     log.info("GargBot 3000 task operational!")
 
@@ -131,6 +130,7 @@ def main():
         sys.exit()
     finally:
         db_connection.close()
+        ssh_tunnel.stop()
 
 
 if __name__ == '__main__':
