@@ -1,3 +1,2 @@
-web: gunicorn run.server.app
+web: gunicorn run:app
 worker: python run.py task
--
