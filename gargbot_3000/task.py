@@ -75,6 +75,7 @@ def handle_congrats(db_connection, slack_client: SlackClient, drop_pics):
             send_response(slack_client, response=response, channel=config.main_channel)
         except OverflowError:
             log.info(f"Too long sleep length for OS. Restart before next birthday, at {birthday.next_bday}")
+            break
 
 
 def setup() -> Tuple[SlackClient, Connection, droppics.DropPics, quotes.Quotes]:
