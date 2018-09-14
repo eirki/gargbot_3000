@@ -76,8 +76,8 @@ def handle_congrats(db_connection, slack_client: SlackClient, drop_pics):
         send_response(slack_client, response=response, channel=config.main_channel)
 
 
-def setup() -> Tuple[SlackClient, droppics.DropPics, quotes.Quotes, Connection, SSHTunnelForwarder,]:
-    db_connection, ssh_tunnel = database_manager.connect_to_database()
+def setup() -> Tuple[SlackClient, droppics.DropPics, quotes.Quotes, Connection]:
+    db_connection = database_manager.connect_to_database()
 
     drop_pics = droppics.DropPics(db=db_connection)
 
@@ -95,11 +95,11 @@ def setup() -> Tuple[SlackClient, droppics.DropPics, quotes.Quotes, Connection, 
     congrats_thread.daemon = True
     congrats_thread.start()
 
-    return slack_client, drop_pics, quotes_db, db_connection, ssh_tunnel
+    return slack_client, drop_pics, quotes_db, db_connection
 
 
 def main():
-    slack_client, drop_pics, quotes_db, db_connection, ssh_tunnel = setup()
+    slack_client, drop_pics, quotes_db, db_connection = setup()
 
     log.info("GargBot 3000 task operational!")
 
@@ -129,8 +129,7 @@ def main():
     except KeyboardInterrupt:
         sys.exit()
     finally:
-        db_connection.close()
-        ssh_tunnel.stop()
+        database_manager.close_database_connection(db_connection)
 
 
 if __name__ == '__main__':

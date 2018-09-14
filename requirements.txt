@@ -7,4 +7,3 @@ Pillow
 pytz
 flask
 python-dotenv
-sshtunnel

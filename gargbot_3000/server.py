@@ -25,9 +25,8 @@ app = Flask(__name__)
 def get_db():
     db_connection = getattr(g, '_database', None)
     if db_connection is None:
-        db_connection, ssh_tunnel = database_manager.connect_to_database()
+        db_connection = database_manager.connect_to_database()
         g._database = db_connection
-        g._ssh_tunnel = ssh_tunnel
     return db_connection
 
 
@@ -35,10 +34,7 @@ def get_db():
 def close_connection(exception):
     db_connection = getattr(g, '_database', None)
     if db_connection is not None:
-        db_connection.close()
-    ssh_tunnel = getattr(g, '_ssh_tunnel', None)
-    if ssh_tunnel is not None:
-        ssh_tunnel.stop()
+        database_manager.close_database_connection(db_connection)
 
 
 def get_pics():

@@ -13,13 +13,12 @@ import MySQLdb
 from MySQLdb.cursors import DictCursor
 from PIL import Image
 import dropbox
-from sshtunnel import SSHTunnelForwarder
 
 # Internal
 from gargbot_3000 import config
 
 # Typing
-from typing import Union, List, Tuple
+from typing import Union, List
 from pathlib import Path
 
 
@@ -33,17 +32,9 @@ class LoggingCursor(DictCursor):
         super().executemany(query, args)
 
 
-def connect_to_database() -> Tuple[MySQLdb.Connection, SSHTunnelForwarder]:
-    server = SSHTunnelForwarder(
-        ssh_host=config.ssh_host,
-        ssh_username=config.ssh_username,
-        ssh_password=config.ssh_password,
-        remote_bind_address=(config.ssh_db_host_name, config.ssh_port)
-    )
-    server.start()
+def connect_to_database() -> MySQLdb.Connection:
     connection = MySQLdb.connect(
         host=config.db_host,
-        port=server.local_bind_port,
         user=config.db_user,
         passwd=config.db_passwd,
         db=config.db_name,
@@ -51,15 +42,13 @@ def connect_to_database() -> Tuple[MySQLdb.Connection, SSHTunnelForwarder]:
         cursorclass=LoggingCursor
     )
 
-    return connection, server
+    return connection
 
 
 def close_database_connection(
     connection: MySQLdb.Connection,
-    server: SSHTunnelForwarder
 ) -> None:
     connection.close()
-    server.stop()
 
 
 def reconnect_if_disconnected(db_connection: MySQLdb.Connection) -> None:
