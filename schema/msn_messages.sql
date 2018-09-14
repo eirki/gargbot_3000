@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS msn_messages;
 
 CREATE TABLE msn_messages (
-	session_ID VARCHAR(50),
+	session_id VARCHAR(50),
 	msg_type VARCHAR(10),
 	msg_time TIMESTAMP(3),
 	msg_source VARCHAR(10),

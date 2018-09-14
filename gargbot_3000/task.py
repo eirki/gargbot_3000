@@ -8,10 +8,12 @@ import sys
 import datetime as dt
 import threading
 import itertools
+from functools import partial
 
 # Dependencies
 from slackclient import SlackClient
 import websocket
+import psycopg2
 
 # Internal
 from gargbot_3000 import config
@@ -24,8 +26,7 @@ from gargbot_3000 import droppics
 
 # Typing
 from typing import Tuple, Dict
-from MySQLdb.connections import Connection
-from sshtunnel import SSHTunnelForwarder
+from psycopg2.extensions import connection
 
 
 def wait_for_slack_output(slack_client: SlackClient) -> Tuple[str, str, str]:
@@ -66,17 +67,20 @@ def send_response(slack_client: SlackClient, response: Dict, channel: str):
     slack_client.api_call("chat.postMessage", channel=channel, as_user=True, **response)
 
 
-def handle_congrats(db_connection, slack_client: SlackClient, drop_pics):
+def handle_congrats(slack_client: SlackClient, drop_pics):
+    db_connection = database_manager.connect_to_database()
     birthdays = congrats.get_birthdays(db_connection)
+    db_connection.close()
     for birthday in itertools.cycle(birthdays):
         log.info(f"Next birthday: {birthday.nick}, at {birthday.next_bday}")
         time.sleep(birthday.seconds_to_bday())
+        db_connection = database_manager.connect_to_database()
         response = congrats.get_greeting(birthday, db_connection, drop_pics)
-
         send_response(slack_client, response=response, channel=config.main_channel)
+        db_connection.close()
 
 
-def setup() -> Tuple[SlackClient, droppics.DropPics, quotes.Quotes, Connection]:
+def setup() -> Tuple[SlackClient, droppics.DropPics, quotes.Quotes, connection]:
     db_connection = database_manager.connect_to_database()
 
     drop_pics = droppics.DropPics(db=db_connection)
@@ -90,7 +94,7 @@ def setup() -> Tuple[SlackClient, droppics.DropPics, quotes.Quotes, Connection]:
 
     congrats_thread = threading.Thread(
         target=handle_congrats,
-        args=(db_connection, slack_client, drop_pics)
+        args=(slack_client, drop_pics)
     )
     congrats_thread.daemon = True
     congrats_thread.start()
@@ -113,16 +117,25 @@ def main():
             except ValueError:
                 command_str = ""
                 args = []
-
             command_str = command_str.lower()
-
-            response = commands.execute(
+            command_func = partial(
+                commands.execute,
                 command_str=command_str,
                 args=args,
                 db_connection=db_connection,
                 drop_pics=drop_pics,
                 quotes_db=quotes_db,
             )
+            try:
+                response = command_func()
+            except psycopg2.OperationalError as op_exc:
+                db_connection = database_manager.connect_to_database()
+                try:
+                    return command_func()
+                except Exception as exc:
+                    # OperationalError not caused by connection issue.
+                    log.error("Error in command execution", exc_info=True)
+                    return commands.cmd_panic(exc)
 
             send_response(slack_client, response, channel)
 

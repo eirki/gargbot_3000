@@ -9,8 +9,8 @@ import datetime as dt
 import re
 
 # Dependencies
-import MySQLdb
-from MySQLdb.cursors import DictCursor
+import psycopg2
+from psycopg2.extras import DictCursor
 from PIL import Image
 import dropbox
 
@@ -20,6 +20,7 @@ from gargbot_3000 import config
 # Typing
 from typing import Union, List
 from pathlib import Path
+from psycopg2.extensions import connection
 
 
 class LoggingCursor(DictCursor):
@@ -32,31 +33,19 @@ class LoggingCursor(DictCursor):
         super().executemany(query, args)
 
 
-def connect_to_database() -> MySQLdb.Connection:
-    connection = MySQLdb.connect(
-        host=config.db_host,
-        user=config.db_user,
-        passwd=config.db_passwd,
-        db=config.db_name,
-        charset="utf8",
-        cursorclass=LoggingCursor
+def connect_to_database() -> connection:
+    connection = psycopg2.connect(
+        config.db_url,
+        cursor_factory=LoggingCursor
     )
 
     return connection
 
 
 def close_database_connection(
-    connection: MySQLdb.Connection,
+    connection: connection,
 ) -> None:
     connection.close()
-
-
-def reconnect_if_disconnected(db_connection: MySQLdb.Connection) -> None:
-    try:
-        db_connection.ping()
-    except MySQLdb.OperationalError:
-        log.info("Database disconnected. Trying to reconnect")
-        db_connection.ping(True)
 
 
 class MSN:

@@ -8,11 +8,10 @@ from operator import attrgetter
 import random
 
 # Dependencies
-import MySQLdb
+import psycopg2
 
 # Internal
 from gargbot_3000 import config
-from gargbot_3000.database_manager import LoggingCursor
 
 
 greetings = [
@@ -67,7 +66,7 @@ class Birthday:
 
 
 def get_birthdays(db):
-    with db.cursor(LoggingCursor) as cursor:
+    with db.cursor() as cursor:
         sql_command = "SELECT slack_nick, slack_id, bday FROM user_ids"
         cursor.execute(sql_command)
         data = cursor.fetchall()
@@ -87,7 +86,7 @@ def get_greeting(person, db, drop_pics):
 
     try:
         person_picurl, timestamp, _ = drop_pics.get_pic(db, [person.nick])
-    except MySQLdb.OperationalError:
+    except psycopg2.OperationalError:
         db.ping(True)
         person_picurl, timestamp, _ = drop_pics.get_pic(db, [person.nick])
 
@@ -100,7 +99,3 @@ def get_greeting(person, db, drop_pics):
     }
 
     return response
-
-
-if __name__ == '__main__':
-    log.info(get_birthdays())

@@ -18,16 +18,7 @@ bot_name = os.environ["bot_name"]
 
 home = Path(os.getenv("home_folder", os.getcwd()))
 
-db_host = os.environ["db_host"]
-db_user = os.environ["db_user"]
-db_passwd = os.environ["db_passwd"]
-db_name = os.environ["db_name"]
-
-ssh_host = os.environ["ssh_host"]
-ssh_username = os.environ["ssh_username"]
-ssh_password = os.environ["ssh_password"]
-ssh_db_host_name = os.environ["ssh_db_host_name"]
-ssh_port = int(os.environ["ssh_port"])
+db_url = os.environ["db_url"]
 
 dropbox_token = os.environ["dropbox_token"]
 

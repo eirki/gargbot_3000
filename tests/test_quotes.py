@@ -6,7 +6,7 @@ from gargbot_3000 import quotes
 from tests import conftest
 
 # Typing
-from MySQLdb import connection
+from psycopg2.extensions import connection
 
 
 @pytest.fixture
