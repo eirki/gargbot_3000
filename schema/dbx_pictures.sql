@@ -1,19 +1,22 @@
 DROP TABLE IF EXISTS dbx_pictures;
 
 CREATE TABLE dbx_pictures (
-	path CHAR(100),
-	topic CHAR(30),
-	taken datetime,
-	pic_id INT PRIMARY KEY AUTO_INCREMENT
+	path VARCHAR(100),
+	topic VARCHAR(30),
+	taken TIMESTAMP,
+	pic_id SERIAL PRIMARY KEY
 );
+
+DROP TABLE IF EXISTS faces;
 
 CREATE TABLE faces (
-	db_id INT PRIMARY KEY,
-	name char(30)
+	db_id SMALLINT NOT NULL PRIMARY KEY,
+	name VARCHAR(30)
 );
+
+DROP TABLE IF EXISTS dbx_pictures_faces;
 
 CREATE TABLE dbx_pictures_faces (
-	db_id INT,
-	pic_id INT
+	db_id SMALLINT,
+	pic_id SMALLINT
 );
-
