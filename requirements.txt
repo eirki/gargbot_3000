@@ -6,4 +6,5 @@ dropbox
 Pillow
 pytz
 flask
+gunicorn
 python-dotenv
