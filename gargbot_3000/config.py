@@ -24,8 +24,6 @@ dropbox_token = os.environ["dropbox_token"]
 
 tz = pytz.timezone(os.environ["tz"])
 
-app_id = os.environ["app_id"]
-
 test_channel = os.environ["test_channel"]
 
 main_channel = os.environ["main_channel"]
