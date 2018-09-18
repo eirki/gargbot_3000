@@ -4,7 +4,7 @@ from gargbot_3000 import congrats
 from tests import conftest
 
 from gargbot_3000.droppics import DropPics
-from MySQLdb import connection
+from psycopg2.extensions import connection
 
 
 def test_congrat(db_connection: connection, drop_pics: DropPics) -> None:

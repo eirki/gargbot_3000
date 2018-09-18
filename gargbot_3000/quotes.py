@@ -13,11 +13,12 @@ from gargbot_3000.database_manager import LoggingCursor
 
 # Typing
 from typing import Optional, List
+from psycopg2.extensions import connection
 
 
 class Quotes:
     def __init__(self, db):
-        with db.cursor(LoggingCursor) as cursor:
+        with db.cursor() as cursor:
             self.slack_nicks_to_db_ids = self._get_users(cursor)
         self.db_ids_to_slack_nicks = {
             nick: db_id for db_id, nick in
@@ -46,7 +47,7 @@ class Quotes:
 
         return inp
 
-    def garg(self, db, args):
+    def garg(self, db: connection, args):
         user = args[0] if args else None
         if user and user not in self.slack_nicks_to_db_ids:
             return f"Gargling not found: {user}. Husk å bruke slack nick"
@@ -57,9 +58,9 @@ class Quotes:
             user_filter = "IN (2, 3, 5, 6, 7, 9, 10, 11)"
 
         sql = ("SELECT db_id, post_text, post_time, post_id, bbcode_uid "
-               f"FROM phpbb_posts WHERE db_id {user_filter} ORDER BY RAND() LIMIT 1")
+               f"FROM phpbb_posts WHERE db_id {user_filter} ORDER BY RANDOM() LIMIT 1")
 
-        cursor = db.cursor(LoggingCursor)
+        cursor = db.cursor()
         cursor.execute(sql)
         result = cursor.fetchone()
         db_id = result["db_id"]
@@ -73,21 +74,20 @@ class Quotes:
             f"http://eirik.stavestrand.no/gargen/viewtopic.php?p={post_id}#p{post_id}\n")
         return quote
 
-    def msn(self, db, args):
+    def msn(self, db: connection, args):
         user = args[0] if args else None
         if user is not None:
             db_id = self.slack_nicks_to_db_ids[user]
             user_filter = f"WHERE db_id = {db_id}"
         else:
             user_filter = ""
-        sql = f"SELECT session_ID FROM msn_messages {user_filter} ORDER BY RAND() LIMIT 1"
-        cursor = db.cursor(LoggingCursor)
+        sql = f"SELECT session_id FROM msn_messages {user_filter} ORDER BY RANDOM() LIMIT 1"
+        cursor = db.cursor()
         cursor.execute(sql)
-        session_ID = cursor.fetchone()["session_ID"]
-        log.info(session_ID)
+        session_id = cursor.fetchone()
         sql = ("SELECT msg_time, from_user, msg_text, msg_color, db_id "
-               f'FROM msn_messages WHERE session_ID = "{session_ID}"')
-        cursor.execute(sql)
+               f'FROM msn_messages WHERE session_id = %(session_id)s')
+        cursor.execute(sql, session_id)
         messages = list(cursor.fetchall())
         messages.sort(key=itemgetter("msg_time"))
         if user is not None:

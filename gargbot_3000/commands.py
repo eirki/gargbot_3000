@@ -8,7 +8,7 @@ from functools import partial
 
 # Dependencies
 from slackclient import SlackClient
-import MySQLdb
+import psycopg2
 from requests.exceptions import SSLError
 
 # Internal
@@ -17,7 +17,7 @@ from gargbot_3000 import droppics
 from gargbot_3000 import quotes
 
 # Typing
-from MySQLdb.connections import Connection
+from psycopg2.extensions import connection
 from typing import Dict, List, Optional, Callable, Any
 
 command_explanation = (
@@ -45,7 +45,7 @@ def cmd_welcome() -> Dict:
     return response
 
 
-def cmd_hvem(args: List[str], db: Connection) -> Dict:
+def cmd_hvem(args: List[str], db: connection) -> Dict:
     """if command.lower().startswith("hvem")"""
     with db as cursor:
         sql = "SELECT first_name FROM user_ids ORDER BY RAND() LIMIT 1"
@@ -58,7 +58,7 @@ def cmd_hvem(args: List[str], db: Connection) -> Dict:
     return response
 
 
-def cmd_pic(args: Optional[List[str]], db: Connection, drop_pics: droppics.DropPics) -> Dict:
+def cmd_pic(args: Optional[List[str]], db: connection, drop_pics: droppics.DropPics) -> Dict:
     """if command is 'pic'"""
     picurl, timestamp, error_text = drop_pics.get_pic(db, args)
     response: Dict[str, Any] = {
@@ -72,14 +72,14 @@ def cmd_pic(args: Optional[List[str]], db: Connection, drop_pics: droppics.DropP
     return response
 
 
-def cmd_quote(args: Optional[List[str]], db: Connection, quotes_db: quotes.Quotes) -> Dict:
+def cmd_quote(args: Optional[List[str]], db: connection, quotes_db: quotes.Quotes) -> Dict:
     """if command is 'quote'"""
     text = quotes_db.garg(db, args)
     response: Dict[str, Any] = {"text": text}
     return response
 
 
-def cmd_msn(args: Optional[List[str]], db: Connection, quotes_db: quotes.Quotes) -> Dict:
+def cmd_msn(args: Optional[List[str]], db: connection, quotes_db: quotes.Quotes) -> Dict:
     """if command is 'msn'"""
     date, text = quotes_db.msn(db, args)
 
@@ -117,7 +117,7 @@ def cmd_panic(exc: Exception) -> Dict:
 def execute(
         command_str: str,
         args: List,
-        db_connection: Connection,
+        db_connection: connection,
         drop_pics: droppics.DropPics,
         quotes_db: quotes.Quotes,
         ) -> Dict:
@@ -139,14 +139,8 @@ def execute(
 
     try:
         return command_func()
-    except MySQLdb.OperationalError as op_exc:
-        database_manager.reconnect_if_disconnected(db_connection)
-        try:
-            return command_func()
-        except Exception as exc:
-            # OperationalError not caused by connection issue.
-            log.error("Error in command execution", exc_info=True)
-            return cmd_panic(exc)
+    except psycopg2.OperationalError:
+        raise
     except SSLError as ssl_exc:
         # Dropbox sometimes gives SSLerrors, try again:
         try:

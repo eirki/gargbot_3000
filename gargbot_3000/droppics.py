@@ -16,14 +16,14 @@ from gargbot_3000 import config
 
 # Typing
 from typing import Set, Tuple, Optional, List, Iterable
-from MySQLdb.connections import Connection
+from psycopg2.extensions import connection
 import datetime as dt
 from gargbot_3000.database_manager import LoggingCursor
 
 
 class DropPics:
-    def __init__(self, db: Connection) -> None:
-        cursor = db.cursor(LoggingCursor)
+    def __init__(self, db: connection) -> None:
+        cursor = db.cursor()
         self.years = self.get_years(cursor)
         self.topics = self.get_topics(cursor)
         self.users = self.get_users(cursor)
@@ -31,7 +31,7 @@ class DropPics:
         self._connect_dbx()
 
     def get_years(self, cursor: LoggingCursor):
-        sql_command = "SELECT DISTINCT YEAR(taken) as year FROM dbx_pictures ORDER BY YEAR(taken)"
+        sql_command = "SELECT DISTINCT EXTRACT(YEAR FROM taken)::int as year FROM dbx_pictures ORDER BY year"
         cursor.execute(sql_command)
         years = set(str(row['year']) for row in cursor.fetchall())
         return years
@@ -78,7 +78,7 @@ class DropPics:
         # year arg
         with contextlib.suppress(StopIteration):
             year = next(arg for arg in args if arg in self.years)
-            sql_filter.append("YEAR(p.taken) = %(year)s")
+            sql_filter.append("EXTRACT(YEAR FROM p.taken)::int = %(year)s")
             sql_data["year"] = year
 
         # face arg(s)
@@ -96,18 +96,20 @@ class DropPics:
             join = 'LEFT JOIN dbx_pictures_faces as f ON p.pic_id = f.pic_id'
         elif len(db_ids) > 1:
             join = (
-                'LEFT JOIN (SELECT GROUP_CONCAT(db_id) as db_ids, pic_id from dbx_pictures_faces '
+                'LEFT JOIN (SELECT ARRAY_AGG(db_id) as db_ids, pic_id from dbx_pictures_faces '
                 'group BY pic_id) as f ON p.pic_id = f.pic_id'
             )
             for db_id in db_ids:
-                sql_filter.append(f"FIND_IN_SET('%(db_id{db_id})s',f.db_ids)")
+                sql_filter.append(f"'%(db_id{db_id})s' = ANY(f.db_ids)")
                 sql_data[f"db_id{db_id}"] = db_id
 
         sql_filter_str = "WHERE " + " AND ".join(sql_filter)
         sql_command = (
             'SELECT p.path, p.taken FROM dbx_pictures as p '
-            f'{join} {sql_filter_str} ORDER BY RAND() LIMIT 1'
+            f'{join} {sql_filter_str} ORDER BY RANDOM() LIMIT 1'
         )
+        # print(sql_command % sql_data)
+        # "SELECT p.path, p.taken FROM dbx_pictures as p LEFT JOIN (SELECT GROUP_CONCAT(db_id) as db_ids, pic_id from dbx_pictures_faces group BY pic_id) as f ON p.pic_id = f.pic_id WHERE FIND_IN_SET('3',f.db_ids) AND FIND_IN_SET('11',f.db_ids) ORDER BY RANDOM() LIMIT 1"
         return sql_command, sql_data
 
     def get_timestamp(self, date_obj: dt.datetime):
@@ -126,7 +128,7 @@ class DropPics:
     def get_random_pic(self, cursor: LoggingCursor):
         sql_command = (
             'SELECT path, taken FROM dbx_pictures '
-            'WHERE topic = %(topic)s ORDER BY RAND() LIMIT 1'
+            'WHERE topic = %(topic)s ORDER BY RANDOM() LIMIT 1'
         )
         data = {"topic": random.choice(list(self.topics))}
 
@@ -140,7 +142,7 @@ class DropPics:
 
     def get_pic(self, db, arg_list: Optional[List[str]])-> Tuple[str, int, str]:
         description = ""
-        cursor = db.cursor(LoggingCursor)
+        cursor = db.cursor()
 
         if not arg_list:
             url, timestamp = self.get_random_pic(cursor)

@@ -8,7 +8,8 @@ from pathlib import Path
 import pytz
 from dotenv import load_dotenv
 
-load_dotenv()
+env_path = Path(".") / ".env"
+load_dotenv(dotenv_path=env_path)
 
 slack_verification_token = os.environ["slack_verification_token"]
 slack_bot_user_token = os.environ["slack_bot_user_token"]
@@ -17,10 +18,7 @@ bot_name = os.environ["bot_name"]
 
 home = Path(os.getenv("home_folder", os.getcwd()))
 
-db_host = os.environ["db_host"]
-db_user = os.environ["db_user"]
-db_passwd = os.environ["db_passwd"]
-db_name = os.environ["db_name"]
+db_url = os.environ["db_url"]
 
 dropbox_token = os.environ["dropbox_token"]
 

@@ -2,7 +2,7 @@
 # coding: utf-8
 from gargbot_3000.droppics import DropPics
 
-from MySQLdb import connection
+from psycopg2.extensions import connection
 
 
 def assert_valid_returns(url: str, timestamp: int, description: str) -> None:

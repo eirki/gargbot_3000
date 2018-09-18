@@ -34,7 +34,7 @@ def get_db():
 def close_connection(exception):
     db_connection = getattr(g, '_database', None)
     if db_connection is not None:
-        db_connection.close()
+        database_manager.close_database_connection(db_connection)
 
 
 def get_pics():
@@ -216,8 +216,7 @@ def countdown():
 
 def main():
     log.info("GargBot 3000 server operational!")
-    # app.run() uwsgi does this
-    pass
+    app.run()
 
 
 if __name__ == '__main__':

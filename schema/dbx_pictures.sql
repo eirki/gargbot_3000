@@ -1,24 +1,22 @@
 DROP TABLE IF EXISTS dbx_pictures;
 
 CREATE TABLE dbx_pictures (
-path CHAR(100),
-topic CHAR(30));
+	path VARCHAR(100),
+	topic VARCHAR(30),
+	taken TIMESTAMP,
+	pic_id SERIAL PRIMARY KEY
+);
 
-ALTER TABLE dbx_pictures
-ADD taken datetime,
-ADD pic_id INT PRIMARY KEY AUTO_INCREMENT;
+DROP TABLE IF EXISTS faces;
 
 CREATE TABLE faces (
-garg_id INT PRIMARY KEY,
-name char(30)
+	db_id SMALLINT NOT NULL PRIMARY KEY,
+	name VARCHAR(30)
 );
 
-ALTER TABLE faces CHANGE garg_id db_id INT;
-
+DROP TABLE IF EXISTS dbx_pictures_faces;
 
 CREATE TABLE dbx_pictures_faces (
-garg_id INT,
-pic_id INT
+	db_id SMALLINT,
+	pic_id SMALLINT
 );
-
-ALTER TABLE dbx_pictures_faces CHANGE `garg_id` `db_id` INT;

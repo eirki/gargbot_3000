@@ -7,13 +7,10 @@ import os
 from xml.dom.minidom import parseString
 import datetime as dt
 import re
-import asyncio
-import json
-import traceback
 
 # Dependencies
-import MySQLdb
-from MySQLdb.cursors import DictCursor
+import psycopg2
+from psycopg2.extras import DictCursor
 from PIL import Image
 import dropbox
 
@@ -23,6 +20,7 @@ from gargbot_3000 import config
 # Typing
 from typing import Union, List
 from pathlib import Path
+from psycopg2.extensions import connection
 
 
 class LoggingCursor(DictCursor):
@@ -35,24 +33,19 @@ class LoggingCursor(DictCursor):
         super().executemany(query, args)
 
 
-def connect_to_database():
-    connection = MySQLdb.connect(
-        host=config.db_host,
-        user=config.db_user,
-        passwd=config.db_passwd,
-        db=config.db_name,
-        charset="utf8",
-        cursorclass=LoggingCursor
+def connect_to_database() -> connection:
+    connection = psycopg2.connect(
+        config.db_url,
+        cursor_factory=LoggingCursor
     )
+
     return connection
 
 
-def reconnect_if_disconnected(db_connection: MySQLdb.Connection):
-    try:
-        db_connection.ping()
-    except MySQLdb.OperationalError:
-        log.info("Database disconnected. Trying to reconnect")
-        db_connection.ping(True)
+def close_database_connection(
+    connection: connection,
+) -> None:
+    connection.close()
 
 
 class MSN:
@@ -249,7 +242,6 @@ class DropPics:
         for pic in folder:
             if not pic.suffix.lower() in {".jpg", ".jpeg"}:
                 continue
-            # disk_path = os.path.join(folder, pic)
             dbx_path = dbx_folder + "/" + pic.name.lower()
 
             date_obj = DropPics.get_date_taken(pic)

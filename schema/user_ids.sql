@@ -1,9 +1,9 @@
 DROP TABLE IF EXISTS user_ids;
-CREATE TABLE user_ids (
-db_id mediumint(8) unsigned NOT NULL PRIMARY KEY,
-slack_id CHAR(9),
-slack_nick CHAR(50),
-first_name CHAR(50)
-);
 
-ALTER TABLE user_ids ADD bday DATE NOT NULL;
+CREATE TABLE user_ids (
+    db_id SMALLINT NOT NULL PRIMARY KEY,
+    slack_id VARCHAR(9),
+    slack_nick VARCHAR(50),
+    first_name VARCHAR(50),
+    bday DATE NOT NULL
+);
