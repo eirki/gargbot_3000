@@ -40,7 +40,7 @@ def wait_for_slack_output(slack_client: SlackClient) -> Tuple[str, str, str]:
         time.sleep(1)
         try:
             output_list = slack_client.rtm_read()
-        except websocket.WebSocketConnectionClosedException:
+        except (websocket.WebSocketConnectionClosedException, TimeoutError):
             slack_client.rtm_connect()
             continue
         if not (output_list or len(output_list) > 0):
