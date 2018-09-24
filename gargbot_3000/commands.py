@@ -3,16 +3,13 @@
 from gargbot_3000.logger import log
 
 # Core
-import datetime as dt
 from functools import partial
 
 # Dependencies
-from slackclient import SlackClient
 import psycopg2
 from requests.exceptions import SSLError
 
 # Internal
-from gargbot_3000 import database_manager
 from gargbot_3000 import droppics
 from gargbot_3000 import quotes
 
@@ -47,8 +44,8 @@ def cmd_welcome() -> Dict:
 
 def cmd_hvem(args: List[str], db: connection) -> Dict:
     """if command.lower().startswith("hvem")"""
-    with db as cursor:
-        sql = "SELECT first_name FROM user_ids ORDER BY RAND() LIMIT 1"
+    with db.cursor() as cursor:
+        sql = "SELECT first_name FROM user_ids ORDER BY RANDOM() LIMIT 1"
         cursor.execute(sql)
         data = cursor.fetchone()
         user = data["first_name"]
