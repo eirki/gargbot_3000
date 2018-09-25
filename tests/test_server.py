@@ -66,7 +66,8 @@ def test_slash(db_connection: connection, monkeypatch, cmd, args):
     mock_commands = MockCommands()
     monkeypatch.setattr("gargbot_3000.server.commands", mock_commands)
 
-    monkeypatch.setattr("gargbot_3000.server.get_pics", conftest.get_pics(db_connection))
+    monkeypatch.setattr("gargbot_3000.server.get_pics", lambda: None)
+    monkeypatch.setattr("gargbot_3000.server.get_quotes", lambda: None)
 
     params = {
         "token": config.slack_verification_token,
@@ -137,12 +138,12 @@ def test_interactive_shuffle(
 ):
     def return_db():
         return db_connection
-
     monkeypatch.setattr("gargbot_3000.server.get_db", return_db)
     mock_commands = MockCommands()
     monkeypatch.setattr("gargbot_3000.server.commands", mock_commands)
 
-    monkeypatch.setattr("gargbot_3000.server.get_pics", conftest.drop_pics)
+    monkeypatch.setattr("gargbot_3000.server.get_pics", lambda: None)
+    monkeypatch.setattr("gargbot_3000.server.get_quotes", lambda: None)
 
     action = "shuffle"
     params = {
