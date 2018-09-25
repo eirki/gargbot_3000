@@ -190,6 +190,7 @@ def drop_pics(db_connection):
         pass
 
     droppics.DropPics._connect_dbx = nothing
-    inited_drop_pics = droppics.DropPics(db=db_connection)
+    inited_drop_pics = droppics.DropPics(db=None, run_setup=False)
     inited_drop_pics.dbx = MockDropbox()
+    inited_drop_pics.setup(db=db_connection)
     yield inited_drop_pics

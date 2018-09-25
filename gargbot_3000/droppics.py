@@ -23,11 +23,11 @@ from gargbot_3000.database_manager import LoggingCursor
 
 class DropPics:
     def __init__(self, db: Optional[connection], run_setup: bool=True) -> None:
-        self._connect_dbx()
         if run_setup:
             self.setup(db)
 
     def setup(self, db):
+        self._connect_dbx()
         cursor = db.cursor()
         self.years = self.get_years(cursor)
         self.topics = self.get_topics(cursor)
