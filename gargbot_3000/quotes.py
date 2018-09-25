@@ -17,7 +17,11 @@ from psycopg2.extensions import connection
 
 
 class Quotes:
-    def __init__(self, db):
+    def __init__(self, db: Optional[connection], run_setup: bool=True) -> None:
+        if run_setup:
+            self.setup(db)
+
+    def setup(self, db: connection):
         with db.cursor() as cursor:
             self.slack_nicks_to_db_ids = self._get_users(cursor)
         self.db_ids_to_slack_nicks = {
