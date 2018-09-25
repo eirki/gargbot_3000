@@ -19,7 +19,7 @@ def start_server():
     server.main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if sys.argv[1] == "task":
         start_task()
 

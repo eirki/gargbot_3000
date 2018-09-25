@@ -10,7 +10,9 @@ from psycopg2.extensions import connection
 def test_congrat(db_connection: connection, drop_pics: DropPics) -> None:
     chosen_user = conftest.users[0]
     birthdays = congrats.get_birthdays(db=db_connection)
-    person = next(person for person in birthdays if person.nick == chosen_user.slack_nick)
+    person = next(
+        person for person in birthdays if person.nick == chosen_user.slack_nick
+    )
 
     response = congrats.get_greeting(person, db_connection, drop_pics)
     image_url = response["attachments"][0]["image_url"]

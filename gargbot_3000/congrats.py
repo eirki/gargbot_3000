@@ -27,11 +27,7 @@ greetings = [
     "Gratz",
 ]
 
-jabs = [
-    "din digge jævel!",
-    "kjekken!",
-    "håper det feires!"
-]
+jabs = ["din digge jævel!", "kjekken!", "håper det feires!"]
 
 
 class Birthday:
@@ -60,7 +56,7 @@ class Birthday:
     def next_bday(self):
         now = dt.datetime.now(config.tz)
         bday_thisyear = self.born.replace(year=now.year)
-        bday_nextyear = self.born.replace(year=now.year+1)
+        bday_nextyear = self.born.replace(year=now.year + 1)
         next_bday = bday_thisyear if bday_thisyear > now else bday_nextyear
         return next_bday
 
@@ -70,7 +66,9 @@ def get_birthdays(db):
         sql_command = "SELECT slack_nick, slack_id, bday FROM user_ids"
         cursor.execute(sql_command)
         data = cursor.fetchall()
-    birthdays = [Birthday(row["slack_nick"], row["slack_id"], row["bday"]) for row in data]
+    birthdays = [
+        Birthday(row["slack_nick"], row["slack_id"], row["bday"]) for row in data
+    ]
     birthdays.sort(key=attrgetter("next_bday"))
     return birthdays
 
@@ -94,8 +92,8 @@ def get_greeting(person, db, drop_pics):
         "text": text,
         "attachments": [
             {"fallback": person_picurl, "image_url": person_picurl, "ts": timestamp},
-            {"fallback": congrats_picurl, "image_url": congrats_picurl}
-        ]
+            {"fallback": congrats_picurl, "image_url": congrats_picurl},
+        ],
     }
 
     return response

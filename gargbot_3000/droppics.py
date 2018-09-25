@@ -33,19 +33,19 @@ class DropPics:
     def get_years(self, cursor: LoggingCursor):
         sql_command = "SELECT DISTINCT EXTRACT(YEAR FROM taken)::int as year FROM dbx_pictures ORDER BY year"
         cursor.execute(sql_command)
-        years = set(str(row['year']) for row in cursor.fetchall())
+        years = set(str(row["year"]) for row in cursor.fetchall())
         return years
 
     def get_topics(self, cursor: LoggingCursor):
         sql_command = "SELECT DISTINCT topic FROM dbx_pictures"
         cursor.execute(sql_command)
-        topics = set(row['topic'] for row in cursor.fetchall())
+        topics = set(row["topic"] for row in cursor.fetchall())
         return topics
 
     def get_users(self, cursor: LoggingCursor):
         sql_command = "SELECT slack_nick, db_id FROM user_ids"
         cursor.execute(sql_command)
-        users = {row['slack_nick']: row['db_id'] for row in cursor.fetchall()}
+        users = {row["slack_nick"]: row["db_id"] for row in cursor.fetchall()}
         return users
 
     def _connect_dbx(self):
@@ -82,22 +82,18 @@ class DropPics:
             sql_data["year"] = year
 
         # face arg(s)
-        db_ids = [
-            db_id
-            for user, db_id in self.users.items()
-            if user in args
-        ]
+        db_ids = [db_id for user, db_id in self.users.items() if user in args]
         if len(db_ids) == 0:
             join = ""
         elif len(db_ids) == 1:
             db_id = db_ids[0]
             sql_filter.append("f.db_id = %(db_id)s")
             sql_data["db_id"] = db_id
-            join = 'LEFT JOIN dbx_pictures_faces as f ON p.pic_id = f.pic_id'
+            join = "LEFT JOIN dbx_pictures_faces as f ON p.pic_id = f.pic_id"
         elif len(db_ids) > 1:
             join = (
-                'LEFT JOIN (SELECT ARRAY_AGG(db_id) as db_ids, pic_id from dbx_pictures_faces '
-                'group BY pic_id) as f ON p.pic_id = f.pic_id'
+                "LEFT JOIN (SELECT ARRAY_AGG(db_id) as db_ids, pic_id from dbx_pictures_faces "
+                "group BY pic_id) as f ON p.pic_id = f.pic_id"
             )
             for db_id in db_ids:
                 sql_filter.append(f"'%(db_id{db_id})s' = ANY(f.db_ids)")
@@ -105,8 +101,8 @@ class DropPics:
 
         sql_filter_str = "WHERE " + " AND ".join(sql_filter)
         sql_command = (
-            'SELECT p.path, p.taken FROM dbx_pictures as p '
-            f'{join} {sql_filter_str} ORDER BY RANDOM() LIMIT 1'
+            "SELECT p.path, p.taken FROM dbx_pictures as p "
+            f"{join} {sql_filter_str} ORDER BY RANDOM() LIMIT 1"
         )
         # print(sql_command % sql_data)
         # "SELECT p.path, p.taken FROM dbx_pictures as p LEFT JOIN (SELECT GROUP_CONCAT(db_id) as db_ids, pic_id from dbx_pictures_faces group BY pic_id) as f ON p.pic_id = f.pic_id WHERE FIND_IN_SET('3',f.db_ids) AND FIND_IN_SET('11',f.db_ids) ORDER BY RANDOM() LIMIT 1"
@@ -120,15 +116,17 @@ class DropPics:
         url = response.url.replace("?dl=0", "?raw=1")
         return url
 
-    def get_dbx_path_sql_cmd(self, cursor: LoggingCursor, sql_command: str, sql_data: dict):
+    def get_dbx_path_sql_cmd(
+        self, cursor: LoggingCursor, sql_command: str, sql_data: dict
+    ):
         cursor.execute(sql_command, sql_data)
         db_data = cursor.fetchone()
         return db_data
 
     def get_random_pic(self, cursor: LoggingCursor):
         sql_command = (
-            'SELECT path, taken FROM dbx_pictures '
-            'WHERE topic = %(topic)s ORDER BY RANDOM() LIMIT 1'
+            "SELECT path, taken FROM dbx_pictures "
+            "WHERE topic = %(topic)s ORDER BY RANDOM() LIMIT 1"
         )
         data = {"topic": random.choice(list(self.topics))}
 
@@ -140,7 +138,7 @@ class DropPics:
         timestamp = self.get_timestamp(date_obj)
         return url, timestamp
 
-    def get_pic(self, db, arg_list: Optional[List[str]])-> Tuple[str, int, str]:
+    def get_pic(self, db, arg_list: Optional[List[str]]) -> Tuple[str, int, str]:
         description = ""
         cursor = db.cursor()
 

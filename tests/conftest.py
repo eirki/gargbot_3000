@@ -13,6 +13,8 @@ from gargbot_3000 import droppics
 # Typing
 from psycopg2.extensions import connection
 
+
+# fmt: off
 User = namedtuple("TestUser", ["db_id", "name", "slack_id", "slack_nick", "bday"])
 users = [
     User(db_id=2, name="name2", slack_id="s_id2", slack_nick="slack_nick2", bday=dt.datetime(1990, 2, 1)),
@@ -64,6 +66,7 @@ messages = [
     Message("session3", dt.datetime(2006, 12, 8, 18, 21,  8), "#541575", "msn_nick3", "text3_session3", 3),
     Message("session3", dt.datetime(2006, 12, 8, 18, 21,  8), "#541575", "msn_nick3", "text4_session3", 3),
 ]
+# fmt: on
 
 
 class MockDropbox:
@@ -90,10 +93,7 @@ def populate_user_table(db: connection) -> None:
             sql_command = """INSERT INTO faces (db_id, name)
             VALUES (%(db_id)s,
                    %(name)s);"""
-            data = {
-                "db_id": user.db_id,
-                "name": user.name,
-            }
+            data = {"db_id": user.db_id, "name": user.name}
             cursor.execute(sql_command, data)
 
             sql_command = """INSERT INTO user_ids (db_id, slack_id, slack_nick, first_name, bday)
@@ -119,16 +119,12 @@ def populate_pics_table(db: connection) -> None:
             VALUES (%(path)s,
                    %(topic)s,
                    %(taken)s);"""
-            data = {
-                "path": pic.path,
-                "topic": pic.topic,
-                "taken": pic.taken
-            }
+            data = {"path": pic.path, "topic": pic.topic, "taken": pic.taken}
             cursor.execute(sql_command, data)
 
     with db.cursor() as cursor:
         for pic in pics:
-            sql_command = 'SELECT pic_id FROM dbx_pictures WHERE path = %(path)s'
+            sql_command = "SELECT pic_id FROM dbx_pictures WHERE path = %(path)s"
             data = {"path": pic.path}
             cursor.execute(sql_command, data)
             pic_id = cursor.fetchone()["pic_id"]
@@ -137,10 +133,7 @@ def populate_pics_table(db: connection) -> None:
                     "INSERT INTO dbx_pictures_faces (db_id, pic_id)"
                     "VALUES (%(db_id)s, %(pic_id)s);"
                 )
-                data = {
-                    "db_id": db_id,
-                    "pic_id": pic_id,
-                }
+                data = {"db_id": db_id, "pic_id": pic_id}
                 cursor.execute(sql_command, data)
 
 
@@ -195,6 +188,7 @@ def db_connection(postgresql: connection):
 def drop_pics(db_connection):
     def nothing(*args, **kwargs):
         pass
+
     droppics.DropPics._connect_dbx = nothing
     inited_drop_pics = droppics.DropPics(db=db_connection)
     inited_drop_pics.dbx = MockDropbox()

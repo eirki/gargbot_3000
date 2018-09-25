@@ -21,18 +21,19 @@ class Quotes:
         with db.cursor() as cursor:
             self.slack_nicks_to_db_ids = self._get_users(cursor)
         self.db_ids_to_slack_nicks = {
-            nick: db_id for db_id, nick in
-            self.slack_nicks_to_db_ids.items()
+            nick: db_id for db_id, nick in self.slack_nicks_to_db_ids.items()
         }
 
     def _get_users(self, cursor):
         sql_command = "SELECT slack_nick, db_id FROM user_ids"
         cursor.execute(sql_command)
-        return {row['slack_nick']: row['db_id'] for row in cursor.fetchall()}
+        return {row["slack_nick"]: row["db_id"] for row in cursor.fetchall()}
 
     @staticmethod
     def _sanitize(inp, bbcode_uid):
-        smls = re.compile(r'<!-- s.*? --><img src=\\?"\{SMILIES_PATH\}/.*?\\?" alt=\\?"(.*?)\\?" title=\\?".*?" /><!-- s.*? -->')
+        smls = re.compile(
+            r'<!-- s.*? --><img src=\\?"\{SMILIES_PATH\}/.*?\\?" alt=\\?"(.*?)\\?" title=\\?".*?" /><!-- s.*? -->'
+        )
         inp = re.sub(smls, r"\1", inp)
         inp = html.unescape(inp)
 
@@ -41,8 +42,10 @@ class Quotes:
         img_tags = re.compile(r"\[/?img\]")
         inp = re.sub(img_tags, "", inp)
 
-        youtube_embeds = re.compile(r'\[html\]<iframe width="\d+" height="\d+" src="//www.youtube.com/embed/([^"]+)" frameborder='
-                                    r'0" allowfullscreen></iframe>\[/html\]')
+        youtube_embeds = re.compile(
+            r'\[html\]<iframe width="\d+" height="\d+" src="//www.youtube.com/embed/([^"]+)" frameborder='
+            r'0" allowfullscreen></iframe>\[/html\]'
+        )
         inp = re.sub(youtube_embeds, r"https://www.youtube.com/watch?v=\1", inp)
 
         return inp
@@ -57,8 +60,10 @@ class Quotes:
         else:
             user_filter = "IN (2, 3, 5, 6, 7, 9, 10, 11)"
 
-        sql = ("SELECT db_id, post_text, post_time, post_id, bbcode_uid "
-               f"FROM phpbb_posts WHERE db_id {user_filter} ORDER BY RANDOM() LIMIT 1")
+        sql = (
+            "SELECT db_id, post_text, post_time, post_id, bbcode_uid "
+            f"FROM phpbb_posts WHERE db_id {user_filter} ORDER BY RANDOM() LIMIT 1"
+        )
 
         cursor = db.cursor()
         cursor.execute(sql)
@@ -71,7 +76,8 @@ class Quotes:
             f"{post}\n"
             "------\n"
             f"- {user}\n"
-            f"http://eirik.stavestrand.no/gargen/viewtopic.php?p={post_id}#p{post_id}\n")
+            f"http://eirik.stavestrand.no/gargen/viewtopic.php?p={post_id}#p{post_id}\n"
+        )
         return quote
 
     def msn(self, db: connection, args):
@@ -85,18 +91,22 @@ class Quotes:
         cursor = db.cursor()
         cursor.execute(sql)
         session_id = cursor.fetchone()
-        sql = ("SELECT msg_time, from_user, msg_text, msg_color, db_id "
-               f'FROM msn_messages WHERE session_id = %(session_id)s')
+        sql = (
+            "SELECT msg_time, from_user, msg_text, msg_color, db_id "
+            f"FROM msn_messages WHERE session_id = %(session_id)s"
+        )
         cursor.execute(sql, session_id)
         messages = list(cursor.fetchall())
         messages.sort(key=itemgetter("msg_time"))
         if user is not None:
-            first = next(i for i, message in enumerate(messages) if message["db_id"] == db_id)
+            first = next(
+                i for i, message in enumerate(messages) if message["db_id"] == db_id
+            )
         elif len(messages) <= 10:
             first = 0
         else:
-            first = random.randint(0, len(messages)-10)
-        chosen_messages = messages[first:first+10]
+            first = random.randint(0, len(messages) - 10)
+        chosen_messages = messages[first : first + 10]
 
         date = chosen_messages[0]["msg_time"].strftime("%d.%m.%y %H:%M")
 
@@ -107,6 +117,8 @@ class Quotes:
                 if message["from_user"] == prev_from_user:
                     convo[-1][1] = "\n".join([prev_msg_text, message["msg_text"]])
                     continue
-            convo.append([message["from_user"], message["msg_text"], message["msg_color"]])
+            convo.append(
+                [message["from_user"], message["msg_text"], message["msg_color"]]
+            )
 
         return date, convo

@@ -23,7 +23,7 @@ app = Flask(__name__)
 
 
 def get_db():
-    db_connection = getattr(g, '_database', None)
+    db_connection = getattr(g, "_database", None)
     if db_connection is None:
         db_connection = database_manager.connect_to_database()
         g._database = db_connection
@@ -32,13 +32,13 @@ def get_db():
 
 @app.teardown_appcontext
 def close_connection(exception):
-    db_connection = getattr(g, '_database', None)
+    db_connection = getattr(g, "_database", None)
     if db_connection is not None:
         database_manager.close_database_connection(db_connection)
 
 
 def get_pics():
-    drop_pics = getattr(g, '_drop_pics', None)
+    drop_pics = getattr(g, "_drop_pics", None)
     if drop_pics is None:
         drop_pics = droppics.DropPics(db=get_db())
         g._drop_pics = drop_pics
@@ -46,7 +46,7 @@ def get_pics():
 
 
 def get_quotes():
-    quotes_db = getattr(g, '_quotes_db', None)
+    quotes_db = getattr(g, "_quotes_db", None)
     if quotes_db is None:
         quotes_db = quotes.Quotes(db=get_db())
         g._quotes_db = quotes_db
@@ -55,34 +55,32 @@ def get_quotes():
 
 def json_response(result: Dict) -> Response:
     return Response(
-            response=json.dumps(result),
-            status=200,
-            mimetype='application/json'
-        )
+        response=json.dumps(result), status=200, mimetype="application/json"
+    )
 
 
 def attach_buttons(callback_id, result, func, args):
     actions = [
-            {
-                "name": "share",
-                "text": "Del i kanal",
-                "type": "button",
-                "style": "primary",
-                "value": json.dumps({"original_response": result})
-            },
-            {
-                "name": "shuffle",
-                "text": "Shuffle",
-                "type": "button",
-                "value": json.dumps({"original_func": func, "original_args": args})
-            },
-            {
-                "name": "cancel",
-                "text": "Avbryt",
-                "value": "avbryt",
-                "type": "button",
-                "style": "danger"
-            },
+        {
+            "name": "share",
+            "text": "Del i kanal",
+            "type": "button",
+            "style": "primary",
+            "value": json.dumps({"original_response": result}),
+        },
+        {
+            "name": "shuffle",
+            "text": "Shuffle",
+            "type": "button",
+            "value": json.dumps({"original_func": func, "original_args": args}),
+        },
+        {
+            "name": "cancel",
+            "text": "Avbryt",
+            "value": "avbryt",
+            "type": "button",
+            "style": "danger",
+        },
     ]
     try:
         attachment = result["attachments"][-1]
@@ -95,7 +93,7 @@ def attach_buttons(callback_id, result, func, args):
     return result
 
 
-@app.route('/')
+@app.route("/")
 def hello_world() -> str:
     return "home"
 
@@ -105,12 +103,12 @@ def share(response_url, result):
     delete_original = {
         "response_type": "ephemeral",
         "replace_original": True,
-        "text": "Sharing is caring!"
+        "text": "Sharing is caring!",
     }
     r = requests.post(response_url, json=delete_original)
     log.info(r.text)
 
-    result['replace_original'] = False
+    result["replace_original"] = False
     result["response_type"] = "in_channel"
     return json_response(result)
 
@@ -120,7 +118,7 @@ def cancel():
     result = {
         "response_type": "ephemeral",
         "replace_original": True,
-        "text": "Canceled! Går fint det. Ikke noe problem for meg. Hadde ikke lyst uansett."
+        "text": "Canceled! Går fint det. Ikke noe problem for meg. Hadde ikke lyst uansett.",
     }
     return json_response(result)
 
@@ -132,12 +130,12 @@ def shuffle(callback_id: str, original_func: str, original_args: List[Optional[s
     return json_response(result)
 
 
-@app.route('/interactive', methods=['POST'])
+@app.route("/interactive", methods=["POST"])
 def interactive():
     log.info("incoming interactive request:")
-    data = json.loads(request.form['payload'])
+    data = json.loads(request.form["payload"])
     log.info(data)
-    if not data.get('token') == config.slack_verification_token:
+    if not data.get("token") == config.slack_verification_token:
         return Response(status=403)
     action = data["actions"][0]["name"]
 
@@ -153,17 +151,17 @@ def interactive():
         return shuffle(callback_id, **original_req)
 
 
-@app.route('/slash', methods=['POST'])
+@app.route("/slash", methods=["POST"])
 def slash_cmds():
     log.info("incoming slash request:")
     data = request.form
     log.info(data)
 
-    if not data.get('token') == config.slack_verification_token:
+    if not data.get("token") == config.slack_verification_token:
         return Response(status=403)
 
     command_str = data["command"][1:]
-    args = data['text']
+    args = data["text"]
     args = args.replace("@", "").split()
 
     trigger_id = data["trigger_id"]
@@ -189,10 +187,7 @@ def handle_command(command_str: str, args: List, trigger_id: str) -> Dict:
         result["response_type"] = "in_channel"
     elif error is False:
         result = attach_buttons(
-            callback_id=trigger_id,
-            result=result,
-            func=command_str,
-            args=args
+            callback_id=trigger_id, result=result, func=command_str, args=args
         )
 
     return result
@@ -205,12 +200,12 @@ def countdown():
     drop_pics = get_pics()
     pic_url, *_ = drop_pics.get_pic(db, arg_list=config.countdown_args)
     return render_template(
-        'countdown.html',
+        "countdown.html",
         date=milli_timestamp,
         image_url=pic_url,
         countdown_message=config.countdown_message,
         ongoing_message=config.ongoing_message,
-        finished_message=config.finished_message
+        finished_message=config.finished_message,
     )
 
 
@@ -219,5 +214,5 @@ def main():
     app.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

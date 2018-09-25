@@ -35,8 +35,7 @@ def cmd_welcome() -> Dict:
     """when joining new channel"""
     text = (
         "Hei hei kjære alle sammen!\n"
-        "Dette er kommandoene jeg skjønner:\n"
-        + command_explanation
+        "Dette er kommandoene jeg skjønner:\n" + command_explanation
     )
     response: Dict[str, Any] = {"text": text}
     return response
@@ -55,13 +54,13 @@ def cmd_hvem(args: List[str], db: connection) -> Dict:
     return response
 
 
-def cmd_pic(args: Optional[List[str]], db: connection, drop_pics: droppics.DropPics) -> Dict:
+def cmd_pic(
+    args: Optional[List[str]], db: connection, drop_pics: droppics.DropPics
+) -> Dict:
     """if command is 'pic'"""
     picurl, timestamp, error_text = drop_pics.get_pic(db, args)
     response: Dict[str, Any] = {
-        "attachments": [{"fallback":  picurl,
-                         "image_url": picurl,
-                         "ts": timestamp}]
+        "attachments": [{"fallback": picurl, "image_url": picurl, "ts": timestamp}]
     }
     if error_text:
         response["text"] = error_text
@@ -69,23 +68,26 @@ def cmd_pic(args: Optional[List[str]], db: connection, drop_pics: droppics.DropP
     return response
 
 
-def cmd_quote(args: Optional[List[str]], db: connection, quotes_db: quotes.Quotes) -> Dict:
+def cmd_quote(
+    args: Optional[List[str]], db: connection, quotes_db: quotes.Quotes
+) -> Dict:
     """if command is 'quote'"""
     text = quotes_db.garg(db, args)
     response: Dict[str, Any] = {"text": text}
     return response
 
 
-def cmd_msn(args: Optional[List[str]], db: connection, quotes_db: quotes.Quotes) -> Dict:
+def cmd_msn(
+    args: Optional[List[str]], db: connection, quotes_db: quotes.Quotes
+) -> Dict:
     """if command is 'msn'"""
     date, text = quotes_db.msn(db, args)
 
     response: Dict[str, Any] = {
-        "attachments":
-            [{"author_name": f"{msg_user}:",
-              "text": msg_text,
-              "color": msg_color}
-             for msg_user, msg_text, msg_color in text]
+        "attachments": [
+            {"author_name": f"{msg_user}:", "text": msg_text, "color": msg_color}
+            for msg_user, msg_text, msg_color in text
+        ]
     }
     response["attachments"][0]["pretext"] = date
     return response
@@ -94,8 +96,7 @@ def cmd_msn(args: Optional[List[str]], db: connection, quotes_db: quotes.Quotes)
 def cmd_not_found(args: str) -> Dict:
     text = (
         f"Beep boop beep! Nôt sure whåt you mean by `{args}`. "
-        "Dette er kommandoene jeg skjønner:\n"
-        + command_explanation
+        "Dette er kommandoene jeg skjønner:\n" + command_explanation
     )
     response: Dict[str, Any] = {"text": text}
     return response
@@ -112,12 +113,12 @@ def cmd_panic(exc: Exception) -> Dict:
 
 
 def execute(
-        command_str: str,
-        args: List,
-        db_connection: connection,
-        drop_pics: droppics.DropPics,
-        quotes_db: quotes.Quotes,
-        ) -> Dict:
+    command_str: str,
+    args: List,
+    db_connection: connection,
+    drop_pics: droppics.DropPics,
+    quotes_db: quotes.Quotes,
+) -> Dict:
     log.info(f"command: {command_str}")
     log.info(f"args: {args}")
 

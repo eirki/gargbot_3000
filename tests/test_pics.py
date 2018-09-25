@@ -8,7 +8,7 @@ from psycopg2.extensions import connection
 def assert_valid_returns(url: str, timestamp: int, description: str) -> None:
     assert url.startswith("https")
     assert type(timestamp) == int
-    assert description == '' or description.startswith("Her er et bilde med")
+    assert description == "" or description.startswith("Her er et bilde med")
     assert not description.startswith("Im so stoopid")
 
 
@@ -57,15 +57,21 @@ def test_error_txt(db_connection: connection, drop_pics: DropPics) -> None:
 
 
 def test_error_txt_with_valid(db_connection: connection, drop_pics: DropPics) -> None:
-    url, timestamp, description = drop_pics.get_pic(db_connection, arg_list=["1999", "slack_nick5"])
+    url, timestamp, description = drop_pics.get_pic(
+        db_connection, arg_list=["1999", "slack_nick5"]
+    )
     assert url.startswith("https")
     assert type(timestamp) == int
     assert description.startswith("Im so stoopid")
     assert "Her er et bilde med" in description
 
 
-def test_error_txt_with_impossible_combination(db_connection: connection, drop_pics: DropPics) -> None:
-    url, timestamp, description = drop_pics.get_pic(db_connection, arg_list=["2001", "topic3"])
+def test_error_txt_with_impossible_combination(
+    db_connection: connection, drop_pics: DropPics
+) -> None:
+    url, timestamp, description = drop_pics.get_pic(
+        db_connection, arg_list=["2001", "topic3"]
+    )
     assert url.startswith("https")
     assert type(timestamp) == int
     assert description.startswith("Fant ikke")

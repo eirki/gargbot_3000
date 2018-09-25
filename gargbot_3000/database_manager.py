@@ -34,17 +34,12 @@ class LoggingCursor(DictCursor):
 
 
 def connect_to_database() -> connection:
-    connection = psycopg2.connect(
-        config.db_url,
-        cursor_factory=LoggingCursor
-    )
+    connection = psycopg2.connect(config.db_url, cursor_factory=LoggingCursor)
 
     return connection
 
 
-def close_database_connection(
-    connection: connection,
-) -> None:
+def close_database_connection(connection: connection,) -> None:
     connection.close()
 
 
@@ -65,16 +60,20 @@ class MSN:
 
     @staticmethod
     def parse_log(fname):
-        with open(os.path.join(config.home, "data", "logs", fname), encoding="utf8") as infile:
+        with open(
+            os.path.join(config.home, "data", "logs", fname), encoding="utf8"
+        ) as infile:
             txt = infile.read()
         obj = parseString(
             txt.replace(b"\x1f".decode(), " ")
-               .replace(b"\x02".decode(), " ")
-               .replace(b"\x03".decode(), " ")
-               .replace(b"\x04".decode(), " ")
-               .replace(b"\x05".decode(), "|")
+            .replace(b"\x02".decode(), " ")
+            .replace(b"\x03".decode(), " ")
+            .replace(b"\x04".decode(), " ")
+            .replace(b"\x05".decode(), "|")
         )
-        for message in obj.getElementsByTagName("Message") + obj.getElementsByTagName("Invitation"):
+        for message in obj.getElementsByTagName("Message") + obj.getElementsByTagName(
+            "Invitation"
+        ):
             msg_type = message.tagName.lower()
             msg_time = dt.datetime.strptime(
                 message.getAttribute("DateTime"), "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -96,19 +95,41 @@ class MSN:
                 to_node = message.getElementsByTagName("To")[0]
                 user_to_nodes = to_node.getElementsByTagName("User")
                 to_users = [node.getAttribute("FriendlyName") for node in user_to_nodes]
-                participants.update(node.getAttribute("LogonName") for node in user_to_nodes)
+                participants.update(
+                    node.getAttribute("LogonName") for node in user_to_nodes
+                )
             elif msg_type == "invitation":
                 to_users = None
 
-            if not all(participant in config.gargling_msn_emails for participant in participants):
+            if not all(
+                participant in config.gargling_msn_emails
+                for participant in participants
+            ):
                 continue
 
-            yield (session_ID, msg_type, msg_time, msg_source,
-                   msg_color, from_user, to_users, msg_text)
+            yield (
+                session_ID,
+                msg_type,
+                msg_time,
+                msg_source,
+                msg_color,
+                from_user,
+                to_users,
+                msg_text,
+            )
 
     @staticmethod
-    def add_entry(cursor, session_ID, msg_type, msg_time, msg_source,
-                  msg_color, from_user, to_users, msg_text):
+    def add_entry(
+        cursor,
+        session_ID,
+        msg_type,
+        msg_time,
+        msg_source,
+        msg_color,
+        from_user,
+        to_users,
+        msg_text,
+    ):
         sql_command = (
             "INSERT INTO msn_messages (session_ID, msg_type, msg_source, "
             "msg_time, from_user, to_users, msg_text, msg_color) "
@@ -123,7 +144,7 @@ class MSN:
             "msg_color": msg_color,
             "from_user": from_user,
             "to_users": str(to_users),
-            "msg_text": msg_text
+            "msg_text": msg_text,
         }
         cursor.execute(sql_command, data)
 
@@ -149,8 +170,7 @@ class MSN:
 
 def add_user_ids_table():
     db = connect_to_database()
-    users = [
-    ]
+    users = []
     cursor = db.cursor()
     for slack_id, db_id, slack_nick, first_name in users:
         sql_command = (
@@ -161,7 +181,7 @@ def add_user_ids_table():
             "slack_nick": slack_nick,
             "slack_id": slack_id,
             "db_id": db_id,
-            "first_name": first_name
+            "first_name": first_name,
         }
         cursor.execute(sql_command, data)
     db.commit()
@@ -180,7 +200,9 @@ class DropPics:
             cursor = self.db.cursor()
             sql_command = "SELECT first_name, db_id FROM user_ids"
             cursor.execute(sql_command)
-            self._firstname_to_db_id = {row['first_name']: row['db_id'] for row in cursor.fetchall()}
+            self._firstname_to_db_id = {
+                row["first_name"]: row["db_id"] for row in cursor.fetchall()
+            }
         return self._firstname_to_db_id
 
     def connect_to_database(self):
@@ -202,11 +224,11 @@ class DropPics:
         im = Image.open(image)
         exif = im._getexif()
         date_str = exif[36867]
-        date_obj = dt.datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
+        date_obj = dt.datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
         return date_obj
 
     def add_faces_in_pic(self, cursor: LoggingCursor, pic: Path, dbx_path: str):
-        sql_command = 'SELECT pic_id FROM dbx_pictures WHERE path = %(path)s'
+        sql_command = "SELECT pic_id FROM dbx_pictures WHERE path = %(path)s"
         data = {"path": dbx_path}
         cursor.execute(sql_command, data)
         try:
@@ -215,7 +237,7 @@ class DropPics:
             log.info(f"pic not in db: {dbx_path}")
             return
 
-        sql_command = 'SELECT * FROM dbx_pictures_faces WHERE pic_id = %(pic_id)s'
+        sql_command = "SELECT * FROM dbx_pictures_faces WHERE pic_id = %(pic_id)s"
         data = {"pic_id": pic_id}
         cursor.execute(sql_command, data)
         result = cursor.fetchone()
@@ -231,13 +253,12 @@ class DropPics:
                 "INSERT INTO dbx_pictures_faces (db_id, pic_id) "
                 "VALUES (%(db_id)s, %(pic_id)s);"
             )
-            data = {
-                "db_id": db_id,
-                "pic_id": pic_id,
-            }
+            data = {"db_id": db_id, "pic_id": pic_id}
             cursor.execute(sql_command, data)
 
-    def add_pics_in_folder(self, folder: List[Path], topic: str, dbx_folder: str) -> None:
+    def add_pics_in_folder(
+        self, folder: List[Path], topic: str, dbx_folder: str
+    ) -> None:
         cursor = self.db.cursor()
         for pic in folder:
             if not pic.suffix.lower() in {".jpg", ".jpeg"}:
@@ -245,17 +266,13 @@ class DropPics:
             dbx_path = dbx_folder + "/" + pic.name.lower()
 
             date_obj = DropPics.get_date_taken(pic)
-            timestr = date_obj.strftime('%Y-%m-%d %H:%M:%S')
+            timestr = date_obj.strftime("%Y-%m-%d %H:%M:%S")
 
             sql_command = """INSERT INTO dbx_pictures (path, topic, taken)
             VALUES (%(path)s,
                    %(topic)s,
                    %(taken)s);"""
-            data = {
-                "path": dbx_path,
-                "topic": topic,
-                "taken": timestr
-            }
+            data = {"path": dbx_path, "topic": topic, "taken": timestr}
             cursor.execute(sql_command, data)
 
             self.add_faces_in_pic(cursor, pic, dbx_path)

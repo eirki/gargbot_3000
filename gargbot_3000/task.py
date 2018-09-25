@@ -47,7 +47,8 @@ def wait_for_slack_output(slack_client: SlackClient) -> Tuple[str, str, str]:
             continue
         try:
             bot_msg = next(
-                output for output in output_list
+                output
+                for output in output_list
                 if output and "text" in output and AT_BOT in output["text"]
             )
         except StopIteration:
@@ -76,7 +77,9 @@ def handle_congrats(slack_client: SlackClient, drop_pics):
         try:
             time.sleep(birthday.seconds_to_bday())
         except OverflowError:
-            log.info(f"Too long sleep length for OS. Restart before next birthday, at {birthday.next_bday}")
+            log.info(
+                f"Too long sleep length for OS. Restart before next birthday, at {birthday.next_bday}"
+            )
             break
         db_connection = database_manager.connect_to_database()
         response = congrats.get_greeting(birthday, db_connection, drop_pics)
@@ -97,8 +100,7 @@ def setup() -> Tuple[SlackClient, droppics.DropPics, quotes.Quotes, connection]:
         raise Exception("Connection failed. Invalid Slack token or bot ID?")
 
     congrats_thread = threading.Thread(
-        target=handle_congrats,
-        args=(slack_client, drop_pics)
+        target=handle_congrats, args=(slack_client, drop_pics)
     )
     congrats_thread.daemon = True
     congrats_thread.start()
@@ -149,5 +151,5 @@ def main():
         database_manager.close_database_connection(db_connection)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
