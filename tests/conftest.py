@@ -184,13 +184,18 @@ def db_connection(postgresql: connection):
     yield db
 
 
+def get_pics(db_connection):
+    def mock_get_pics():
+        next(drop_pics(db_connection))
+    return mock_get_pics
+
+
 @pytest.fixture
 def drop_pics(db_connection):
     def nothing(*args, **kwargs):
         pass
 
     droppics.DropPics._connect_dbx = nothing
-    inited_drop_pics = droppics.DropPics(db=None, run_setup=False)
+    inited_drop_pics = droppics.DropPics(db=db_connection)
     inited_drop_pics.dbx = MockDropbox()
-    inited_drop_pics.setup(db=db_connection)
     yield inited_drop_pics

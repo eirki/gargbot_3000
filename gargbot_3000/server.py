@@ -20,8 +20,6 @@ from gargbot_3000 import droppics
 from typing import Dict, List, Optional
 
 app = Flask(__name__)
-drop_pics = droppics.DropPics(db=None, run_setup=False)
-quotes_db = quotes.Quotes(db=None, run_setup=False)
 
 
 def get_db():
@@ -37,6 +35,22 @@ def close_connection(exception):
     db_connection = getattr(g, "_database", None)
     if db_connection is not None:
         database_manager.close_database_connection(db_connection)
+
+
+def get_pics():
+    drop_pics = getattr(g, "_drop_pics", None)
+    if drop_pics is None:
+        drop_pics = droppics.DropPics(db=get_db())
+        g._drop_pics = drop_pics
+    return drop_pics
+
+
+def get_quotes():
+    quotes_db = getattr(g, "_quotes_db", None)
+    if quotes_db is None:
+        quotes_db = quotes.Quotes(db=get_db())
+        g._quotes_db = quotes_db
+    return quotes_db
 
 
 def json_response(result: Dict) -> Response:
@@ -121,8 +135,6 @@ def shuffle(callback_id: str, original_func: str, original_args: List[Optional[s
 @app.route("/interactive", methods=["POST"])
 def interactive():
     log.info("incoming interactive request:")
-    print(request)
-    print(request.form)
     data = json.loads(request.form["payload"])
     log.info(data)
     if not data.get("token") == config.slack_verification_token:
@@ -163,12 +175,14 @@ def slash_cmds():
 
 def handle_command(command_str: str, args: List, trigger_id: str) -> Dict:
     db = get_db() if command_str in {"hvem", "pic", "quote", "msn"} else None
+    pic = get_pics() if command_str == "pic" else None
+    quotes = get_quotes() if command_str in {"quote", "msn"} else None
     result = commands.execute(
         command_str=command_str,
         args=args,
         db_connection=db,
-        drop_pics=drop_pics,
-        quotes_db=quotes_db,
+        drop_pics=pic,
+        quotes_db=quotes,
     )
 
     error = result.get("text", "").startswith("Error")
@@ -186,6 +200,7 @@ def handle_command(command_str: str, args: List, trigger_id: str) -> Dict:
 def countdown():
     milli_timestamp = config.countdown_date.timestamp() * 1000
     db = get_db()
+    drop_pics = get_pics()
     pic_url, *_ = drop_pics.get_pic(db, arg_list=config.countdown_args)
     return render_template(
         "countdown.html",
@@ -198,9 +213,6 @@ def countdown():
 
 
 def main():
-    db = database_manager.connect_to_database()
-    drop_pics.setup(db=db)
-    quotes_db.setup(db=db)
     log.info("GargBot 3000 server operational!")
     app.run()
 

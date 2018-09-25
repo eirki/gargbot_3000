@@ -8,6 +8,7 @@ import flask
 
 from gargbot_3000 import server
 from gargbot_3000 import config
+from tests import conftest
 
 from psycopg2.extensions import connection
 
@@ -56,7 +57,7 @@ def test_slash_cmd_ping(db_connection: connection):
 
 @pytest.mark.parametrize("cmd", ["pic", "quote", "msn"])
 @pytest.mark.parametrize("args", ["", "arg1", "arg1 arg2"])
-def test_slash(db_connection: connection, monkeypatch, cmd, args, drop_pics):
+def test_slash(db_connection: connection, monkeypatch, cmd, args):
     def return_db():
         return db_connection
 
@@ -65,7 +66,7 @@ def test_slash(db_connection: connection, monkeypatch, cmd, args, drop_pics):
     mock_commands = MockCommands()
     monkeypatch.setattr("gargbot_3000.server.commands", mock_commands)
 
-    monkeypatch.setattr("gargbot_3000.server.drop_pics", drop_pics)
+    monkeypatch.setattr("gargbot_3000.server.get_pics", conftest.get_pics(db_connection))
 
     params = {
         "token": config.slack_verification_token,
@@ -132,7 +133,7 @@ def test_interactive_cancel():
 @pytest.mark.parametrize("cmd", ["pic", "quote", "msn"])
 @pytest.mark.parametrize("args", [[], ["arg1"], ["arg1", "arg2"]])
 def test_interactive_shuffle(
-    db_connection: connection, monkeypatch, cmd, args, drop_pics
+    db_connection: connection, monkeypatch, cmd, args
 ):
     def return_db():
         return db_connection
@@ -141,7 +142,7 @@ def test_interactive_shuffle(
     mock_commands = MockCommands()
     monkeypatch.setattr("gargbot_3000.server.commands", mock_commands)
 
-    monkeypatch.setattr("gargbot_3000.server.drop_pics", drop_pics)
+    monkeypatch.setattr("gargbot_3000.server.get_pics", conftest.drop_pics)
 
     action = "shuffle"
     params = {

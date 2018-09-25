@@ -22,17 +22,13 @@ from gargbot_3000.database_manager import LoggingCursor
 
 
 class DropPics:
-    def __init__(self, db: Optional[connection], run_setup: bool=True) -> None:
-        if run_setup:
-            self.setup(db)
-
-    def setup(self, db):
-        self._connect_dbx()
+    def __init__(self, db: connection) -> None:
         cursor = db.cursor()
         self.years = self.get_years(cursor)
         self.topics = self.get_topics(cursor)
         self.users = self.get_users(cursor)
         self.possible_args = self.topics | self.years | set(self.users)
+        self._connect_dbx()
 
     def get_years(self, cursor: LoggingCursor):
         sql_command = "SELECT DISTINCT EXTRACT(YEAR FROM taken)::int as year FROM dbx_pictures ORDER BY year"
