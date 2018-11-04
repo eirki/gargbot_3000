@@ -111,6 +111,7 @@ class DropPics:
 
     def get_url_for_dbx_path(self, path: str):
         full_path = "/".join([config.dbx_pic_folder, path])
+        log.info(f"Getting url for {full_path}")
         response = self.dbx.sharing_create_shared_link(full_path)
         url = response.url.replace("?dl=0", "?raw=1")
         return url
