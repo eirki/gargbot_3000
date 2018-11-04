@@ -110,7 +110,7 @@ class DropPics:
         return int(time.mktime(date_obj.timetuple()))
 
     def get_url_for_dbx_path(self, path: str):
-        full_path = "/".join(config.dbx_pic_folder, path)
+        full_path = "/".join([config.dbx_pic_folder, path])
         response = self.dbx.sharing_create_shared_link(full_path)
         url = response.url.replace("?dl=0", "?raw=1")
         return url
