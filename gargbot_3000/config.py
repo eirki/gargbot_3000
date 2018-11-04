@@ -22,6 +22,8 @@ db_url = os.environ["db_url"]
 
 dropbox_token = os.environ["dropbox_token"]
 
+dbx_pic_folder = os.environ["dbx_pic_folder"]
+
 tz = pytz.timezone(os.environ["tz"])
 
 test_channel = os.environ["test_channel"]
