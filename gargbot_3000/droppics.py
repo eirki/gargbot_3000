@@ -104,15 +104,14 @@ class DropPics:
             "SELECT p.path, p.taken FROM dbx_pictures as p "
             f"{join} {sql_filter_str} ORDER BY RANDOM() LIMIT 1"
         )
-        # print(sql_command % sql_data)
-        # "SELECT p.path, p.taken FROM dbx_pictures as p LEFT JOIN (SELECT GROUP_CONCAT(db_id) as db_ids, pic_id from dbx_pictures_faces group BY pic_id) as f ON p.pic_id = f.pic_id WHERE FIND_IN_SET('3',f.db_ids) AND FIND_IN_SET('11',f.db_ids) ORDER BY RANDOM() LIMIT 1"
         return sql_command, sql_data
 
     def get_timestamp(self, date_obj: dt.datetime):
         return int(time.mktime(date_obj.timetuple()))
 
     def get_url_for_dbx_path(self, path: str):
-        response = self.dbx.sharing_create_shared_link(path)
+        full_path = "/".join(config.dbx_pic_folder, path)
+        response = self.dbx.sharing_create_shared_link(full_path)
         url = response.url.replace("?dl=0", "?raw=1")
         return url
 
