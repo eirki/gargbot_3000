@@ -55,10 +55,10 @@ def test_slash_cmd_ping(db_connection: connection):
     }
 
 
-def test_slash_cmd_halp(db_connection: connection):
+def test_slash_cmd_gargbot(db_connection: connection):
     params = {
         "token": config.slack_verification_token,
-        "command": "/halp",
+        "command": "/gargbot",
         "text": "",
         "trigger_id": "test_slash_cmd_halp",
     }

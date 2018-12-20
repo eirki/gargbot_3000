@@ -44,7 +44,7 @@ def cmd_welcome() -> Dict:
     return response
 
 
-def cmd_server_explanation(args: str) -> Dict:
+def cmd_server_explanation() -> Dict:
     expl = command_explanation(server=True)
     text = "Beep boop beep! Dette er kommandoene jeg skjønner:\n" + expl
     response: Dict[str, Any] = {"text": text}
