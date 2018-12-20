@@ -30,7 +30,7 @@ class Quotes:
         return {row["slack_nick"]: row["db_id"] for row in cursor.fetchall()}
 
     @staticmethod
-    def _sanitize(inp, bbcode_uid):
+    def _sanitize(inp, bbcode_uid: str):
         smls = re.compile(
             r'<!-- s.*? --><img src=\\?"\{SMILIES_PATH\}/.*?\\?" alt=\\?"(.*?)\\?" title=\\?".*?" /><!-- s.*? -->'
         )
@@ -50,7 +50,7 @@ class Quotes:
 
         return inp
 
-    def garg(self, db: connection, args):
+    def garg(self, db: connection, args: List[str]):
         user = args[0] if args else None
         if user and user not in self.slack_nicks_to_db_ids:
             return f"Gargling not found: {user}. Husk å bruke slack nick"

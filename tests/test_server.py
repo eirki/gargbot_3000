@@ -55,6 +55,20 @@ def test_slash_cmd_ping(db_connection: connection):
     }
 
 
+def test_slash_cmd_halp(db_connection: connection):
+    params = {
+        "token": config.slack_verification_token,
+        "command": "/halp",
+        "text": "",
+        "trigger_id": "test_slash_cmd_halp",
+    }
+    response = test_client.post("/slash", data=params)
+    assert response.status_code == 200
+    data = json.loads(response.data.decode())
+    assert data["text"].startswith("Beep boop beep!")
+    assert "/pic" in data["text"]
+
+
 @pytest.mark.parametrize("cmd", ["pic", "quote", "msn"])
 @pytest.mark.parametrize("args", ["", "arg1", "arg1 arg2"])
 def test_slash(db_connection: connection, monkeypatch, cmd, args):
@@ -133,11 +147,10 @@ def test_interactive_cancel():
 
 @pytest.mark.parametrize("cmd", ["pic", "quote", "msn"])
 @pytest.mark.parametrize("args", [[], ["arg1"], ["arg1", "arg2"]])
-def test_interactive_shuffle(
-    db_connection: connection, monkeypatch, cmd, args
-):
+def test_interactive_shuffle(db_connection: connection, monkeypatch, cmd, args):
     def return_db():
         return db_connection
+
     monkeypatch.setattr("gargbot_3000.server.get_db", return_db)
     mock_commands = MockCommands()
     monkeypatch.setattr("gargbot_3000.server.commands", mock_commands)

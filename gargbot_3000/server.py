@@ -186,13 +186,14 @@ def handle_command(command_str: str, args: List, trigger_id: str) -> Dict:
     )
 
     error = result.get("text", "").startswith("Error")
-    if command_str in {"ping", "hvem"} and error is False:
+    if error:
+        return result
+    if command_str in {"ping", "hvem"}:
         result["response_type"] = "in_channel"
-    elif error is False:
+    elif command_str in {"pic", "quote", "msn"}:
         result = attach_buttons(
             callback_id=trigger_id, result=result, func=command_str, args=args
         )
-
     return result
 
 

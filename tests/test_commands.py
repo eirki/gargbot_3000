@@ -16,7 +16,7 @@ def test_cmd_ping():
 
 def test_cmd_welcome():
     response = commands.cmd_welcome()
-    assert response["text"].endswith(commands.command_explanation)
+    assert response["text"].endswith(commands.command_explanation())
 
 
 def test_cmd_hvem(db_connection: connection):

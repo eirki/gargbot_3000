@@ -188,6 +188,7 @@ def db_connection(postgresql: connection):
 def drop_pics(db_connection):
     def nothing(*args, **kwargs):
         pass
+
     droppics.DropPics._connect_dbx = nothing
     inited_drop_pics = droppics.DropPics(db=db_connection)
     inited_drop_pics.dbx = MockDropbox()

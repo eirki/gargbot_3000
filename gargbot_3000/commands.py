@@ -17,12 +17,15 @@ from gargbot_3000 import quotes
 from psycopg2.extensions import connection
 from typing import Dict, List, Optional, Callable, Any
 
-command_explanation = (
-    "`@gargbot_3000 Hvem [spørsmål]`: svarer på spørsmål om garglings \n"
-    "`@gargbot_3000 pic [lark/fe/skating/henging] [gargling] [år]`: viser random bilde\n"
-    "`@gargbot_3000 quote [garling]`: henter tilfeldig sitat fra forumet\n"
-    "`@gargbot_3000 msn [garling]`: utfrag fra tilfeldig msn samtale\n"
-)
+
+def command_explanation(server: bool = False):
+    commands = (
+        "`@gargbot_3000 hvem [spørsmål]`: svarer på spørsmål om garglings \n"
+        "`@gargbot_3000 pic [lark/fe/skating/henging] [gargling] [år]`: viser random bilde\n"
+        "`@gargbot_3000 quote [garling]`: henter tilfeldig sitat fra forumet\n"
+        "`@gargbot_3000 msn [garling]`: utfrag fra tilfeldig msn samtale\n"
+    )
+    return commands if server is False else commands.replace("@gargbot_3000 ", "/")
 
 
 def cmd_ping() -> Dict:
@@ -35,8 +38,15 @@ def cmd_welcome() -> Dict:
     """when joining new channel"""
     text = (
         "Hei hei kjære alle sammen!\n"
-        "Dette er kommandoene jeg skjønner:\n" + command_explanation
+        "Dette er kommandoene jeg skjønner:\n" + command_explanation()
     )
+    response: Dict[str, Any] = {"text": text}
+    return response
+
+
+def cmd_halp(args: str) -> Dict:
+    expl = command_explanation(server=True)
+    text = "Beep boop beep! Dette er kommandoene jeg skjønner:\n" + expl
     response: Dict[str, Any] = {"text": text}
     return response
 
@@ -96,7 +106,7 @@ def cmd_msn(
 def cmd_not_found(args: str) -> Dict:
     text = (
         f"Beep boop beep! Nôt sure whåt you mean by `{args}`. "
-        "Dette er kommandoene jeg skjønner:\n" + command_explanation
+        "Dette er kommandoene jeg skjønner:\n" + command_explanation()
     )
     response: Dict[str, Any] = {"text": text}
     return response
@@ -125,6 +135,7 @@ def execute(
     switch: Dict[str, Callable] = {
         "ping": cmd_ping,
         "new_channel": cmd_welcome,
+        "halp": partial(cmd_halp, args),
         "hvem": partial(cmd_hvem, args, db=db_connection),
         "pic": partial(cmd_pic, args, db=db_connection, drop_pics=drop_pics),
         "quote": partial(cmd_quote, args, db=db_connection, quotes_db=quotes_db),
@@ -144,7 +155,6 @@ def execute(
         try:
             return command_func()
         except Exception as exc:
-            # SSLError fixed on retry. Reraise error to log below
             log.error("Error in command execution", exc_info=True)
             return cmd_panic(exc)
     except Exception as exc:
