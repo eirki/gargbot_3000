@@ -105,6 +105,7 @@ def attach_commands_buttons(callback_id, result) -> dict:
         }
     ]
     result["attachments"] = attachments
+    result["replace_original"] = True
     return result
 
 
