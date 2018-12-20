@@ -44,7 +44,7 @@ def cmd_welcome() -> Dict:
     return response
 
 
-def cmd_halp(args: str) -> Dict:
+def cmd_server_explanation(args: str) -> Dict:
     expl = command_explanation(server=True)
     text = "Beep boop beep! Dette er kommandoene jeg skjønner:\n" + expl
     response: Dict[str, Any] = {"text": text}
@@ -135,7 +135,7 @@ def execute(
     switch: Dict[str, Callable] = {
         "ping": cmd_ping,
         "new_channel": cmd_welcome,
-        "halp": partial(cmd_halp, args),
+        "gargbot": cmd_server_explanation,
         "hvem": partial(cmd_hvem, args, db=db_connection),
         "pic": partial(cmd_pic, args, db=db_connection, drop_pics=drop_pics),
         "quote": partial(cmd_quote, args, db=db_connection, quotes_db=quotes_db),
