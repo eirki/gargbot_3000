@@ -59,7 +59,7 @@ def json_response(result: Dict) -> Response:
     )
 
 
-def attach_buttons(callback_id, result, func, args):
+def attach_share_buttons(callback_id, result, func, args):
     actions = [
         {
             "name": "share",
@@ -77,7 +77,6 @@ def attach_buttons(callback_id, result, func, args):
         {
             "name": "cancel",
             "text": "Avbryt",
-            "value": "avbryt",
             "type": "button",
             "style": "danger",
         },
@@ -90,6 +89,24 @@ def attach_buttons(callback_id, result, func, args):
     attachment["actions"] = actions
     attachment["callback_id"] = callback_id
     result["response_type"] = "ephemeral"
+    return result
+
+
+def attach_commands_buttons(callback_id, result) -> dict:
+    attachments = [
+        {
+            "text": "Try me:",
+            "fallback": "You are unable to choose a game",
+            "callback_id": "wopr_game",
+            "actions": [
+                {"name": "hvem", "text": "/hvem", "type": "button"},
+                {"name": "pic", "text": "/pic", "type": "button"},
+                {"name": "quote", "text": "/quote", "type": "button"},
+                {"name": "msn", "text": "/msn", "type": "button"},
+            ],
+        }
+    ]
+    result["attachments"] = attachments
     return result
 
 
@@ -108,28 +125,29 @@ def delete_ephemeral(response_url):
     log.info(r.text)
 
 
-def share(result):
-    log.info("Interactive: share")
-    result["replace_original"] = False
-    result["response_type"] = "in_channel"
-    return json_response(result)
-
-
-def cancel():
-    log.info("Interactive: cancel")
-    result = {
-        "response_type": "ephemeral",
-        "replace_original": True,
-        "text": "Canceled! Går fint det. Ikke noe problem for meg. Hadde ikke lyst uansett.",
-    }
-    return json_response(result)
-
-
-def shuffle(callback_id: str, original_func: str, original_args: List[Optional[str]]):
-    log.info("Interactive: shuffle")
-    result = handle_command(original_func, original_args, callback_id)
-    result["replace_original"] = True
-    return json_response(result)
+def handle_share_interaction(action, data):
+    if action == "share":
+        response_url = data["response_url"]
+        delete_ephemeral(response_url)
+        result = json.loads(data["actions"][0]["value"])["original_response"]
+        log.info("Interactive: share")
+        result["replace_original"] = False
+        result["response_type"] = "in_channel"
+    elif action == "cancel":
+        log.info("Interactive: cancel")
+        result = {
+            "response_type": "ephemeral",
+            "replace_original": True,
+            "text": "Canceled! Går fint det. Ikke noe problem for meg. Hadde ikke lyst uansett.",
+        }
+    elif action == "shuffle":
+        log.info("Interactive: shuffle")
+        original_func = json.loads(data["actions"][0]["value"])["original_func"]
+        original_args = json.loads(data["actions"][0]["value"])["original_args"]
+        callback_id = data["callback_id"]
+        result = handle_command(original_func, original_args, callback_id)
+        result["replace_original"] = True
+    return result
 
 
 @app.route("/interactive", methods=["POST"])
@@ -140,18 +158,11 @@ def interactive():
     if not data.get("token") == config.slack_verification_token:
         return Response(status=403)
     action = data["actions"][0]["name"]
-
-    if action == "share":
-        response_url = data["response_url"]
-        delete_ephemeral(response_url)
-        result = json.loads(data["actions"][0]["value"])["original_response"]
-        return share(result)
-    elif action == "cancel":
-        return cancel()
-    elif action == "shuffle":
-        original_req = json.loads(data["actions"][0]["value"])
-        callback_id = data["callback_id"]
-        return shuffle(callback_id, **original_req)
+    if action in {"share", "shuffle", "cancel"}:
+        result = handle_share_interaction(action, data)
+    elif action in {"hvem", "pic", "quote", "msn"}:
+        result = handle_command(action)
+    return json_response(result)
 
 
 @app.route("/slash", methods=["POST"])
@@ -191,9 +202,11 @@ def handle_command(command_str: str, args: List, trigger_id: str) -> Dict:
     if command_str in {"ping", "hvem"}:
         result["response_type"] = "in_channel"
     elif command_str in {"pic", "quote", "msn"}:
-        result = attach_buttons(
+        result = attach_share_buttons(
             callback_id=trigger_id, result=result, func=command_str, args=args
         )
+    elif command_str == "gargbot":
+        result = attach_commands_buttons(callback_id=trigger_id, result=result)
     return result
 
 
