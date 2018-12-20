@@ -92,7 +92,7 @@ def attach_share_buttons(callback_id, result, func, args):
     return result
 
 
-def attach_commands_buttons(result) -> dict:
+def attach_commands_buttons(callback_id, result) -> dict:
     attachments = [
         {
             "text": "Try me:",
@@ -101,6 +101,7 @@ def attach_commands_buttons(result) -> dict:
                 {"name": "quote", "text": "/quote", "type": "button"},
                 {"name": "msn", "text": "/msn", "type": "button"},
             ],
+            "callback_id": callback_id
         }
     ]
     result["attachments"] = attachments
@@ -204,7 +205,7 @@ def handle_command(command_str: str, args: List, trigger_id: str) -> Dict:
             callback_id=trigger_id, result=result, func=command_str, args=args
         )
     elif command_str == "gargbot":
-        result = attach_commands_buttons(result)
+        result = attach_commands_buttons(callback_id=trigger_id, result=result)
     return result
 
 
