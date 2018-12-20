@@ -92,14 +92,11 @@ def attach_share_buttons(callback_id, result, func, args):
     return result
 
 
-def attach_commands_buttons(callback_id, result) -> dict:
+def attach_commands_buttons(result) -> dict:
     attachments = [
         {
             "text": "Try me:",
-            "fallback": "You are unable to choose a game",
-            "callback_id": "wopr_game",
             "actions": [
-                {"name": "hvem", "text": "/hvem", "type": "button"},
                 {"name": "pic", "text": "/pic", "type": "button"},
                 {"name": "quote", "text": "/quote", "type": "button"},
                 {"name": "msn", "text": "/msn", "type": "button"},
@@ -160,8 +157,9 @@ def interactive():
     action = data["actions"][0]["name"]
     if action in {"share", "shuffle", "cancel"}:
         result = handle_share_interaction(action, data)
-    elif action in {"hvem", "pic", "quote", "msn"}:
-        result = handle_command(action)
+    elif action in {"pic", "quote", "msn"}:
+        trigger_id = data["trigger_id"]
+        result = handle_command(command_str=action, args=[], trigger_id=trigger_id)
     return json_response(result)
 
 
@@ -206,7 +204,7 @@ def handle_command(command_str: str, args: List, trigger_id: str) -> Dict:
             callback_id=trigger_id, result=result, func=command_str, args=args
         )
     elif command_str == "gargbot":
-        result = attach_commands_buttons(callback_id=trigger_id, result=result)
+        result = attach_commands_buttons(result)
     return result
 
 

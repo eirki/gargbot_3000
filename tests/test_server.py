@@ -60,7 +60,7 @@ def test_slash_cmd_gargbot(db_connection: connection):
         "token": config.slack_verification_token,
         "command": "/gargbot",
         "text": "",
-        "trigger_id": "test_slash_cmd_halp",
+        "trigger_id": "test_slash_cmd_gargbot",
     }
     response = test_client.post("/slash", data=params)
     assert response.status_code == 200
@@ -186,3 +186,29 @@ def test_interactive_shuffle(db_connection: connection, monkeypatch, cmd, args):
     assert mock_commands.command_str == cmd
     assert mock_commands.args == args
     assert mock_commands.db_connection == db_connection
+
+
+@pytest.mark.parametrize("cmd", ["pic", "quote", "msn"])
+def test_interactive_gargbot_commands(db_connection: connection, monkeypatch, cmd):
+    def return_db():
+        return db_connection
+
+    monkeypatch.setattr("gargbot_3000.server.get_db", return_db)
+    mock_commands = MockCommands()
+    monkeypatch.setattr("gargbot_3000.server.commands", mock_commands)
+
+    monkeypatch.setattr("gargbot_3000.server.get_pics", lambda: None)
+    monkeypatch.setattr("gargbot_3000.server.get_quotes", lambda: None)
+
+    params = {
+        "payload": json.dumps({
+            "token": config.slack_verification_token,
+            "actions": [{"name": cmd}],
+            "trigger_id": "trigger_id"
+        })
+    }
+    response = test_client.post("/interactive", data=params)
+    assert response.status_code == 200
+    data = json.loads(response.data.decode())
+    print(data)
+    assert "attachments" in data
