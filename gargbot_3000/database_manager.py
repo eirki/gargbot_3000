@@ -18,7 +18,7 @@ import dropbox
 from gargbot_3000 import config
 
 # Typing
-from typing import Union, List
+from typing import Union, List, Optional
 from pathlib import Path
 from psycopg2.extensions import connection
 
@@ -214,10 +214,13 @@ class DropPics:
         log.info("Connected to dbx")
 
     @staticmethod
-    def get_tags(image: Union[Path, str]) -> List[str]:
+    def get_tags(image: Union[Path, str]) -> Optional[List[str]]:
         im = Image.open(image)
         exif = im._getexif()
-        return exif[40094].decode("utf-16").rstrip("\x00").split(";")
+        try:
+            return exif[40094].decode("utf-16").rstrip("\x00").split(";")
+        except KeyError:
+            return None
 
     @staticmethod
     def get_date_taken(image: Union[Path, str]) -> dt.datetime:
@@ -246,6 +249,8 @@ class DropPics:
             return
 
         tags = DropPics.get_tags(pic)
+        if tags is None:
+            return
         faces = set(tags).intersection(self.firstname_to_db_id)
         for face in faces:
             db_id = self.firstname_to_db_id[face]
@@ -257,13 +262,20 @@ class DropPics:
             cursor.execute(sql_command, data)
 
     def add_pics_in_folder(
-        self, folder: List[Path], topic: str, dbx_folder: str
+        self, folder: Path, topic: str, dbx_folder: str
     ) -> None:
         cursor = self.db.cursor()
-        for pic in folder:
+        for pic in folder.iterdir():
             if not pic.suffix.lower() in {".jpg", ".jpeg"}:
                 continue
             dbx_path = dbx_folder + "/" + pic.name.lower()
+
+            sql_command = "SELECT pic_id FROM dbx_pictures WHERE path = %(path)s"
+            data = {"path": dbx_path}
+            cursor.execute(sql_command, data)
+            if cursor.fetchone() is not None:
+                log.info(f"{dbx_path} pic already in db")
+                continue
 
             date_obj = DropPics.get_date_taken(pic)
             timestr = date_obj.strftime("%Y-%m-%d %H:%M:%S")
