@@ -8,23 +8,26 @@ import pytest
 from pytest_postgresql.factories import postgresql
 from psycopg2.extras import RealDictCursor
 
+from gargbot_3000 import config
 from gargbot_3000 import droppics
 
 # Typing
 from psycopg2.extensions import connection
 
 
+byear = dt.datetime.now(config.tz).year - 28
+
 # fmt: off
 User = namedtuple("TestUser", ["db_id", "name", "slack_id", "slack_nick", "bday"])
 users = [
-    User(db_id=2, name="name2", slack_id="s_id2", slack_nick="slack_nick2", bday=dt.datetime(1990, 2, 1)),
-    User(db_id=3, name="name3", slack_id="s_id3", slack_nick="slack_nick3", bday=dt.datetime(1990, 3, 1)),
-    User(db_id=5, name="name5", slack_id="s_id5", slack_nick="slack_nick5", bday=dt.datetime(1990, 5, 1)),
-    User(db_id=6, name="name6", slack_id="s_id6", slack_nick="slack_nick6", bday=dt.datetime(1990, 6, 1)),
-    User(db_id=7, name="name7", slack_id="s_id7", slack_nick="slack_nick7", bday=dt.datetime(1990, 7, 1)),
-    User(db_id=9, name="name9", slack_id="s_id9", slack_nick="slack_nick9", bday=dt.datetime(1990, 9, 1)),
-    User(db_id=10, name="name10", slack_id="s_id10", slack_nick="slack_nick10", bday=dt.datetime(1990, 10, 1)),
-    User(db_id=11, name="name11", slack_id="s_id11", slack_nick="slack_nick11", bday=dt.datetime(1990, 11, 1)),
+    User(db_id=2, name="name2", slack_id="s_id2", slack_nick="slack_nick2", bday=dt.datetime(byear, 2, 1)),
+    User(db_id=3, name="name3", slack_id="s_id3", slack_nick="slack_nick3", bday=dt.datetime(byear, 3, 1)),
+    User(db_id=5, name="name5", slack_id="s_id5", slack_nick="slack_nick5", bday=dt.datetime(byear, 5, 1)),
+    User(db_id=6, name="name6", slack_id="s_id6", slack_nick="slack_nick6", bday=dt.datetime(byear, 6, 1)),
+    User(db_id=7, name="name7", slack_id="s_id7", slack_nick="slack_nick7", bday=dt.datetime(byear, 7, 1)),
+    User(db_id=9, name="name9", slack_id="s_id9", slack_nick="slack_nick9", bday=dt.datetime(byear, 9, 1)),
+    User(db_id=10, name="name10", slack_id="s_id10", slack_nick="slack_nick10", bday=dt.datetime(byear, 10, 1)),
+    User(db_id=11, name="name11", slack_id="s_id11", slack_nick="slack_nick11", bday=dt.datetime(byear, 11, 1)),
 ]
 
 
