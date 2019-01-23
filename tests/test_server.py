@@ -69,7 +69,7 @@ def test_slash_cmd_gargbot(db_connection: connection):
     assert "/pic" in data["text"]
 
 
-@pytest.mark.parametrize("cmd", ["pic", "quote", "msn"])
+@pytest.mark.parametrize("cmd", ["pic", "forum", "msn"])
 @pytest.mark.parametrize("args", ["", "arg1", "arg1 arg2"])
 def test_slash(db_connection: connection, monkeypatch, cmd, args):
     def return_db():
@@ -145,7 +145,7 @@ def test_interactive_cancel():
     assert data["text"].startswith("Canceled!")
 
 
-@pytest.mark.parametrize("cmd", ["pic", "quote", "msn"])
+@pytest.mark.parametrize("cmd", ["pic", "forum", "msn"])
 @pytest.mark.parametrize("args", [[], ["arg1"], ["arg1", "arg2"]])
 def test_interactive_shuffle(db_connection: connection, monkeypatch, cmd, args):
     def return_db():
@@ -188,7 +188,7 @@ def test_interactive_shuffle(db_connection: connection, monkeypatch, cmd, args):
     assert mock_commands.db_connection == db_connection
 
 
-@pytest.mark.parametrize("cmd", ["pic", "quote", "msn"])
+@pytest.mark.parametrize("cmd", ["pic", "forum", "msn"])
 def test_interactive_gargbot_commands(db_connection: connection, monkeypatch, cmd):
     def return_db():
         return db_connection

@@ -15,13 +15,13 @@ def quotes_db(db_connection: connection):
 
 
 def test_garg_quote_random(db_connection: connection, quotes_db: quotes.Quotes):
-    text = quotes_db.garg(db_connection, args=None)
+    text = quotes_db.forum(db_connection, args=None)
     assert "------\n- " in text
 
 
 def test_garg_quote_user(db_connection: connection, quotes_db: quotes.Quotes):
     user = conftest.users[0]
-    text = quotes_db.garg(db_connection, args=[user.slack_nick])
+    text = quotes_db.forum(db_connection, args=[user.slack_nick])
     assert f"------\n- {user.slack_nick}" in text
 
 

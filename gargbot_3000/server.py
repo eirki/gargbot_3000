@@ -93,7 +93,7 @@ def attach_commands_buttons(callback_id, result) -> dict:
             "text": "Try me:",
             "actions": [
                 {"name": "pic", "text": "/pic", "type": "button"},
-                {"name": "quote", "text": "/quote", "type": "button"},
+                {"name": "forum", "text": "/forum", "type": "button"},
                 {"name": "msn", "text": "/msn", "type": "button"},
             ],
             "callback_id": callback_id,
@@ -154,9 +154,11 @@ def interactive():
     action = data["actions"][0]["name"]
     if action in {"share", "shuffle", "cancel"}:
         result = handle_share_interaction(action, data)
-    elif action in {"pic", "quote", "msn"}:
+    elif action in {"pic", "forum", "msn"}:
         trigger_id = data["trigger_id"]
         result = handle_command(command_str=action, args=[], trigger_id=trigger_id)
+    else:
+        raise Exception(f"Unknown action: {result}")
     return json_response(result)
 
 
@@ -180,9 +182,9 @@ def slash_cmds():
 
 
 def handle_command(command_str: str, args: List, trigger_id: str) -> Dict:
-    db = get_db() if command_str in {"hvem", "pic", "quote", "msn"} else None
+    db = get_db() if command_str in {"hvem", "pic", "forum", "msn"} else None
     pic = get_pics() if command_str == "pic" else None
-    quotes = get_quotes() if command_str in {"quote", "msn"} else None
+    quotes = get_quotes() if command_str in {"forum", "msn"} else None
     result = commands.execute(
         command_str=command_str,
         args=args,
@@ -196,7 +198,7 @@ def handle_command(command_str: str, args: List, trigger_id: str) -> Dict:
         return result
     if command_str in {"ping", "hvem"}:
         result["response_type"] = "in_channel"
-    elif command_str in {"pic", "quote", "msn"}:
+    elif command_str in {"pic", "forum", "msn"}:
         result = attach_share_buttons(
             callback_id=trigger_id, result=result, func=command_str, args=args
         )

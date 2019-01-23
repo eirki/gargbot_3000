@@ -12,7 +12,7 @@ from operator import itemgetter
 from gargbot_3000.database_manager import LoggingCursor
 
 # Typing
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from psycopg2.extensions import connection
 
 
@@ -50,7 +50,7 @@ class Quotes:
 
         return inp
 
-    def garg(self, db: connection, args: List[str]):
+    def forum(self, db: connection, args: List[str]):
         user = args[0] if args else None
         if user and user not in self.slack_nicks_to_db_ids:
             return f"Gargling not found: {user}. Husk å bruke slack nick"
@@ -110,7 +110,7 @@ class Quotes:
 
         date = chosen_messages[0]["msg_time"].strftime("%d.%m.%y %H:%M")
 
-        convo = []
+        convo: List[List[str]] = []
         for message in chosen_messages:
             if convo:
                 prev_from_user, prev_msg_text, prev_msg_color = convo[-1]

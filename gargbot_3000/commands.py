@@ -22,7 +22,7 @@ def command_explanation(server: bool = False):
     commands = (
         "`@gargbot_3000 hvem [spørsmål]`: svarer på spørsmål om garglings \n"
         "`@gargbot_3000 pic [lark/fe/skating/henging] [gargling] [år]`: viser random bilde\n"
-        "`@gargbot_3000 quote [garling]`: henter tilfeldig sitat fra forumet\n"
+        "`@gargbot_3000 forum [garling]`: henter tilfeldig sitat fra det gamle forumet\n"
         "`@gargbot_3000 msn [garling]`: utfrag fra tilfeldig msn samtale\n"
     )
     return commands if server is False else commands.replace("@gargbot_3000 ", "/")
@@ -78,11 +78,11 @@ def cmd_pic(
     return response
 
 
-def cmd_quote(
+def cmd_forum(
     args: Optional[List[str]], db: connection, quotes_db: quotes.Quotes
 ) -> Dict:
-    """if command is 'quote'"""
-    text = quotes_db.garg(db, args)
+    """if command is 'forum'"""
+    text = quotes_db.forum(db, args)
     response: Dict[str, Any] = {"text": text}
     return response
 
@@ -138,7 +138,7 @@ def execute(
         "gargbot": cmd_server_explanation,
         "hvem": partial(cmd_hvem, args, db=db_connection),
         "pic": partial(cmd_pic, args, db=db_connection, drop_pics=drop_pics),
-        "quote": partial(cmd_quote, args, db=db_connection, quotes_db=quotes_db),
+        "forum": partial(cmd_forum, args, db=db_connection, quotes_db=quotes_db),
         "msn": partial(cmd_msn, args, db=db_connection, quotes_db=quotes_db),
     }
     try:
