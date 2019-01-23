@@ -201,11 +201,13 @@ def test_interactive_gargbot_commands(db_connection: connection, monkeypatch, cm
     monkeypatch.setattr("gargbot_3000.server.get_quotes", lambda: None)
 
     params = {
-        "payload": json.dumps({
-            "token": config.slack_verification_token,
-            "actions": [{"name": cmd}],
-            "trigger_id": "trigger_id"
-        })
+        "payload": json.dumps(
+            {
+                "token": config.slack_verification_token,
+                "actions": [{"name": cmd}],
+                "trigger_id": "trigger_id",
+            }
+        )
     }
     response = test_client.post("/interactive", data=params)
     assert response.status_code == 200

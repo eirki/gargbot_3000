@@ -261,9 +261,7 @@ class DropPics:
             data = {"db_id": db_id, "pic_id": pic_id}
             cursor.execute(sql_command, data)
 
-    def add_pics_in_folder(
-        self, folder: Path, topic: str, dbx_folder: str
-    ) -> None:
+    def add_pics_in_folder(self, folder: Path, topic: str, dbx_folder: str) -> None:
         cursor = self.db.cursor()
         for pic in folder.iterdir():
             if not pic.suffix.lower() in {".jpg", ".jpeg"}:

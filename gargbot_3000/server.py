@@ -74,12 +74,7 @@ def attach_share_buttons(callback_id, result, func, args):
             "type": "button",
             "value": json.dumps({"original_func": func, "original_args": args}),
         },
-        {
-            "name": "cancel",
-            "text": "Avbryt",
-            "type": "button",
-            "style": "danger",
-        },
+        {"name": "cancel", "text": "Avbryt", "type": "button", "style": "danger"},
     ]
     try:
         attachment = result["attachments"][-1]
@@ -101,7 +96,7 @@ def attach_commands_buttons(callback_id, result) -> dict:
                 {"name": "quote", "text": "/quote", "type": "button"},
                 {"name": "msn", "text": "/msn", "type": "button"},
             ],
-            "callback_id": callback_id
+            "callback_id": callback_id,
         }
     ]
     result["attachments"] = attachments
