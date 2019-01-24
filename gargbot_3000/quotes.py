@@ -56,6 +56,7 @@ class Quotes:
         inp = bbcode.render_html(
             inp, drop_unrecognized=True, escape_html=False, replace_links=False
         )
+        inp = inp.replace('rel="nofollow"', "")
         inp = HTMLSlacker(inp).get_output()
 
         return inp
