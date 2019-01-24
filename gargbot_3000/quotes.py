@@ -7,6 +7,7 @@ import re
 import html
 import random
 from operator import itemgetter
+import time
 
 # Internal
 from gargbot_3000 import config
@@ -70,10 +71,10 @@ class Quotes:
         result = cursor.fetchone()
         db_id = result["db_id"]
         post_id = result["post_id"]
-        post_timestamp = result["post_timestamp"]
+        post_datetime = result["post_timestamp"]
+        post_timestamp = int(time.mktime(post_datetime.timetuple()))
         cursor.execute(f"SELECT avatar FROM user_ids WHERE db_id = {db_id}")
         avatar_name = cursor.fetchone()["avatar"]
-        print(avatar_name)
         avatar_url = f"{config.forum_url}/download/file.php?avatar={avatar_name}"
         user = user if user is not None else self.db_ids_to_slack_nicks[db_id]
         text = self._sanitize(result["post_text"], result["bbcode_uid"])
