@@ -34,6 +34,8 @@ countdown_message = os.environ["countdown_message"]
 ongoing_message = os.environ["ongoing_message"]
 finished_message = os.environ["finished_message"]
 
+forum_url = os.environ["forum_url"]
+
 countdown_date = dt.datetime.fromtimestamp(int(os.environ["countdown_date"]), tz=tz)
 
 countdown_args = os.environ["countdown_args"].split(", ")

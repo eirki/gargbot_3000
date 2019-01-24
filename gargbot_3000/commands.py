@@ -82,8 +82,19 @@ def cmd_forum(
     args: Optional[List[str]], db: connection, quotes_db: quotes.Quotes
 ) -> Dict:
     """if command is 'forum'"""
-    text = quotes_db.forum(db, args)
-    response: Dict[str, Any] = {"text": text}
+    text, user, avatar_url, timestamp, url = quotes_db.forum(db, args)
+    response: Dict[str, Any] = {
+        "attachments": [
+            {
+                "author_name": user,
+                "author_icon": avatar_url,
+                "fallback": text,
+                "text": text,
+                "ts": timestamp,
+                "footer": url,
+            }
+        ]
+    }
     return response
 
 

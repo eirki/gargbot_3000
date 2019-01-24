@@ -18,16 +18,16 @@ from psycopg2.extensions import connection
 byear = dt.datetime.now(config.tz).year - 28
 
 # fmt: off
-User = namedtuple("TestUser", ["db_id", "name", "slack_id", "slack_nick", "bday"])
+User = namedtuple("TestUser", ["db_id", "name", "slack_id", "slack_nick", "bday", "avatar"])
 users = [
-    User(db_id=2, name="name2", slack_id="s_id2", slack_nick="slack_nick2", bday=dt.datetime(byear, 2, 1)),
-    User(db_id=3, name="name3", slack_id="s_id3", slack_nick="slack_nick3", bday=dt.datetime(byear, 3, 1)),
-    User(db_id=5, name="name5", slack_id="s_id5", slack_nick="slack_nick5", bday=dt.datetime(byear, 5, 1)),
-    User(db_id=6, name="name6", slack_id="s_id6", slack_nick="slack_nick6", bday=dt.datetime(byear, 6, 1)),
-    User(db_id=7, name="name7", slack_id="s_id7", slack_nick="slack_nick7", bday=dt.datetime(byear, 7, 1)),
-    User(db_id=9, name="name9", slack_id="s_id9", slack_nick="slack_nick9", bday=dt.datetime(byear, 9, 1)),
-    User(db_id=10, name="name10", slack_id="s_id10", slack_nick="slack_nick10", bday=dt.datetime(byear, 10, 1)),
-    User(db_id=11, name="name11", slack_id="s_id11", slack_nick="slack_nick11", bday=dt.datetime(byear, 11, 1)),
+    User(db_id=2, name="name2", slack_id="s_id2", slack_nick="slack_nick2", bday=dt.datetime(byear, 2, 1), avatar="2.jpg"),
+    User(db_id=3, name="name3", slack_id="s_id3", slack_nick="slack_nick3", bday=dt.datetime(byear, 3, 1), avatar="3.jpg"),
+    User(db_id=5, name="name5", slack_id="s_id5", slack_nick="slack_nick5", bday=dt.datetime(byear, 5, 1), avatar="5.jpg"),
+    User(db_id=6, name="name6", slack_id="s_id6", slack_nick="slack_nick6", bday=dt.datetime(byear, 6, 1), avatar="6.jpg"),
+    User(db_id=7, name="name7", slack_id="s_id7", slack_nick="slack_nick7", bday=dt.datetime(byear, 7, 1), avatar="7.jpg"),
+    User(db_id=9, name="name9", slack_id="s_id9", slack_nick="slack_nick9", bday=dt.datetime(byear, 9, 1), avatar="9.jpg"),
+    User(db_id=10, name="name10", slack_id="s_id10", slack_nick="slack_nick10", bday=dt.datetime(byear, 10, 1), avatar="10.jpg"),
+    User(db_id=11, name="name11", slack_id="s_id11", slack_nick="slack_nick11", bday=dt.datetime(byear, 11, 1), avatar="11.jpg"),
 ]
 
 
@@ -44,16 +44,16 @@ pics = [
     Pic("path/test_pic9", "topic3", dt.datetime(2009, 9, 9), [2]),
 ]
 
-Quote = namedtuple("Quote", ["db_id", "post_text", "post_time", "post_id", "bbcode_uid"])
+Quote = namedtuple("Quote", ["db_id", "post_text", "post_timestamp", "post_id", "bbcode_uid"])
 quotes = [
-    Quote(2, "text2", 1172690211, 3, "1dz6ywqv"),
-    Quote(3, "text3", 1172690257, 4, "xw0i6wvy"),
-    Quote(5, "text4", 1172690319, 5, "3ntrk0df"),
-    Quote(6, "text5", 1172690396, 6, "1qmz5uwv"),
-    Quote(7, "text6", 1172690466, 7, "2xuife66"),
-    Quote(9, "text7", 1172690486, 8, "2wpgc113"),
-    Quote(10, "text8", 1172690875, 9, "240k4drr"),
-    Quote(11, "text9", 1172691974, 11, "2v1czw2o"),
+    Quote(2, "text2", dt.datetime.fromtimestamp(1172690211), 3, "1dz6ywqv"),
+    Quote(3, "text3", dt.datetime.fromtimestamp(1172690257), 4, "xw0i6wvy"),
+    Quote(5, "text4", dt.datetime.fromtimestamp(1172690319), 5, "3ntrk0df"),
+    Quote(6, "text5", dt.datetime.fromtimestamp(1172690396), 6, "1qmz5uwv"),
+    Quote(7, "text6", dt.datetime.fromtimestamp(1172690466), 7, "2xuife66"),
+    Quote(9, "text7", dt.datetime.fromtimestamp(1172690486), 8, "2wpgc113"),
+    Quote(10, "text8", dt.datetime.fromtimestamp(1172690875), 9, "240k4drr"),
+    Quote(11, "text9", dt.datetime.fromtimestamp(1172691974), 11, "2v1czw2o"),
 ]
 
 Message = namedtuple("MSN", ["session_id", "msg_time", "msg_color", "from_user", "msg_text", "db_id"])
@@ -99,18 +99,20 @@ def populate_user_table(db: connection) -> None:
             data = {"db_id": user.db_id, "name": user.name}
             cursor.execute(sql_command, data)
 
-            sql_command = """INSERT INTO user_ids (db_id, slack_id, slack_nick, first_name, bday)
+            sql_command = """INSERT INTO user_ids (db_id, slack_id, slack_nick, first_name, bday, avatar)
             VALUES (%(db_id)s,
                    %(slack_id)s,
                    %(slack_nick)s,
                    %(first_name)s,
-                   %(bday)s);"""
+                   %(bday)s,
+                   %(avatar)s);"""
             data = {
                 "db_id": user.db_id,
                 "slack_id": user.slack_id,
                 "slack_nick": user.slack_nick,
                 "first_name": user.name,
                 "bday": user.bday,
+                "avatar": user.avatar,
             }
             cursor.execute(sql_command, data)
 
@@ -143,16 +145,16 @@ def populate_pics_table(db: connection) -> None:
 def populate_quotes_table(db: connection) -> None:
     with db.cursor() as cursor:
         for quote in quotes:
-            sql_command = """INSERT INTO phpbb_posts (db_id, post_id, post_time, post_text, bbcode_uid)
+            sql_command = """INSERT INTO phpbb_posts (db_id, post_id, post_timestamp, post_text, bbcode_uid)
             VALUES (%(db_id)s,
                    %(post_id)s,
-                   %(post_time)s,
+                   %(post_timestamp)s,
                    %(post_text)s,
                    %(bbcode_uid)s);"""
             data = {
                 "db_id": quote.db_id,
                 "post_id": quote.post_id,
-                "post_time": quote.post_time,
+                "post_timestamp": quote.post_timestamp,
                 "post_text": quote.post_text,
                 "bbcode_uid": quote.bbcode_uid,
             }

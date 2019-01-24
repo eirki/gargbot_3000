@@ -9,10 +9,10 @@ import random
 from operator import itemgetter
 
 # Internal
-from gargbot_3000.database_manager import LoggingCursor
+from gargbot_3000 import config
 
 # Typing
-from typing import Optional, List, Tuple
+from typing import List, Optional
 from psycopg2.extensions import connection
 
 
@@ -44,13 +44,13 @@ class Quotes:
 
         youtube_embeds = re.compile(
             r'\[html\]<iframe width="\d+" height="\d+" src="//www.youtube.com/embed/([^"]+)" frameborder='
-            r'0" allowfullscreen></iframe>\[/html\]'
+            r'"0" allowfullscreen></iframe>\[/html\]'
         )
         inp = re.sub(youtube_embeds, r"https://www.youtube.com/watch?v=\1", inp)
 
         return inp
 
-    def forum(self, db: connection, args: List[str]):
+    def forum(self, db: connection, args: Optional[List[str]]):
         user = args[0] if args else None
         if user and user not in self.slack_nicks_to_db_ids:
             return f"Gargling not found: {user}. Husk å bruke slack nick"
@@ -61,7 +61,7 @@ class Quotes:
             user_filter = "IN (2, 3, 5, 6, 7, 9, 10, 11)"
 
         sql = (
-            "SELECT db_id, post_text, post_time, post_id, bbcode_uid "
+            "SELECT db_id, post_text, post_timestamp, post_id, bbcode_uid "
             f"FROM phpbb_posts WHERE db_id {user_filter} ORDER BY RANDOM() LIMIT 1"
         )
 
@@ -70,17 +70,17 @@ class Quotes:
         result = cursor.fetchone()
         db_id = result["db_id"]
         post_id = result["post_id"]
+        post_timestamp = result["post_timestamp"]
+        cursor.execute(f"SELECT avatar FROM user_ids WHERE db_id = {db_id}")
+        avatar_name = cursor.fetchone()["avatar"]
+        print(avatar_name)
+        avatar_url = f"{config.forum_url}/download/file.php?avatar={avatar_name}"
         user = user if user is not None else self.db_ids_to_slack_nicks[db_id]
-        post = self._sanitize(result["post_text"], result["bbcode_uid"])
-        quote = (
-            f"{post}\n"
-            "------\n"
-            f"- {user}\n"
-            f"http://eirik.stavestrand.no/gargen/viewtopic.php?p={post_id}#p{post_id}\n"
-        )
-        return quote
+        text = self._sanitize(result["post_text"], result["bbcode_uid"])
+        url = f"{config.forum_url}/viewtopic.php?p={post_id}#p{post_id}"
+        return text, user, avatar_url, post_timestamp, url
 
-    def msn(self, db: connection, args):
+    def msn(self, db: connection, args: Optional[List[str]]):
         user = args[0] if args else None
         if user is not None:
             db_id = self.slack_nicks_to_db_ids[user]

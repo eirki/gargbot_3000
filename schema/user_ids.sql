@@ -5,5 +5,6 @@ CREATE TABLE user_ids (
     slack_id VARCHAR(9),
     slack_nick VARCHAR(50),
     first_name VARCHAR(50),
-    bday DATE NOT NULL
+    bday DATE NOT NULL,
+    avatar VARCHAR(20)
 );
