@@ -21,7 +21,7 @@ def test_garg_quote_random(db_connection: connection, quotes_db: quotes.Quotes):
     )
     assert isinstance(post_timestamp, int)
     assert url.startswith(config.forum_url)
-    assert len(text) > 0
+    assert "*" in text
     assert len(user) > 0
 
 
@@ -32,7 +32,7 @@ def test_garg_quote_user(db_connection: connection, quotes_db: quotes.Quotes):
     )
     assert isinstance(post_timestamp, int)
     assert url.startswith(config.forum_url)
-    assert len(text) > 0
+    assert "*" in text
     assert out_user == in_user.slack_nick
     assert avatar_url.endswith(f"{in_user.db_id}.jpg")
 

@@ -12,6 +12,10 @@ import time
 # Internal
 from gargbot_3000 import config
 
+# Dependencies
+import bbcode
+from htmlslacker import HTMLSlacker
+
 # Typing
 from typing import List, Optional
 from psycopg2.extensions import connection
@@ -48,6 +52,9 @@ class Quotes:
             r'"0" allowfullscreen></iframe>\[/html\]'
         )
         inp = re.sub(youtube_embeds, r"https://www.youtube.com/watch?v=\1", inp)
+
+        inp = bbcode.render_html(inp, drop_unrecognized=True)
+        inp = HTMLSlacker(inp).get_output()
 
         return inp
 

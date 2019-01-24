@@ -8,3 +8,5 @@ pytz
 flask
 gunicorn
 python-dotenv
+bbcode
+html-slacker
