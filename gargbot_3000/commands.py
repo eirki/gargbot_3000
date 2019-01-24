@@ -84,16 +84,16 @@ def cmd_forum(
     """if command is 'forum'"""
     text, user, avatar_url, timestamp, url = quotes_db.forum(db, args)
     response: Dict[str, Any] = {
+        "text": text,
         "attachments": [
             {
                 "author_name": user,
                 "author_icon": avatar_url,
-                "fallback": text,
-                "text": text,
+                "fallback": "",
                 "ts": timestamp,
                 "footer": url,
             }
-        ]
+        ],
     }
     return response
 
