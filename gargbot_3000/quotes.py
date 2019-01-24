@@ -53,7 +53,9 @@ class Quotes:
         )
         inp = re.sub(youtube_embeds, r"https://www.youtube.com/watch?v=\1", inp)
 
-        inp = bbcode.render_html(inp, drop_unrecognized=True)
+        inp = bbcode.render_html(
+            inp, drop_unrecognized=True, escape_html=False, replace_links=False
+        )
         inp = HTMLSlacker(inp).get_output()
 
         return inp

@@ -46,14 +46,14 @@ pics = [
 
 Quote = namedtuple("Quote", ["db_id", "post_text", "post_timestamp", "post_id", "bbcode_uid"])
 quotes = [
-    Quote(2, "text2", dt.datetime.fromtimestamp(1172690211), 3, "1dz6ywqv"),
-    Quote(3, "text3", dt.datetime.fromtimestamp(1172690257), 4, "xw0i6wvy"),
-    Quote(5, "text4", dt.datetime.fromtimestamp(1172690319), 5, "3ntrk0df"),
-    Quote(6, "text5", dt.datetime.fromtimestamp(1172690396), 6, "1qmz5uwv"),
-    Quote(7, "text6", dt.datetime.fromtimestamp(1172690466), 7, "2xuife66"),
-    Quote(9, "text7", dt.datetime.fromtimestamp(1172690486), 8, "2wpgc113"),
-    Quote(10, "text8", dt.datetime.fromtimestamp(1172690875), 9, "240k4drr"),
-    Quote(11, "text9", dt.datetime.fromtimestamp(1172691974), 11, "2v1czw2o"),
+    Quote(2, "[b]text2[/b]", dt.datetime.fromtimestamp(1172690211), 3, "1dz6ywqv"),
+    Quote(3, "[b]text3[/b]", dt.datetime.fromtimestamp(1172690257), 4, "xw0i6wvy"),
+    Quote(5, "[b]text4[/b]", dt.datetime.fromtimestamp(1172690319), 5, "3ntrk0df"),
+    Quote(6, "[b]text5[/b]", dt.datetime.fromtimestamp(1172690396), 6, "1qmz5uwv"),
+    Quote(7, "[b]text6[/b]", dt.datetime.fromtimestamp(1172690466), 7, "2xuife66"),
+    Quote(9, "[b]text7[/b]", dt.datetime.fromtimestamp(1172690486), 8, "2wpgc113"),
+    Quote(10, "[b]text8[/b]", dt.datetime.fromtimestamp(1172690875), 9, "240k4drr"),
+    Quote(11, "[b]text9[/b]", dt.datetime.fromtimestamp(1172691974), 11, "2v1czw2o"),
 ]
 
 Message = namedtuple("MSN", ["session_id", "msg_time", "msg_color", "from_user", "msg_text", "db_id"])
