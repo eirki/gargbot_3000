@@ -8,6 +8,7 @@ from functools import partial
 # Dependencies
 import psycopg2
 from requests.exceptions import SSLError
+import dropbox
 
 # Internal
 from gargbot_3000 import droppics
@@ -161,8 +162,8 @@ def execute(
         return command_func()
     except psycopg2.OperationalError:
         raise
-    except SSLError as ssl_exc:
-        # Dropbox sometimes gives SSLerrors, try again:
+    except (SSLError, dropbox.exceptions.ApiError):
+        # Dropbox sometimes gives SSLerrors, (or ApiError if file not there) try again:
         try:
             return command_func()
         except Exception as exc:
