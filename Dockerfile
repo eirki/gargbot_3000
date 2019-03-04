@@ -19,5 +19,4 @@ RUN apk add --no-cache --virtual .build-deps build-base linux-headers && venv/bi
 
 USER gargbotuser
 
-COPY run.py run.py
 COPY gargbot_3000 gargbot_3000

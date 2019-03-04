@@ -5,7 +5,7 @@ services:
     build: .
     env_file:
       - .env
-    command: "venv/bin/gunicorn --workers 3 --bind :5000 run:app"
+    command: "venv/bin/python -m gargbot_3000 --mode server"
     expose:
       - 5000
     ports:
@@ -20,7 +20,7 @@ services:
     build: .
     env_file:
       - .env
-    command: "venv/bin/python run.py task"
+    command: "venv/bin/python -m gargbot_3000 --mode task"
     depends_on:
       - postgres_db
     networks:

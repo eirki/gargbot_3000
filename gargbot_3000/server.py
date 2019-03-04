@@ -221,12 +221,3 @@ def countdown():
         ongoing_message=config.ongoing_message,
         finished_message=config.finished_message,
     )
-
-
-def main():
-    log.info("GargBot 3000 server operational!")
-    app.run(debug=True, host='0.0.0.0')
-
-
-if __name__ == "__main__":
-    main()
