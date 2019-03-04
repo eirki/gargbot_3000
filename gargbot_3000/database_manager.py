@@ -34,13 +34,20 @@ class LoggingCursor(DictCursor):
 
 
 def connect_to_database() -> connection:
-    connection = psycopg2.connect(config.db_url, cursor_factory=LoggingCursor)
+    log.info("Connecting to db")
+    db_connection = psycopg2.connect(
+        dbname=config.db_name,
+        user=config.db_user,
+        password=config.db_password,
+        host=config.db_host,
+        port=5432,
+        cursor_factory=LoggingCursor
+    )
+    return db_connection
 
-    return connection
 
-
-def close_database_connection(connection: connection,) -> None:
-    connection.close()
+def close_database_connection(db_connection: connection,) -> None:
+    db_connection.close()
 
 
 class MSN:
