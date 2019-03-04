@@ -7,10 +7,12 @@ import os
 from xml.dom.minidom import parseString
 import datetime as dt
 import re
+from contextlib import contextmanager
 
 # Dependencies
 import psycopg2
 from psycopg2.extras import DictCursor
+from psycopg2.pool import ThreadedConnectionPool
 from PIL import Image
 import dropbox
 
@@ -18,6 +20,7 @@ import dropbox
 from gargbot_3000 import config
 
 # Typing
+import typing as t
 from typing import Union, List, Optional
 from pathlib import Path
 from psycopg2.extensions import connection
@@ -33,6 +36,60 @@ class LoggingCursor(DictCursor):
         super().executemany(query, args)
 
 
+class ConnectionPool:
+    """https://gist.github.com/jeorgen/4eea9b9211bafeb18ada"""
+    is_setup = False
+
+    def setup(self):
+        self.last_seen_process_id = os.getpid()
+        self._init()
+        self.is_setup = True
+
+    def _init(self):
+        self._pool = ThreadedConnectionPool(
+            1,
+            10,
+            database=config.db_name,
+            user=config.db_user,
+            password=config.db_password,
+            host=config.db_host,
+            port=config.db_port,
+        )
+
+    def getconn(self) -> connection:
+        current_pid = os.getpid()
+        if not (current_pid == self.last_seen_process_id):
+            self._init()
+            log.debug(f"New id is {current_pid}, old id was {self.last_seen_process_id}")
+            self.last_seen_process_id = current_pid
+        return self._pool.getconn()
+
+    def putconn(self, conn: connection):
+        return self._pool.putconn(conn)
+
+    def closeall(self):
+        self._pool.closeall()
+
+    @contextmanager
+    def get_db_connection(self) -> t.Generator[connection, None, None]:
+        try:
+            connection = self.getconn()
+            yield connection
+        finally:
+            self.putconn(connection)
+
+    @contextmanager
+    def get_db_cursor(self, commit=False) -> t.Generator[DictCursor, None, None]:
+        with self.get_db_connection() as connection:
+            cursor = connection.cursor(cursor_factory=DictCursor)
+            try:
+                yield cursor
+                if commit:
+                    connection.commit()
+            finally:
+                cursor.close()
+
+
 def connect_to_database() -> connection:
     log.info("Connecting to db")
     db_connection = psycopg2.connect(
@@ -40,13 +97,13 @@ def connect_to_database() -> connection:
         user=config.db_user,
         password=config.db_password,
         host=config.db_host,
-        port=5432,
-        cursor_factory=LoggingCursor
+        port=config.db_port,
+        cursor_factory=LoggingCursor,
     )
     return db_connection
 
 
-def close_database_connection(db_connection: connection,) -> None:
+def close_database_connection(db_connection: connection) -> None:
     db_connection.close()
 
 

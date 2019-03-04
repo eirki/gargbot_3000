@@ -4,16 +4,34 @@ import json
 from types import SimpleNamespace
 
 import pytest
-import flask
+from flask import testing
+import typing as t
 
 from gargbot_3000 import server
 from gargbot_3000 import config
-from tests import conftest
+from gargbot_3000 import database_manager
 
 from psycopg2.extensions import connection
 
 
-test_client: flask.testing.FlaskClient = server.app.test_client()
+@pytest.fixture
+def client(db_connection) -> t.Generator[testing.FlaskClient, None, None]:
+    server.app.pool = MockPool(db_connection)
+    yield server.app.test_client()
+
+
+class MockPool(database_manager.ConnectionPool):
+    def __init__(self, db_connection: connection) -> None:
+        self.db_connection = db_connection
+
+    def getconn(self) -> connection:
+        return self.db_connection
+
+    def putconn(self, conn: connection):
+        pass
+
+    def closeall(self):
+        pass
 
 
 class MockRequests:
@@ -34,20 +52,20 @@ class MockCommands:
         return {"text": "text"}
 
 
-def test_home(db_connection: connection):
-    response = test_client.get("/")
+def test_home(client: testing.FlaskClient):
+    response = client.get("/")
     assert response.status_code == 200
     assert response.data == b"home"
 
 
-def test_slash_cmd_ping(db_connection: connection):
+def test_slash_cmd_ping(client: testing.FlaskClient):
     params = {
         "token": config.slack_verification_token,
         "command": "/ping",
         "text": "",
         "trigger_id": "test_slash_cmd_ping",
     }
-    response = test_client.post("/slash", data=params)
+    response = client.post("/slash", data=params)
     assert response.status_code == 200
     assert json.loads(response.data.decode()) == {
         "text": "GargBot 3000 is active. Beep boop beep",
@@ -55,14 +73,14 @@ def test_slash_cmd_ping(db_connection: connection):
     }
 
 
-def test_slash_cmd_gargbot(db_connection: connection):
+def test_slash_cmd_gargbot(client: testing.FlaskClient):
     params = {
         "token": config.slack_verification_token,
         "command": "/gargbot",
         "text": "",
         "trigger_id": "test_slash_cmd_gargbot",
     }
-    response = test_client.post("/slash", data=params)
+    response = client.post("/slash", data=params)
     assert response.status_code == 200
     data = json.loads(response.data.decode())
     assert data["text"].startswith("Beep boop beep!")
@@ -71,17 +89,11 @@ def test_slash_cmd_gargbot(db_connection: connection):
 
 @pytest.mark.parametrize("cmd", ["pic", "forum", "msn"])
 @pytest.mark.parametrize("args", ["", "arg1", "arg1 arg2"])
-def test_slash(db_connection: connection, monkeypatch, cmd, args):
-    def return_db():
-        return db_connection
-
-    monkeypatch.setattr("gargbot_3000.server.get_db", return_db)
-
+def test_slash(
+    client: testing.FlaskClient, db_connection: connection, monkeypatch, cmd, args
+):
     mock_commands = MockCommands()
     monkeypatch.setattr("gargbot_3000.server.commands", mock_commands)
-
-    monkeypatch.setattr("gargbot_3000.server.get_pics", lambda: None)
-    monkeypatch.setattr("gargbot_3000.server.get_quotes", lambda: None)
 
     params = {
         "token": config.slack_verification_token,
@@ -89,14 +101,14 @@ def test_slash(db_connection: connection, monkeypatch, cmd, args):
         "text": args,
         "trigger_id": "test_slash_" + cmd,
     }
-    response = test_client.post("/slash", data=params)
+    response = client.post("/slash", data=params)
     assert response.status_code == 200
     assert mock_commands.command_str == cmd
     assert mock_commands.args == args.split()
     assert mock_commands.db_connection == db_connection
 
 
-def test_interactive_share(monkeypatch):
+def test_interactive_share(client: testing.FlaskClient, monkeypatch):
     mock_requests = MockRequests()
     monkeypatch.setattr("gargbot_3000.server.requests", mock_requests)
     action = "share"
@@ -116,7 +128,7 @@ def test_interactive_share(monkeypatch):
             }
         )
     }
-    response = test_client.post("/interactive", data=params)
+    response = client.post("/interactive", data=params)
     assert response.status_code == 200
 
     data = json.loads(response.data.decode())
@@ -130,14 +142,14 @@ def test_interactive_share(monkeypatch):
     assert mock_requests.json["text"] == "Sharing is caring!"
 
 
-def test_interactive_cancel():
+def test_interactive_cancel(client: testing.FlaskClient):
     action = "cancel"
     params = {
         "payload": json.dumps(
             {"token": config.slack_verification_token, "actions": [{"name": action}]}
         )
     }
-    response = test_client.post("/interactive", data=params)
+    response = client.post("/interactive", data=params)
     assert response.status_code == 200
     data = json.loads(response.data.decode())
     assert data["replace_original"] is True
@@ -147,16 +159,11 @@ def test_interactive_cancel():
 
 @pytest.mark.parametrize("cmd", ["pic", "forum", "msn"])
 @pytest.mark.parametrize("args", [[], ["arg1"], ["arg1", "arg2"]])
-def test_interactive_shuffle(db_connection: connection, monkeypatch, cmd, args):
-    def return_db():
-        return db_connection
-
-    monkeypatch.setattr("gargbot_3000.server.get_db", return_db)
+def test_interactive_shuffle(
+    client: testing.FlaskClient, db_connection: connection, monkeypatch, cmd, args
+):
     mock_commands = MockCommands()
     monkeypatch.setattr("gargbot_3000.server.commands", mock_commands)
-
-    monkeypatch.setattr("gargbot_3000.server.get_pics", lambda: None)
-    monkeypatch.setattr("gargbot_3000.server.get_quotes", lambda: None)
 
     action = "shuffle"
     params = {
@@ -175,7 +182,7 @@ def test_interactive_shuffle(db_connection: connection, monkeypatch, cmd, args):
             }
         )
     }
-    response = test_client.post("/interactive", data=params)
+    response = client.post("/interactive", data=params)
     assert response.status_code == 200
 
     data = json.loads(response.data.decode())
@@ -189,17 +196,11 @@ def test_interactive_shuffle(db_connection: connection, monkeypatch, cmd, args):
 
 
 @pytest.mark.parametrize("cmd", ["pic", "forum", "msn"])
-def test_interactive_gargbot_commands(db_connection: connection, monkeypatch, cmd):
-    def return_db():
-        return db_connection
-
-    monkeypatch.setattr("gargbot_3000.server.get_db", return_db)
+def test_interactive_gargbot_commands(
+    client: testing.FlaskClient, db_connection: connection, monkeypatch, cmd
+):
     mock_commands = MockCommands()
     monkeypatch.setattr("gargbot_3000.server.commands", mock_commands)
-
-    monkeypatch.setattr("gargbot_3000.server.get_pics", lambda: None)
-    monkeypatch.setattr("gargbot_3000.server.get_quotes", lambda: None)
-
     params = {
         "payload": json.dumps(
             {
@@ -209,7 +210,7 @@ def test_interactive_gargbot_commands(db_connection: connection, monkeypatch, cm
             }
         )
     }
-    response = test_client.post("/interactive", data=params)
+    response = client.post("/interactive", data=params)
     assert response.status_code == 200
     data = json.loads(response.data.decode())
     print(data)

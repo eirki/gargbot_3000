@@ -4,10 +4,13 @@ from gargbot_3000.logger import log
 
 # Core
 import json
+import os
+import contextlib
 
 # Dependencies
 import requests
-from flask import Flask, request, g, Response, render_template
+from flask import Flask, request, g, Response, render_template, jsonify
+from gunicorn.app.base import BaseApplication
 
 # Internal
 from gargbot_3000 import config
@@ -17,46 +20,28 @@ from gargbot_3000 import quotes
 from gargbot_3000 import droppics
 
 # Typing
-from typing import Dict, List, Optional
+import typing as t
+from typing import Dict, List
+from psycopg2.extensions import connection
 
 app = Flask(__name__)
+app.pool = database_manager.ConnectionPool()
 
 
-def get_db():
-    db_connection = getattr(g, "_database", None)
-    if db_connection is None:
-        db_connection = database_manager.connect_to_database()
-        g._database = db_connection
-    return db_connection
-
-
-@app.teardown_appcontext
-def close_connection(exception):
-    db_connection = getattr(g, "_database", None)
-    if db_connection is not None:
-        database_manager.close_database_connection(db_connection)
-
-
-def get_pics():
+def get_pics(db: connection):
     drop_pics = getattr(g, "_drop_pics", None)
     if drop_pics is None:
-        drop_pics = droppics.DropPics(db=get_db())
+        drop_pics = droppics.DropPics(db=db)
         g._drop_pics = drop_pics
     return drop_pics
 
 
-def get_quotes():
+def get_quotes(db: connection):
     quotes_db = getattr(g, "_quotes_db", None)
     if quotes_db is None:
-        quotes_db = quotes.Quotes(db=get_db())
+        quotes_db = quotes.Quotes(db=db)
         g._quotes_db = quotes_db
     return quotes_db
-
-
-def json_response(result: Dict) -> Response:
-    return Response(
-        response=json.dumps(result), status=200, mimetype="application/json"
-    )
 
 
 def attach_share_buttons(callback_id, result, func, args):
@@ -109,7 +94,7 @@ def hello_world() -> str:
     return "home"
 
 
-def delete_ephemeral(response_url):
+def delete_ephemeral(response_url: str):
     delete_original = {
         "response_type": "ephemeral",
         "replace_original": True,
@@ -119,7 +104,7 @@ def delete_ephemeral(response_url):
     log.info(r.text)
 
 
-def handle_share_interaction(action, data):
+def handle_share_interaction(action: str, data: dict):
     if action == "share":
         response_url = data["response_url"]
         delete_ephemeral(response_url)
@@ -159,7 +144,7 @@ def interactive():
         result = handle_command(command_str=action, args=[], trigger_id=trigger_id)
     else:
         raise Exception(f"Unknown action: {result}")
-    return json_response(result)
+    return jsonify(result)
 
 
 @app.route("/slash", methods=["POST"])
@@ -178,20 +163,25 @@ def slash_cmds():
     trigger_id = data["trigger_id"]
     result = handle_command(command_str, args, trigger_id)
     log.info(f"result: {result}")
-    return json_response(result)
+    return jsonify(result)
 
 
 def handle_command(command_str: str, args: List, trigger_id: str) -> Dict:
-    db = get_db() if command_str in {"hvem", "pic", "forum", "msn"} else None
-    pic = get_pics() if command_str == "pic" else None
-    quotes = get_quotes() if command_str in {"forum", "msn"} else None
-    result = commands.execute(
-        command_str=command_str,
-        args=args,
-        db_connection=db,
-        drop_pics=pic,
-        quotes_db=quotes,
+    db_func = (
+        app.pool.get_db_connection
+        if command_str in {"hvem", "pic", "forum", "msn"}
+        else contextlib.nullcontext
     )
+    with db_func() as db:
+        pic = get_pics(db) if command_str == "pic" else None
+        quotes = get_quotes(db) if command_str in {"forum", "msn"} else None
+        result = commands.execute(
+            command_str=command_str,
+            args=args,
+            db_connection=db,
+            drop_pics=pic,
+            quotes_db=quotes,
+        )
 
     error = result.get("text", "").startswith("Error")
     if error:
@@ -210,9 +200,9 @@ def handle_command(command_str: str, args: List, trigger_id: str) -> Dict:
 @app.route("/countdown", methods=["GET"])
 def countdown():
     milli_timestamp = config.countdown_date.timestamp() * 1000
-    db = get_db()
-    drop_pics = get_pics()
-    pic_url, *_ = drop_pics.get_pic(db, arg_list=config.countdown_args)
+    with app.pool.get_db_connection() as db:
+        drop_pics = get_pics(db)
+        pic_url, *_ = drop_pics.get_pic(db, arg_list=config.countdown_args)
     return render_template(
         "countdown.html",
         date=milli_timestamp,
@@ -221,3 +211,31 @@ def countdown():
         ongoing_message=config.ongoing_message,
         finished_message=config.finished_message,
     )
+
+
+class StandaloneApplication(BaseApplication):
+    def __init__(self, app, options=None):
+        self.options = options if options is not None else {}
+        self.application = app
+        super(StandaloneApplication, self).__init__()
+
+    def load_config(self):
+        for key, value in self.options.items():
+            if key in self.cfg.settings and value is not None:
+                self.cfg.set(key.lower(), value)
+
+    def load(self):
+        return self.application
+
+
+def main(options: t.Optional[dict], debug: bool = False):
+    app.pool.setup()
+    if debug is False:
+        gunicorn_app = StandaloneApplication(app, options)
+        gunicorn_app.run()
+    else:
+        # Workaround for a werzeug reloader bug
+        # (https://github.com/pallets/flask/issues/1246)
+        os.environ["PYTHONPATH"] = os.getcwd()
+        app.run(debug=True)
+    app.pool.closeall()

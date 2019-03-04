@@ -134,7 +134,7 @@ def main():
             )
             try:
                 response = command_func()
-            except psycopg2.OperationalError as op_exc:
+            except psycopg2.OperationalError:
                 db_connection = database_manager.connect_to_database()
                 try:
                     return command_func()
@@ -149,7 +149,3 @@ def main():
         sys.exit()
     finally:
         database_manager.close_database_connection(db_connection)
-
-
-if __name__ == "__main__":
-    main()
