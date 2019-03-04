@@ -21,8 +21,12 @@ def start_server():
 
 
 if __name__ == "__main__":
-    if sys.argv[1] == "task":
+    arg = sys.argv[1]
+    if arg == "task":
         start_task()
 
-    elif sys.argv[1] == "server":
+    elif arg == "server":
         start_server()
+
+    else:
+        raise Exception(f"Incorrect arguments {arg}")

@@ -225,7 +225,7 @@ def countdown():
 
 def main():
     log.info("GargBot 3000 server operational!")
-    app.run()
+    app.run(debug=True, host='0.0.0.0')
 
 
 if __name__ == "__main__":

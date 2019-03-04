@@ -81,7 +81,6 @@ class MockDropbox:
 
 def create_tables(db: connection) -> None:
     with db.cursor() as cursor:
-        print(cursor)
         for file in (Path(".") / "schema").iterdir():
             with open(file) as f:
                 input = f.read()
@@ -91,7 +90,6 @@ def create_tables(db: connection) -> None:
 
 def populate_user_table(db: connection) -> None:
     with db.cursor() as cursor:
-        print(cursor)
         for user in users:
             sql_command = """INSERT INTO faces (db_id, name)
             VALUES (%(db_id)s,
