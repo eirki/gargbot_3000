@@ -1,0 +1,43 @@
+version: '3'
+services:
+  gargbot_server:
+    container_name: gargbot_server
+    build: .
+    env_file:
+      - .env
+    command: "venv/bin/gunicorn --workers 3 --bind :5000 run:app"
+    expose:
+      - 5000
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres_db
+    networks:
+      - gargbot_network
+      - nginx_network
+  gargbot_worker:
+    container_name: gargbot_worker
+    build: .
+    env_file:
+      - .env
+    command: "venv/bin/python run.py task"
+    depends_on:
+      - postgres_db
+    networks:
+      - gargbot_network
+  postgres_db:
+    container_name: postgres_db
+    image: "postgres"
+    env_file: .env
+    expose:
+      - 5432
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    networks:
+      - gargbot_network
+
+networks:
+  nginx_network:
+    external:
+      name: nginx_default
+  gargbot_network: ~
