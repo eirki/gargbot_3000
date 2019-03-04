@@ -54,6 +54,7 @@ class ConnectionPool:
             password=config.db_password,
             host=config.db_host,
             port=config.db_port,
+            cursor_factory=LoggingCursor,
         )
 
     def getconn(self) -> connection:
@@ -62,7 +63,8 @@ class ConnectionPool:
             self._init()
             log.debug(f"New id is {current_pid}, old id was {self.last_seen_process_id}")
             self.last_seen_process_id = current_pid
-        return self._pool.getconn()
+        db_connection = self._pool.getconn()
+        return db_connection
 
     def putconn(self, conn: connection):
         return self._pool.putconn(conn)
@@ -79,9 +81,9 @@ class ConnectionPool:
             self.putconn(connection)
 
     @contextmanager
-    def get_db_cursor(self, commit=False) -> t.Generator[DictCursor, None, None]:
+    def get_db_cursor(self, commit=False) -> t.Generator[LoggingCursor, None, None]:
         with self.get_db_connection() as connection:
-            cursor = connection.cursor(cursor_factory=DictCursor)
+            cursor = connection.cursor(cursor_factory=LoggingCursor)
             try:
                 yield cursor
                 if commit:
