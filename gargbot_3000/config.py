@@ -18,10 +18,10 @@ bot_name = os.environ["bot_name"]
 
 home = Path(os.getenv("home_folder", os.getcwd()))
 
-db_name = os.environ["db_name"]
-db_user = os.environ["db_user"]
-db_password = os.environ["db_password"]
-db_host = os.environ["db_host"]
+db_name = os.environ["POSTGRES_DB"]
+db_user = os.environ["POSTGRES_USER"]
+db_password = os.environ["POSTGRES_PASSWORD"]
+db_host = os.environ["POSTGRES_HOST"]
 
 dropbox_token = os.environ["dropbox_token"]
 
