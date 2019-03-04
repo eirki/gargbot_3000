@@ -165,6 +165,7 @@ def execute(
     except (SSLError, dropbox.exceptions.ApiError):
         # Dropbox sometimes gives SSLerrors, (or ApiError if file not there) try again:
         try:
+            log.error("SSLerror/ApiError, retrying", exc_info=True)
             return command_func()
         except Exception as exc:
             log.error("Error in command execution", exc_info=True)
