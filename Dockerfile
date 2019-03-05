@@ -13,9 +13,13 @@ RUN apk add --no-cache postgresql-dev
 # for Pillow
 RUN apk add --no-cache jpeg-dev zlib-dev
 
+RUN apk add --no-cache libressl-dev musl-dev libffi-dev
+
 COPY requirements.txt requirements.txt
 RUN python -m venv venv
-RUN apk add --no-cache --virtual .build-deps build-base linux-headers && venv/bin/pip install -r requirements.txt && apk del .build-deps
+RUN apk add --no-cache --virtual .build-deps build-base linux-headers && \
+	venv/bin/pip install -r requirements.txt && \
+	apk del .build-deps libressl-dev musl-dev libffi-dev
 
 USER gargbotuser
 

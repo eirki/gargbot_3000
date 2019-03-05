@@ -10,3 +10,4 @@ gunicorn
 python-dotenv
 bbcode
 html-slacker
+pyopenssl
