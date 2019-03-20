@@ -21,6 +21,7 @@ services:
     env_file:
       - .env
     command: "venv/bin/python -m gargbot_3000 --mode task"
+    restart: always
     depends_on:
       - postgres_db
     networks:
