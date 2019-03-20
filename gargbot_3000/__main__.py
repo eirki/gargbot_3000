@@ -5,7 +5,6 @@
 import argparse
 
 # Internal
-from gargbot_3000 import config
 from gargbot_3000.logger import log
 from gargbot_3000 import task
 from gargbot_3000 import server

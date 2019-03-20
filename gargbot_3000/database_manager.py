@@ -38,6 +38,7 @@ class LoggingCursor(DictCursor):
 
 class ConnectionPool:
     """https://gist.github.com/jeorgen/4eea9b9211bafeb18ada"""
+
     is_setup = False
 
     def setup(self):
@@ -61,7 +62,9 @@ class ConnectionPool:
         current_pid = os.getpid()
         if not (current_pid == self.last_seen_process_id):
             self._init()
-            log.debug(f"New id is {current_pid}, old id was {self.last_seen_process_id}")
+            log.debug(
+                f"New id is {current_pid}, old id was {self.last_seen_process_id}"
+            )
             self.last_seen_process_id = current_pid
         db_connection = self._pool.getconn()
         return db_connection
