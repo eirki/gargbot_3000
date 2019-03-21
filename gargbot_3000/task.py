@@ -12,6 +12,7 @@ from functools import partial
 
 # Dependencies
 from slackclient import SlackClient
+from slackclient.server import SlackConnectionError
 import websocket
 import psycopg2
 
@@ -40,7 +41,11 @@ def wait_for_slack_output(slack_client: SlackClient) -> Tuple[str, str, str]:
         time.sleep(1)
         try:
             output_list = slack_client.rtm_read()
-        except (websocket.WebSocketConnectionClosedException, TimeoutError):
+        except (
+            websocket.WebSocketConnectionClosedException,
+            SlackConnectionError,
+            TimeoutError,
+        ):
             slack_client.rtm_connect()
             continue
         if not (output_list or len(output_list) > 0):
@@ -78,7 +83,8 @@ def handle_congrats(slack_client: SlackClient, drop_pics):
             time.sleep(birthday.seconds_to_bday())
         except OverflowError:
             log.info(
-                f"Too long sleep length for OS. Restart before next birthday, at {birthday.next_bday}"
+                "Too long sleep length for OS. "
+                f"Restart before next birthday, at {birthday.next_bday}"
             )
             break
         db_connection = database_manager.connect_to_database()
