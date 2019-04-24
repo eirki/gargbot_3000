@@ -1,6 +1,8 @@
 .env
 
 data/*
+venv/*
+setup/*
 logs/*
 
 *.pyc
