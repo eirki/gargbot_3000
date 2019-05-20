@@ -2,9 +2,9 @@ DROP TABLE IF EXISTS user_ids;
 
 CREATE TABLE user_ids (
     db_id SMALLINT NOT NULL PRIMARY KEY,
-    slack_id VARCHAR(9),
-    slack_nick VARCHAR(50),
-    first_name VARCHAR(50),
+    slack_id TEXT,
+    slack_nick TEXT,
+    first_name TEXT,
     bday DATE NOT NULL,
-    avatar VARCHAR(20)
+    avatar TEXT
 );
