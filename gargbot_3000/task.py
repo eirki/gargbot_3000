@@ -1,33 +1,21 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from gargbot_3000.logger import log
-
-# Core
-import time
-import sys
 import datetime as dt
-import threading
 import itertools
+import sys
+import threading
+import time
 from functools import partial
+from typing import Dict, Tuple
 
-# Dependencies
+import psycopg2
+import websocket
+from psycopg2.extensions import connection
 from slackclient import SlackClient
 from slackclient.server import SlackConnectionError
-import websocket
-import psycopg2
 
-# Internal
-from gargbot_3000 import config
-from gargbot_3000 import congrats
-from gargbot_3000 import commands
-from gargbot_3000 import database_manager
-from gargbot_3000 import quotes
-from gargbot_3000 import droppics
-
-
-# Typing
-from typing import Tuple, Dict
-from psycopg2.extensions import connection
+from gargbot_3000 import commands, config, congrats, database_manager, droppics, quotes
+from gargbot_3000.logger import log
 
 
 def wait_for_slack_output(slack_client: SlackClient) -> Tuple[str, str, str]:

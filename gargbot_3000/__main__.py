@@ -1,13 +1,9 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-
-# Core
 import argparse
 
-# Internal
+from gargbot_3000 import server, task
 from gargbot_3000.logger import log
-from gargbot_3000 import task
-from gargbot_3000 import server
 
 
 def main():

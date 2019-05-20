@@ -1,8 +1,7 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-
-import os
 import datetime as dt
+import os
 from pathlib import Path
 
 import pytz

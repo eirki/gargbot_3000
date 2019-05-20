@@ -1,29 +1,22 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from gargbot_3000.logger import log
-
-# Core
-import os
-from xml.dom.minidom import parseString
 import datetime as dt
+import os
 import re
+import typing as t
 from contextlib import contextmanager
+from pathlib import Path
+from xml.dom.minidom import parseString
 
-# Dependencies
+import dropbox
 import psycopg2
+from PIL import Image
+from psycopg2.extensions import connection
 from psycopg2.extras import DictCursor
 from psycopg2.pool import ThreadedConnectionPool
-from PIL import Image
-import dropbox
 
-# Internal
 from gargbot_3000 import config
-
-# Typing
-import typing as t
-from typing import Union, List, Optional
-from pathlib import Path
-from psycopg2.extensions import connection
+from gargbot_3000.logger import log
 
 
 class LoggingCursor(DictCursor):
@@ -283,7 +276,7 @@ class DropPics:
         log.info("Connected to dbx")
 
     @staticmethod
-    def get_tags(image: Union[Path, str]) -> Optional[List[str]]:
+    def get_tags(image: t.Union[Path, str]) -> t.Optional[t.List[str]]:
         im = Image.open(image)
         exif = im._getexif()
         try:
@@ -292,7 +285,7 @@ class DropPics:
             return None
 
     @staticmethod
-    def get_date_taken(image: Union[Path, str]) -> dt.datetime:
+    def get_date_taken(image: t.Union[Path, str]) -> dt.datetime:
         im = Image.open(image)
         exif = im._getexif()
         date_str = exif[36867]

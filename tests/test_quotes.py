@@ -1,13 +1,10 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
 import pytest
-
-from gargbot_3000 import quotes
-from gargbot_3000 import config
-from tests import conftest
-
-# Typing
 from psycopg2.extensions import connection
+
+from gargbot_3000 import config, quotes
+from tests import conftest
 
 
 @pytest.fixture

@@ -1,8 +1,8 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from gargbot_3000.droppics import DropPics
-
 from psycopg2.extensions import connection
+
+from gargbot_3000.droppics import DropPics
 
 
 def assert_valid_returns(url: str, timestamp: int, description: str) -> None:

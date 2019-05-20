@@ -1,10 +1,10 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from gargbot_3000 import congrats
-from tests import conftest
-
-from gargbot_3000.droppics import DropPics
 from psycopg2.extensions import connection
+
+from gargbot_3000 import congrats
+from gargbot_3000.droppics import DropPics
+from tests import conftest
 
 
 def test_congrat(db_connection: connection, drop_pics: DropPics) -> None:

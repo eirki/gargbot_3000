@@ -5,18 +5,14 @@ from collections import namedtuple
 from pathlib import Path
 
 import pytest
-from pytest_postgresql.factories import postgresql
+from psycopg2.extensions import connection
 from psycopg2.extras import RealDictCursor
 
-from gargbot_3000 import config
-from gargbot_3000 import droppics
-
-# Typing
-from psycopg2.extensions import connection
-
+from gargbot_3000 import config, droppics
 
 byear = dt.datetime.now(config.tz).year - 28
 
+# flake8: noqa
 # fmt: off
 User = namedtuple("TestUser", ["db_id", "name", "slack_id", "slack_nick", "bday", "avatar"])
 users = [

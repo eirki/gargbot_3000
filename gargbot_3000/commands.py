@@ -1,29 +1,22 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from gargbot_3000.logger import log
-
-# Core
 from functools import partial
+from typing import Any, Callable, Dict, List, Optional
 
-# Dependencies
-import psycopg2
-from requests.exceptions import SSLError
 import dropbox
-
-# Internal
-from gargbot_3000 import droppics
-from gargbot_3000 import quotes
-
-# Typing
+import psycopg2
 from psycopg2.extensions import connection
-from typing import Dict, List, Optional, Callable, Any
+from requests.exceptions import SSLError
+
+from gargbot_3000 import droppics, quotes
+from gargbot_3000.logger import log
 
 
 def command_explanation(server: bool = False):
     commands = (
         "`@gargbot_3000 hvem [spørsmål]`: svarer på spørsmål om garglings \n"
-        "`@gargbot_3000 pic [lark/fe/skating/henging] [gargling] [år]`: viser random bilde\n"
-        "`@gargbot_3000 forum [garling]`: henter tilfeldig sitat fra det gamle forumet\n"
+        "`@gargbot_3000 pic [lark/fe/skating/henging] [gargling] [år]`: random bilde\n"
+        "`@gargbot_3000 forum [garling]`: henter tilfeldig sitat fra ye olde forumet\n"
         "`@gargbot_3000 msn [garling]`: utfrag fra tilfeldig msn samtale\n"
     )
     return commands if server is False else commands.replace("@gargbot_3000 ", "/")

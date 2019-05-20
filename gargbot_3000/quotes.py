@@ -1,24 +1,17 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from gargbot_3000.logger import log
-
-# Core
-import re
 import html
 import random
-from operator import itemgetter
+import re
 import time
+import typing as t
+from operator import itemgetter
 
-# Internal
-from gargbot_3000 import config
-
-# Dependencies
 import bbcode
 from htmlslacker import HTMLSlacker
-
-# Typing
-from typing import List, Optional
 from psycopg2.extensions import connection
+
+from gargbot_3000 import config
 
 
 class Quotes:
@@ -37,7 +30,8 @@ class Quotes:
     @staticmethod
     def _sanitize(inp, bbcode_uid: str):
         smls = re.compile(
-            r'<!-- s.*? --><img src=\\?"\{SMILIES_PATH\}/.*?\\?" alt=\\?"(.*?)\\?" title=\\?".*?" /><!-- s.*? -->'
+            r'<!-- s.*? --><img src=\\?"\{SMILIES_PATH\}/.*?\\?" '
+            'alt=\\?"(.*?)\\?" title=\\?".*?" /><!-- s.*? -->'
         )
         inp = re.sub(smls, r"\1", inp)
         inp = html.unescape(inp)
@@ -48,7 +42,8 @@ class Quotes:
         inp = re.sub(img_tags, "", inp)
 
         youtube_embeds = re.compile(
-            r'\[html\]<iframe width="\d+" height="\d+" src="//www.youtube.com/embed/([^"]+)" frameborder='
+            r'\[html\]<iframe width="\d+" height="\d+" '
+            'src="//www.youtube.com/embed/([^"]+)" frameborder='
             r'"0" allowfullscreen></iframe>\[/html\]'
         )
         inp = re.sub(youtube_embeds, r"https://www.youtube.com/watch?v=\1", inp)
@@ -61,7 +56,7 @@ class Quotes:
 
         return inp
 
-    def forum(self, db: connection, args: Optional[List[str]]):
+    def forum(self, db: connection, args: t.Optional[t.List[str]]):
         user = args[0] if args else None
         if user and user not in self.slack_nicks_to_db_ids:
             return f"Gargling not found: {user}. Husk å bruke slack nick"
@@ -91,14 +86,17 @@ class Quotes:
         url = f"{config.forum_url}/viewtopic.php?p={post_id}#p{post_id}"
         return text, user, avatar_url, post_timestamp, url
 
-    def msn(self, db: connection, args: Optional[List[str]]):
+    def msn(self, db: connection, args: t.Optional[t.List[str]]):
         user = args[0] if args else None
         if user is not None:
             db_id = self.slack_nicks_to_db_ids[user]
             user_filter = f"WHERE db_id = {db_id}"
         else:
             user_filter = ""
-        sql = f"SELECT session_id FROM msn_messages {user_filter} ORDER BY RANDOM() LIMIT 1"
+        sql = (
+            f"SELECT session_id FROM msn_messages {user_filter} "
+            "ORDER BY RANDOM() LIMIT 1"
+        )
         cursor = db.cursor()
         cursor.execute(sql)
         session_id = cursor.fetchone()
@@ -121,7 +119,7 @@ class Quotes:
 
         date = chosen_messages[0]["msg_time"].strftime("%d.%m.%y %H:%M")
 
-        convo: List[List[str]] = []
+        convo: t.List[t.List[str]] = []
         for message in chosen_messages:
             if convo:
                 prev_from_user, prev_msg_text, prev_msg_color = convo[-1]

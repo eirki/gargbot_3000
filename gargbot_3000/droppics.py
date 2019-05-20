@@ -1,24 +1,18 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from gargbot_3000.logger import log
-
-# Core
+import contextlib
+import datetime as dt
+import itertools
 import random
 import time
-import contextlib
-import itertools
+import typing as t
 
-# Dependencies
 import dropbox
-
-# Internal
-from gargbot_3000 import config
-
-# Typing
-from typing import Set, Tuple, Optional, List, Iterable
 from psycopg2.extensions import connection
-import datetime as dt
+
+from gargbot_3000 import config
 from gargbot_3000.database_manager import LoggingCursor
+from gargbot_3000.logger import log
 
 
 class DropPics:
@@ -31,7 +25,10 @@ class DropPics:
         self._connect_dbx()
 
     def get_years(self, cursor: LoggingCursor):
-        sql_command = "SELECT DISTINCT EXTRACT(YEAR FROM taken)::int as year FROM dbx_pictures ORDER BY year"
+        sql_command = (
+            "SELECT DISTINCT EXTRACT(YEAR FROM taken)::int as year "
+            "FROM dbx_pictures ORDER BY year"
+        )
         cursor.execute(sql_command)
         years = set(str(row["year"]) for row in cursor.fetchall())
         return years
@@ -52,7 +49,7 @@ class DropPics:
         self.dbx = dropbox.Dropbox(config.dropbox_token)
         log.info("Connected to dbx")
 
-    def get_description_for_invalid_args(self, invalid_args: Set[str]):
+    def get_description_for_invalid_args(self, invalid_args: t.Set[str]):
         invalid_args_fmt = ", ".join(f"`{arg}`" for arg in invalid_args)
         years_fmt = ", ".join(f"`{year}`" for year in sorted(self.years))
         topics_fmt = ", ".join(f"`{topic}`" for topic in self.topics)
@@ -65,7 +62,7 @@ class DropPics:
         )
         return description
 
-    def get_sql_for_args(self, args: Iterable[str]):
+    def get_sql_for_args(self, args: t.Iterable[str]):
         sql_filter = []
         sql_data = {}
 
@@ -92,7 +89,8 @@ class DropPics:
             join = "LEFT JOIN dbx_pictures_faces as f ON p.pic_id = f.pic_id"
         elif len(db_ids) > 1:
             join = (
-                "LEFT JOIN (SELECT ARRAY_AGG(db_id) as db_ids, pic_id from dbx_pictures_faces "
+                "LEFT JOIN (SELECT ARRAY_AGG(db_id) as db_ids, "
+                "pic_id from dbx_pictures_faces "
                 "group BY pic_id) as f ON p.pic_id = f.pic_id"
             )
             for db_id in db_ids:
@@ -138,7 +136,7 @@ class DropPics:
         timestamp = self.get_timestamp(date_obj)
         return url, timestamp
 
-    def get_pic(self, db, arg_list: Optional[List[str]]) -> Tuple[str, int, str]:
+    def get_pic(self, db, arg_list: t.Optional[t.List[str]]) -> t.Tuple[str, int, str]:
         description = ""
         cursor = db.cursor()
 

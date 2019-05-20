@@ -1,12 +1,9 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-import pytest
+from psycopg2.extensions import connection
 
 from gargbot_3000 import commands
 from tests import conftest
-
-# Typing
-from psycopg2.extensions import connection
 
 
 def test_cmd_ping():

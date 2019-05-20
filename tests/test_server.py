@@ -1,17 +1,14 @@
 #! /usr/bin/env python3
 # coding: utf-8
 import json
+import typing as t
 from types import SimpleNamespace
 
 import pytest
 from flask import testing
-import typing as t
-
-from gargbot_3000 import server
-from gargbot_3000 import config
-from gargbot_3000 import database_manager
-
 from psycopg2.extensions import connection
+
+from gargbot_3000 import config, database_manager, server
 
 
 @pytest.fixture

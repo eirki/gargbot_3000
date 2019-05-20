@@ -1,18 +1,12 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from gargbot_3000.logger import log
-
-# Core
 import datetime as dt
-from operator import attrgetter
 import random
+from operator import attrgetter
 
-# Dependencies
 import psycopg2
 
-# Internal
 from gargbot_3000 import config
-
 
 greetings = [
     "Grattis med dagen",
