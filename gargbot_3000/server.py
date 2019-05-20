@@ -1,28 +1,16 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from gargbot_3000.logger import log
-
-# Core
+import contextlib
 import json
 import os
-import contextlib
+import typing as t
 
-# Dependencies
 import requests
-from flask import Flask, request, Response, render_template, jsonify
+from flask import Flask, Response, jsonify, render_template, request
 from gunicorn.app.base import BaseApplication
 
-# Internal
-from gargbot_3000 import config
-from gargbot_3000 import commands
-from gargbot_3000 import database_manager
-from gargbot_3000 import quotes
-from gargbot_3000 import droppics
-
-# Typing
-import typing as t
-from typing import Dict, List
-from psycopg2.extensions import connection
+from gargbot_3000 import commands, config, database_manager, droppics, quotes
+from gargbot_3000.logger import log
 
 app = Flask(__name__)
 app.pool = database_manager.ConnectionPool()
@@ -90,51 +78,62 @@ def delete_ephemeral(response_url: str):
     log.info(r.text)
 
 
-def handle_share_interaction(action: str, data: dict):
-    if action == "share":
-        response_url = data["response_url"]
-        delete_ephemeral(response_url)
-        result = json.loads(data["actions"][0]["value"])["original_response"]
-        log.info("Interactive: share")
-        result["replace_original"] = False
-        result["response_type"] = "in_channel"
-    elif action == "cancel":
-        log.info("Interactive: cancel")
-        result = {
-            "response_type": "ephemeral",
-            "replace_original": True,
-            "text": "Canceled! Går fint det. Ikke noe problem for meg. Hadde ikke lyst uansett.",
-        }
-    elif action == "shuffle":
-        log.info("Interactive: shuffle")
-        original_func = json.loads(data["actions"][0]["value"])["original_func"]
-        original_args = json.loads(data["actions"][0]["value"])["original_args"]
-        callback_id = data["callback_id"]
-        result = handle_command(original_func, original_args, callback_id)
-        result["replace_original"] = True
+def interaction_share(data: dict) -> dict:
+    response_url = data["response_url"]
+    delete_ephemeral(response_url)
+    result = json.loads(data["actions"][0]["value"])["original_response"]
+    log.info("Interactive: share")
+    result["replace_original"] = False
+    result["response_type"] = "in_channel"
+    return result
+
+
+def interaction_cancel() -> dict:
+    result = {
+        "response_type": "ephemeral",
+        "replace_original": True,
+        "text": (
+            "Canceled! Går fint det. Ikke noe problem for meg. "
+            "Hadde ikke lyst uansett."
+        ),
+    }
+    return result
+
+
+def interaction_shuffle(data: dict) -> dict:
+    original_func = json.loads(data["actions"][0]["value"])["original_func"]
+    original_args = json.loads(data["actions"][0]["value"])["original_args"]
+    callback_id = data["callback_id"]
+    result = handle_command(original_func, original_args, callback_id)
+    result["replace_original"] = True
     return result
 
 
 @app.route("/interactive", methods=["POST"])
-def interactive():
+def interactive() -> Response:
     log.info("incoming interactive request:")
     data = json.loads(request.form["payload"])
     log.info(data)
     if not data.get("token") == config.slack_verification_token:
         return Response(status=403)
     action = data["actions"][0]["name"]
-    if action in {"share", "shuffle", "cancel"}:
-        result = handle_share_interaction(action, data)
+    log.info(f"Interactive: {action}")
+    if action == "share":
+        result = interaction_share(data)
+    elif action == "cancel":
+        result = interaction_cancel()
+    elif action == "shuffle":
+        result = interaction_shuffle(data)
     elif action in {"pic", "forum", "msn"}:
         trigger_id = data["trigger_id"]
         result = handle_command(command_str=action, args=[], trigger_id=trigger_id)
     else:
-        raise Exception(f"Unknown action: {result}")
+        raise Exception(f"Unknown action: {action}")
     return jsonify(result)
 
 
 @app.route("/slash", methods=["POST"])
-def slash_cmds():
+def slash_cmds() -> Response:
     log.info("incoming slash request:")
     data = request.form
     log.info(data)
@@ -152,7 +151,7 @@ def slash_cmds():
     return jsonify(result)
 
 
-def handle_command(command_str: str, args: List, trigger_id: str) -> Dict:
+def handle_command(command_str: str, args: list, trigger_id: str) -> dict:
     db_func = (
         app.pool.get_db_connection
         if command_str in {"hvem", "pic", "forum", "msn"}
@@ -225,7 +224,7 @@ def main(options: t.Optional[dict], debug: bool = False):
             # (https://github.com/pallets/flask/issues/1246)
             os.environ["PYTHONPATH"] = os.getcwd()
             app.run(debug=True)
-    except Exception as exc:
+    except Exception:
         log.error("Error in server setup", exc_info=True)
     finally:
         if app.pool.is_setup:
