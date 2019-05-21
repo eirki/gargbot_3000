@@ -1,7 +1,9 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
+import datetime as dt
+import time
+import typing as t
 from functools import partial
-from typing import Any, Callable, Dict, List, Optional
 
 import dropbox
 import psycopg2
@@ -10,6 +12,15 @@ from requests.exceptions import SSLError
 
 from gargbot_3000 import droppics, quotes
 from gargbot_3000.logger import log
+
+
+def _prettify_date(date: dt.datetime) -> str:
+    timestamp = int(time.mktime(date.timetuple()))
+    return (
+        f"<!date^{timestamp}^{{date_pretty}} "
+        f"at {date.strftime('%H:%M')}| "
+        f"{date.strftime('%A %d. %B %Y %H:%M')}>"
+    )
 
 
 def command_explanation(server: bool = False):
@@ -22,30 +33,31 @@ def command_explanation(server: bool = False):
     return commands if server is False else commands.replace("@gargbot_3000 ", "/")
 
 
-def cmd_ping() -> Dict:
+def cmd_ping() -> t.Dict:
     """if command is 'ping' """
-    response: Dict[str, Any] = {"text": "GargBot 3000 is active. Beep boop beep"}
+    text = "GargBot 3000 is active. Beep boop beep"
+    response: t.Dict[str, t.Any] = {"text": text}
     return response
 
 
-def cmd_welcome() -> Dict:
+def cmd_welcome() -> t.Dict:
     """when joining new channel"""
     text = (
         "Hei hei kjære alle sammen!\n"
         "Dette er kommandoene jeg skjønner:\n" + command_explanation()
     )
-    response: Dict[str, Any] = {"text": text}
+    response: t.Dict[str, t.Any] = {"text": text}
     return response
 
 
-def cmd_server_explanation() -> Dict:
+def cmd_server_explanation() -> t.Dict:
     expl = command_explanation(server=True)
     text = "Beep boop beep! Dette er kommandoene jeg skjønner:\n" + expl
-    response: Dict[str, Any] = {"text": text}
+    response: t.Dict[str, t.Any] = {"text": text}
     return response
 
 
-def cmd_hvem(args: List[str], db: connection) -> Dict:
+def cmd_hvem(args: t.List[str], db: connection) -> t.Dict:
     """if command.lower().startswith("hvem")"""
     with db.cursor() as cursor:
         sql = "SELECT first_name FROM user_ids ORDER BY RANDOM() LIMIT 1"
@@ -54,90 +66,113 @@ def cmd_hvem(args: List[str], db: connection) -> Dict:
         user = data["first_name"]
     answ = " ".join(args).replace("?", "!")
     text = f"{user} {answ}"
-    response: Dict[str, Any] = {"text": text}
+    response: t.Dict[str, t.Any] = {"text": text}
     return response
 
 
 def cmd_pic(
-    args: Optional[List[str]], db: connection, drop_pics: droppics.DropPics
-) -> Dict:
+    args: t.Optional[t.List[str]], db: connection, drop_pics: droppics.DropPics
+) -> t.Dict:
     """if command is 'pic'"""
-    picurl, timestamp, error_text = drop_pics.get_pic(db, args)
-    response: Dict[str, Any] = {
-        "attachments": [{"fallback": picurl, "image_url": picurl, "ts": timestamp}]
+    picurl, date, description = drop_pics.get_pic(db, args)
+    pretty_date = _prettify_date(date)
+    blocks = []
+    image_block = {"type": "image", "image_url": picurl, "alt_text": picurl}
+    blocks.append(image_block)
+    context_block: t.Dict[str, t.Any] = {
+        "type": "context",
+        "elements": [{"type": "mrkdwn", "text": pretty_date}],
     }
-    if error_text:
-        response["text"] = error_text
+    blocks.append(context_block)
+    if description:
+        description_block: t.Dict[str, t.Any] = {
+            "type": "context",
+            "elements": [{"type": "mrkdwn", "text": description}],
+        }
+        blocks.append(description_block)
+    response = {"text": picurl, "blocks": blocks}
 
     return response
 
 
 def cmd_forum(
-    args: Optional[List[str]], db: connection, quotes_db: quotes.Quotes
-) -> Dict:
+    args: t.Optional[t.List[str]], db: connection, quotes_db: quotes.Quotes
+) -> t.Dict:
     """if command is 'forum'"""
-    text, user, avatar_url, timestamp, url = quotes_db.forum(db, args)
-    response: Dict[str, Any] = {
-        "text": text,
+    text, user, avatar_url, date, url, description = quotes_db.forum(db, args)
+    pretty_date = _prettify_date(date)
+    text_block = {"type": "section", "text": {"type": "mrkdwn", "text": text}}
+
+    context_block = {
+        "type": "context",
+        "elements": [
+            {"type": "image", "image_url": avatar_url, "alt_text": user},
+            {"type": "plain_text", "text": user},
+            {"type": "mrkdwn", "text": pretty_date},
+            {"type": "mrkdwn", "text": url},
+            {"type": "mrkdwn", "text": description},
+        ],
+    }
+    response = {"text": text, "blocks": [text_block, context_block]}
+
+    return response
+
+
+def cmd_msn(
+    args: t.Optional[t.List[str]], db: connection, quotes_db: quotes.Quotes
+) -> t.Dict:
+    """if command is 'msn'"""
+    date, text = quotes_db.msn(db, args)
+
+    response: t.Dict[str, t.Any] = {
+        "text": date,
         "attachments": [
             {
-                "author_name": user,
-                "author_icon": avatar_url,
-                "fallback": "",
-                "ts": timestamp,
-                "footer": url,
+                "color": msg_color,
+                "blocks": [
+                    {
+                        "type": "context",
+                        "elements": [{"type": "plain_text", "text": msg_user + ":"}],
+                    },
+                    {"type": "section", "text": {"type": "mrkdwn", "text": msg_text}},
+                ],
             }
+            for msg_user, msg_text, msg_color in text
         ],
     }
     return response
 
 
-def cmd_msn(
-    args: Optional[List[str]], db: connection, quotes_db: quotes.Quotes
-) -> Dict:
-    """if command is 'msn'"""
-    date, text = quotes_db.msn(db, args)
-
-    response: Dict[str, Any] = {
-        "attachments": [
-            {"author_name": f"{msg_user}:", "text": msg_text, "color": msg_color}
-            for msg_user, msg_text, msg_color in text
-        ]
-    }
-    response["attachments"][0]["pretext"] = date
-    return response
-
-
-def cmd_not_found(args: str) -> Dict:
+def cmd_not_found(args: str) -> t.Dict:
     text = (
         f"Beep boop beep! Nôt sure whåt you mean by `{args}`. "
         "Dette er kommandoene jeg skjønner:\n" + command_explanation()
     )
-    response: Dict[str, Any] = {"text": text}
+    response: t.Dict[str, t.Any] = {"text": text}
     return response
 
 
-def cmd_panic(exc: Exception) -> Dict:
+def cmd_panic(exc: Exception) -> t.Dict:
     text = (
         f"Error, error! Noe har gått fryktelig galt: {str(exc)}! Ææææææ. Ta kontakt"
         " med systemadministrator umiddelbart, før det er for sent. "
         "HJELP MEG. If I don't survive, tell mrs. gargbot... 'Hello'"
     )
-    response: Dict[str, Any] = {"text": text}
+    response: t.Dict[str, t.Any] = {"text": text}
     return response
 
 
 def execute(
     command_str: str,
-    args: List,
+    args: t.List,
     db_connection: connection,
     drop_pics: droppics.DropPics,
     quotes_db: quotes.Quotes,
-) -> Dict:
+) -> t.Dict:
     log.info(f"command: {command_str}")
     log.info(f"args: {args}")
 
-    switch: Dict[str, Callable] = {
+    switch: t.Dict[str, t.Callable] = {
         "ping": cmd_ping,
         "new_channel": cmd_welcome,
         "gargbot": cmd_server_explanation,

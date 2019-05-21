@@ -6,7 +6,7 @@ import os
 import typing as t
 
 import requests
-from flask import Flask, Response, jsonify, render_template, request
+from flask import Flask, Response, render_template, request
 from gunicorn.app.base import BaseApplication
 
 from gargbot_3000 import commands, config, database_manager, droppics, quotes
@@ -18,47 +18,82 @@ app.drop_pics = None
 app.quotes_db = None
 
 
-def attach_share_buttons(callback_id, result, func, args):
-    actions = [
-        {
-            "name": "share",
-            "text": "Del i kanal",
-            "type": "button",
-            "style": "primary",
-            "value": json.dumps({"original_response": result}),
-        },
-        {
-            "name": "shuffle",
-            "text": "Shuffle",
-            "type": "button",
-            "value": json.dumps({"original_func": func, "original_args": args}),
-        },
-        {"name": "cancel", "text": "Avbryt", "type": "button", "style": "danger"},
-    ]
-    try:
-        attachment = result["attachments"][-1]
-    except KeyError:
-        attachment = {}
-        result["attachments"] = [attachment]
-    attachment["actions"] = actions
-    attachment["callback_id"] = callback_id
+def attach_share_buttons(result: dict, func: str, args: list) -> dict:
+    buttons_block = {
+        "type": "actions",
+        "block_id": "share_buttons",
+        "elements": [
+            {
+                "text": {"type": "plain_text", "text": "Del i kanal"},
+                "type": "button",
+                "action_id": "share",
+                "style": "primary",
+                "value": json.dumps({"original_response": result}),
+            },
+            {
+                "text": {"type": "plain_text", "text": "Shuffle"},
+                "type": "button",
+                "action_id": "shuffle",
+                "value": json.dumps({"original_func": func, "original_args": args}),
+            },
+            {
+                "text": {"type": "plain_text", "text": "Avbryt"},
+                "type": "button",
+                "action_id": "cancel",
+                "style": "danger",
+            },
+        ],
+    }
     result["response_type"] = "ephemeral"
+    result["blocks"].append(buttons_block)
     return result
 
 
-def attach_commands_buttons(callback_id, result) -> dict:
-    attachments = [
+def attach_original_request(
+    result: dict, user_id: str, user_name: str, func: str, args: str
+) -> dict:
+    db_connection = database_manager.connect_to_database()
+
+    with db_connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT slack_avatar FROM user_ids WHERE slack_id = %s", (user_id,)
+        )
+        avatar_url = cursor.fetchone()["slack_avatar"]
+    context_blocks = [
         {
-            "text": "Try me:",
-            "actions": [
-                {"name": "pic", "text": "/pic", "type": "button"},
-                {"name": "forum", "text": "/forum", "type": "button"},
-                {"name": "msn", "text": "/msn", "type": "button"},
+            "type": "context",
+            "elements": [
+                {"type": "image", "image_url": avatar_url, "alt_text": user_name},
+                {"type": "plain_text", "text": user_name},
             ],
-            "callback_id": callback_id,
-        }
+        },
+        {
+            "type": "context",
+            "elements": [{"type": "mrkdwn", "text": f"/{func} {args}"}],
+        },
     ]
-    result["attachments"] = attachments
+    result["blocks"][0:0] = context_blocks
+    return result
+
+
+def attach_commands_buttons(result: dict) -> dict:
+    blocks = [
+        {"type": "section", "text": {"type": "mrkdwn", "text": result["text"]}},
+        {"type": "section", "text": {"type": "plain_text", "text": "Try me:"}},
+        {
+            "type": "actions",
+            "block_id": "commands_buttons",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": f"/{command}"},
+                    "action_id": command,
+                }
+                for command in ["pic", "forum", "msn"]
+            ],
+        },
+    ]
+    result["blocks"] = blocks
     result["replace_original"] = True
     return result
 
@@ -68,7 +103,7 @@ def hello_world() -> str:
     return "home"
 
 
-def delete_ephemeral(response_url: str):
+def delete_ephemeral(response_url: str) -> None:
     delete_original = {
         "response_type": "ephemeral",
         "replace_original": True,
@@ -78,34 +113,37 @@ def delete_ephemeral(response_url: str):
     log.info(r.text)
 
 
-def interaction_share(data: dict) -> dict:
-    response_url = data["response_url"]
-    delete_ephemeral(response_url)
-    result = json.loads(data["actions"][0]["value"])["original_response"]
-    log.info("Interactive: share")
-    result["replace_original"] = False
-    result["response_type"] = "in_channel"
-    return result
+def handle_share_interaction(action: str, data: dict) -> dict:
+    action_data = json.loads(data["actions"][0]["value"])
+    original_func = action_data["original_func"]
+    original_args = action_data["original_args"]
+    if action == "share":
+        response_url = data["response_url"]
+        delete_ephemeral(response_url)
 
+        result = action_data["original_response"]
+        result["replace_original"] = False
+        result["response_type"] = "in_channel"
+        result = attach_original_request(
+            result=result,
+            user_id=data["user"]["id"],
+            user_name=data["user"]["name"],
+            func=original_func,
+            args=original_args,
+        )
 
-def interaction_cancel() -> dict:
-    result = {
-        "response_type": "ephemeral",
-        "replace_original": True,
-        "text": (
-            "Canceled! Går fint det. Ikke noe problem for meg. "
-            "Hadde ikke lyst uansett."
-        ),
-    }
-    return result
-
-
-def interaction_shuffle(data: dict) -> dict:
-    original_func = json.loads(data["actions"][0]["value"])["original_func"]
-    original_args = json.loads(data["actions"][0]["value"])["original_args"]
-    callback_id = data["callback_id"]
-    result = handle_command(original_func, original_args, callback_id)
-    result["replace_original"] = True
+    elif action == "cancel":
+        result = {
+            "response_type": "ephemeral",
+            "replace_original": True,
+            "text": (
+                "Canceled! Går fint det. Ikke noe problem for meg. "
+                "Hadde ikke lyst uansett."
+            ),
+        }
+    elif action == "shuffle":
+        result = handle_command(original_func, original_args)
+        result["replace_original"] = True
     return result
 
 
@@ -116,20 +154,16 @@ def interactive() -> Response:
     log.info(data)
     if not data.get("token") == config.slack_verification_token:
         return Response(status=403)
-    action = data["actions"][0]["name"]
-    log.info(f"Interactive: {action}")
-    if action == "share":
-        result = interaction_share(data)
-    elif action == "cancel":
-        result = interaction_cancel()
-    elif action == "shuffle":
-        result = interaction_shuffle(data)
-    elif action in {"pic", "forum", "msn"}:
-        trigger_id = data["trigger_id"]
-        result = handle_command(command_str=action, args=[], trigger_id=trigger_id)
-    else:
-        raise Exception(f"Unknown action: {action}")
-    return jsonify(result)
+    action_id = data["actions"][0]["action_id"]
+    block_id = data["actions"][0]["block_id"]
+    log.info(f"Interactive: {block_id}, {action_id}")
+    if block_id == "share_buttons":
+        result = handle_share_interaction(action_id, data)
+    elif block_id == "commands_buttons":
+        result = handle_command(command_str=action_id, args=[])
+    response_url = data["response_url"]
+    requests.post(response_url, json=result)
+    return Response(status=200)
 
 
 @app.route("/slash", methods=["POST"])
@@ -145,13 +179,14 @@ def slash_cmds() -> Response:
     args = data["text"]
     args = args.replace("@", "").split()
 
-    trigger_id = data["trigger_id"]
-    result = handle_command(command_str, args, trigger_id)
+    result = handle_command(command_str, args)
     log.info(f"result: {result}")
-    return jsonify(result)
+    response_url = data["response_url"]
+    requests.post(response_url, json=result)
+    return Response(status=200)
 
 
-def handle_command(command_str: str, args: list, trigger_id: str) -> dict:
+def handle_command(command_str: str, args: list) -> dict:
     db_func = (
         app.pool.get_db_connection
         if command_str in {"hvem", "pic", "forum", "msn"}
@@ -172,11 +207,9 @@ def handle_command(command_str: str, args: list, trigger_id: str) -> dict:
     if command_str in {"ping", "hvem"}:
         result["response_type"] = "in_channel"
     elif command_str in {"pic", "forum", "msn"}:
-        result = attach_share_buttons(
-            callback_id=trigger_id, result=result, func=command_str, args=args
-        )
+        result = attach_share_buttons(result=result, func=command_str, args=args)
     elif command_str == "gargbot":
-        result = attach_commands_buttons(callback_id=trigger_id, result=result)
+        result = attach_commands_buttons(result=result)
     return result
 
 

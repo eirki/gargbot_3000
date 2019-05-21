@@ -5,8 +5,8 @@ import itertools
 import sys
 import threading
 import time
+import typing as t
 from functools import partial
-from typing import Dict, Tuple
 
 import psycopg2
 import websocket
@@ -18,7 +18,7 @@ from gargbot_3000 import commands, config, congrats, database_manager, droppics,
 from gargbot_3000.logger import log
 
 
-def wait_for_slack_output(slack_client: SlackClient) -> Tuple[str, str, str]:
+def wait_for_slack_output(slack_client: SlackClient) -> t.Tuple[str, str, str]:
     """
         The Slack Real Time Messaging API is an events firehose.
         This parsing function returns when a message is
@@ -55,7 +55,7 @@ def wait_for_slack_output(slack_client: SlackClient) -> Tuple[str, str, str]:
         return text, channel, user
 
 
-def send_response(slack_client: SlackClient, response: Dict, channel: str):
+def send_response(slack_client: SlackClient, response: t.Dict, channel: str):
     log.info(dt.datetime.now())
     log.info(f"response: {response}")
     slack_client.api_call("chat.postMessage", channel=channel, as_user=True, **response)
@@ -81,7 +81,7 @@ def handle_congrats(slack_client: SlackClient, drop_pics):
         db_connection.close()
 
 
-def setup() -> Tuple[SlackClient, droppics.DropPics, quotes.Quotes, connection]:
+def setup() -> t.Tuple[SlackClient, droppics.DropPics, quotes.Quotes, connection]:
     db_connection = database_manager.connect_to_database()
 
     drop_pics = droppics.DropPics(db=db_connection)
@@ -106,7 +106,6 @@ def main():
     slack_client, drop_pics, quotes_db, db_connection = setup()
 
     log.info("GargBot 3000 task operational!")
-
     try:
         while True:
             time.sleep(1)
@@ -131,11 +130,11 @@ def main():
             except psycopg2.OperationalError:
                 db_connection = database_manager.connect_to_database()
                 try:
-                    return command_func()
+                    response = command_func()
                 except Exception as exc:
                     # OperationalError not caused by connection issue.
                     log.error("Error in command execution", exc_info=True)
-                    return commands.cmd_panic(exc)
+                    response = commands.cmd_panic(exc)
 
             send_response(slack_client, response, channel)
 

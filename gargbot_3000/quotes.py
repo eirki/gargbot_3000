@@ -1,9 +1,9 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
+import datetime as dt
 import html
 import random
 import re
-import time
 import typing as t
 from operator import itemgetter
 
@@ -56,10 +56,18 @@ class Quotes:
 
         return inp
 
-    def forum(self, db: connection, args: t.Optional[t.List[str]]):
+    def forum(
+        self, db: connection, args: t.Optional[t.List[str]]
+    ) -> t.Tuple[str, str, str, dt.datetime, str, str]:
         user = args[0] if args else None
         if user and user not in self.slack_nicks_to_db_ids:
-            return f"Gargling not found: {user}. Husk å bruke slack nick"
+            description = (
+                f"Gargling not found: {user}. Husk å bruke slack nick."
+                "Her er et tilfeldig quote i stedet."
+            )
+            user = None
+        else:
+            description = " "
 
         if user:
             user_filter = f"= {self.slack_nicks_to_db_ids[user]}"
@@ -77,14 +85,13 @@ class Quotes:
         db_id = result["db_id"]
         post_id = result["post_id"]
         post_datetime = result["post_timestamp"]
-        post_timestamp = int(time.mktime(post_datetime.timetuple()))
-        cursor.execute(f"SELECT avatar FROM user_ids WHERE db_id = {db_id}")
+        cursor.execute("SELECT avatar FROM user_ids WHERE db_id = %s", (db_id,))
         avatar_name = cursor.fetchone()["avatar"]
-        avatar_url = f"{config.forum_url}/download/file.php?avatar={avatar_name}"
+        avatarurl = f"{config.forum_url}/download/file.php?avatar={avatar_name}".strip()
         user = user if user is not None else self.db_ids_to_slack_nicks[db_id]
         text = self._sanitize(result["post_text"], result["bbcode_uid"])
         url = f"{config.forum_url}/viewtopic.php?p={post_id}#p{post_id}"
-        return text, user, avatar_url, post_timestamp, url
+        return text, user, avatarurl, post_datetime, url, description
 
     def msn(self, db: connection, args: t.Optional[t.List[str]]):
         user = args[0] if args else None

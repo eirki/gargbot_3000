@@ -4,7 +4,6 @@ import contextlib
 import datetime as dt
 import itertools
 import random
-import time
 import typing as t
 
 import dropbox
@@ -104,9 +103,6 @@ class DropPics:
         )
         return sql_command, sql_data
 
-    def get_timestamp(self, date_obj: dt.datetime):
-        return int(time.mktime(date_obj.timetuple()))
-
     def get_url_for_dbx_path(self, path: str):
         full_path = "/".join([config.dbx_pic_folder, path])
         log.info(f"Getting url for {full_path}")
@@ -131,18 +127,19 @@ class DropPics:
         cursor.execute(sql_command, data)
         result = cursor.fetchone()
         path = result["path"]
-        date_obj = result["taken"]
+        date_taken = result["taken"]
         url = self.get_url_for_dbx_path(path)
-        timestamp = self.get_timestamp(date_obj)
-        return url, timestamp
+        return url, date_taken
 
-    def get_pic(self, db, arg_list: t.Optional[t.List[str]]) -> t.Tuple[str, int, str]:
+    def get_pic(
+        self, db, arg_list: t.Optional[t.List[str]]
+    ) -> t.Tuple[str, dt.datetime, str]:
         description = ""
         cursor = db.cursor()
 
         if not arg_list:
-            url, timestamp = self.get_random_pic(cursor)
-            return url, timestamp, description
+            url, date_taken = self.get_random_pic(cursor)
+            return url, date_taken, description
 
         args = {arg.lower() for arg in arg_list}
         invalid_args = args - self.possible_args
@@ -151,20 +148,19 @@ class DropPics:
         if invalid_args:
             description = self.get_description_for_invalid_args(invalid_args)
             if not valid_args:
-                description += "Her er et tilfeldig bilde i stedet:"
-                url, timestamp = self.get_random_pic(cursor)
-                return url, timestamp, description
+                description += "Her er et tilfeldig bilde i stedet."
+                url, date_taken = self.get_random_pic(cursor)
+                return url, date_taken, description
 
         sql_command, data = self.get_sql_for_args(valid_args)
         db_data = self.get_dbx_path_sql_cmd(cursor, sql_command, data)
         if db_data is not None:
             valid_args_fmt = ", ".join(f"`{arg}`" for arg in valid_args)
-            description += f"Her er et bilde med {valid_args_fmt}:"
+            description += f"Her er et bilde med {valid_args_fmt}."
             path = db_data["path"]
-            date_obj = db_data["taken"]
+            date_taken = db_data["taken"]
             url = self.get_url_for_dbx_path(path)
-            timestamp = self.get_timestamp(date_obj)
-            return url, timestamp, description
+            return url, date_taken, description
 
         # No pics found for arg-combination. Reduce args until pic found
         valid_args_fmt = ", ".join(f"`{arg}`" for arg in valid_args)
@@ -177,13 +173,12 @@ class DropPics:
                     continue
 
                 arg_combination_fmt = ", ".join(f"`{arg}`" for arg in arg_combination)
-                description += f"Her er et bilde med {arg_combination_fmt} i stedet:"
+                description += f"Her er et bilde med {arg_combination_fmt} i stedet."
                 path = db_data["path"]
-                date_obj = db_data["taken"]
+                date_taken = db_data["taken"]
                 url = self.get_url_for_dbx_path(path)
-                timestamp = self.get_timestamp(date_obj)
-                return url, timestamp, description
+                return url, date_taken, description
 
         #  No pics found for any args
-        url, timestamp = self.get_random_pic(cursor)
-        return url, timestamp, description
+        url, date_taken = self.get_random_pic(cursor)
+        return url, date_taken, description
