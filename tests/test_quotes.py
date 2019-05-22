@@ -1,5 +1,7 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
+import datetime as dt
+
 import pytest
 from psycopg2.extensions import connection
 
@@ -13,10 +15,10 @@ def quotes_db(db_connection: connection):
 
 
 def test_garg_quote_random(db_connection: connection, quotes_db: quotes.Quotes):
-    text, user, avatar_url, post_timestamp, url = quotes_db.forum(
+    text, user, avatar_url, date, url, description = quotes_db.forum(
         db_connection, args=None
     )
-    assert isinstance(post_timestamp, int)
+    assert isinstance(date, dt.datetime)
     assert url.startswith(config.forum_url)
     assert "*" in text
     assert len(user) > 0
@@ -24,10 +26,10 @@ def test_garg_quote_random(db_connection: connection, quotes_db: quotes.Quotes):
 
 def test_garg_quote_user(db_connection: connection, quotes_db: quotes.Quotes):
     in_user = conftest.users[0]
-    text, out_user, avatar_url, post_timestamp, url = quotes_db.forum(
+    text, out_user, avatar_url, date, url, description = quotes_db.forum(
         db_connection, args=[in_user.slack_nick]
     )
-    assert isinstance(post_timestamp, int)
+    assert isinstance(date, dt.datetime)
     assert url.startswith(config.forum_url)
     assert "*" in text
     assert out_user == in_user.slack_nick

@@ -1,13 +1,15 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
+import datetime as dt
+
 from psycopg2.extensions import connection
 
 from gargbot_3000.droppics import DropPics
 
 
-def assert_valid_returns(url: str, timestamp: int, description: str) -> None:
+def assert_valid_returns(url: str, timestamp: dt.datetime, description: str) -> None:
     assert url.startswith("https")
-    assert type(timestamp) == int
+    assert type(timestamp) == dt.datetime
     assert description == "" or description.startswith("Her er et bilde med")
     assert not description.startswith("Im so stoopid")
 
@@ -51,9 +53,9 @@ def test_multiple_args(db_connection: connection, drop_pics: DropPics) -> None:
 def test_error_txt(db_connection: connection, drop_pics: DropPics) -> None:
     url, timestamp, description = drop_pics.get_pic(db_connection, arg_list=["2000"])
     assert url.startswith("https")
-    assert type(timestamp) == int
+    assert type(timestamp) == dt.datetime
     assert description.startswith("Im so stoopid")
-    assert description.endswith("Her er et tilfeldig bilde i stedet:")
+    assert description.endswith("Her er et tilfeldig bilde i stedet.")
 
 
 def test_error_txt_with_valid(db_connection: connection, drop_pics: DropPics) -> None:
@@ -61,7 +63,7 @@ def test_error_txt_with_valid(db_connection: connection, drop_pics: DropPics) ->
         db_connection, arg_list=["1999", "slack_nick5"]
     )
     assert url.startswith("https")
-    assert type(timestamp) == int
+    assert type(timestamp) == dt.datetime
     assert description.startswith("Im so stoopid")
     assert "Her er et bilde med" in description
 
@@ -73,6 +75,6 @@ def test_error_txt_with_impossible_combination(
         db_connection, arg_list=["2001", "topic3"]
     )
     assert url.startswith("https")
-    assert type(timestamp) == int
+    assert type(timestamp) == dt.datetime
     assert description.startswith("Fant ikke")
     assert "Her er et bilde med" in description

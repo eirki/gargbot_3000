@@ -9,6 +9,7 @@ from flask import testing
 from psycopg2.extensions import connection
 
 from gargbot_3000 import config, database_manager, server
+from tests import conftest
 
 
 @pytest.fixture
@@ -32,9 +33,17 @@ class MockPool(database_manager.ConnectionPool):
 
 
 class MockRequests:
-    def post(self, url, json):
+    def __init__(self):
+        self.url = None
+        self.urls = []
+        self.json = None
+        self.jsons = []
+
+    def post(self, url: str, json: dict):
         self.url = url
+        self.urls.append(url)
         self.json = json
+        self.jsons.append(json)
         mock_response = SimpleNamespace(text="text")
         return mock_response
 
@@ -46,7 +55,7 @@ class MockCommands:
         self.db_connection = db_connection
         self.drop_pics = drop_pics
         self.quotes_db = quotes_db
-        return {"text": "text"}
+        return {"text": command_str, "blocks": []}
 
 
 def test_home(client: testing.FlaskClient):
@@ -55,33 +64,40 @@ def test_home(client: testing.FlaskClient):
     assert response.data == b"home"
 
 
-def test_slash_cmd_ping(client: testing.FlaskClient):
+def test_slash_cmd_ping(client: testing.FlaskClient, monkeypatch):
     params = {
         "token": config.slack_verification_token,
         "command": "/ping",
         "text": "",
         "trigger_id": "test_slash_cmd_ping",
+        "response_url": "response_url",
     }
+    mock_requests = MockRequests()
+    monkeypatch.setattr("gargbot_3000.server.requests", mock_requests)
+
     response = client.post("/slash", data=params)
     assert response.status_code == 200
-    assert json.loads(response.data.decode()) == {
-        "text": "GargBot 3000 is active. Beep boop beep",
-        "response_type": "in_channel",
-    }
+    assert mock_requests.url == "response_url"
+    assert mock_requests.json["text"] == "GargBot 3000 is active. Beep boop beep"
+    assert mock_requests.json["response_type"] == "in_channel"
 
 
-def test_slash_cmd_gargbot(client: testing.FlaskClient):
+def test_slash_cmd_gargbot(client: testing.FlaskClient, monkeypatch):
     params = {
         "token": config.slack_verification_token,
         "command": "/gargbot",
         "text": "",
         "trigger_id": "test_slash_cmd_gargbot",
+        "response_url": "response_url",
     }
+    mock_requests = MockRequests()
+    monkeypatch.setattr("gargbot_3000.server.requests", mock_requests)
+
     response = client.post("/slash", data=params)
     assert response.status_code == 200
-    data = json.loads(response.data.decode())
-    assert data["text"].startswith("Beep boop beep!")
-    assert "/pic" in data["text"]
+    assert mock_requests.url == "response_url"
+    assert mock_requests.json["text"].startswith("Beep boop beep!")
+    assert "/pic" in mock_requests.json["text"]
 
 
 @pytest.mark.parametrize("cmd", ["pic", "forum", "msn"])
@@ -91,12 +107,15 @@ def test_slash(
 ):
     mock_commands = MockCommands()
     monkeypatch.setattr("gargbot_3000.server.commands", mock_commands)
+    mock_requests = MockRequests()
+    monkeypatch.setattr("gargbot_3000.server.requests", mock_requests)
 
     params = {
         "token": config.slack_verification_token,
         "command": "/" + cmd,
         "text": args,
         "trigger_id": "test_slash_" + cmd,
+        "response_url": "response_url",
     }
     response = client.post("/slash", data=params)
     assert response.status_code == 200
@@ -104,10 +123,20 @@ def test_slash(
     assert mock_commands.args == args.split()
     assert mock_commands.db_connection == db_connection
 
+    assert mock_requests.url == "response_url"
+    assert mock_requests.json["text"] == cmd
+    action_ids = {
+        elem["action_id"] for elem in mock_requests.json["blocks"][0]["elements"]
+    }
+    assert all(action_id in action_ids for action_id in ["share", "shuffle", "cancel"])
 
-def test_interactive_share(client: testing.FlaskClient, monkeypatch):
-    mock_requests = MockRequests()
-    monkeypatch.setattr("gargbot_3000.server.requests", mock_requests)
+
+@pytest.mark.parametrize("cmd", ["pic", "forum", "msn"])
+@pytest.mark.parametrize("args", [[], ["arg1"], ["arg1", "arg2"]])
+def test_interactive_share(
+    client: testing.FlaskClient, monkeypatch, cmd: str, args: t.List[str]
+):
+    user = conftest.users[0]
     action = "share"
     params = {
         "payload": json.dumps(
@@ -115,43 +144,60 @@ def test_interactive_share(client: testing.FlaskClient, monkeypatch):
                 "token": config.slack_verification_token,
                 "actions": [
                     {
-                        "name": action,
+                        "action_id": action,
+                        "block_id": "share_buttons",
                         "value": json.dumps(
-                            {"original_response": {"text": "original_text"}}
+                            {
+                                "original_response": {
+                                    "text": "original_text",
+                                    "blocks": [],
+                                },
+                                "original_func": cmd,
+                                "original_args": args,
+                            }
                         ),
                     }
                 ],
                 "response_url": "response_url",
+                "user": {"id": user.slack_id, "name": user.slack_nick},
             }
         )
     }
+    mock_requests = MockRequests()
+    monkeypatch.setattr("gargbot_3000.server.requests", mock_requests)
     response = client.post("/interactive", data=params)
     assert response.status_code == 200
 
-    data = json.loads(response.data.decode())
-    assert data["replace_original"] is False
-    assert data["response_type"] == "in_channel"
-    assert data["text"] == "original_text"
+    assert mock_requests.urls[0] == "response_url"
+    assert mock_requests.jsons[0]["replace_original"] is True
+    assert mock_requests.jsons[0]["response_type"] == "ephemeral"
+    assert mock_requests.jsons[0]["text"] == "Sharing is caring!"
 
-    assert mock_requests.url == "response_url"
-    assert mock_requests.json["replace_original"] is True
-    assert mock_requests.json["response_type"] == "ephemeral"
-    assert mock_requests.json["text"] == "Sharing is caring!"
+    assert mock_requests.urls[1] == "response_url"
+    assert mock_requests.jsons[1]["replace_original"] is False
+    assert mock_requests.jsons[1]["response_type"] == "in_channel"
+    assert mock_requests.jsons[1]["text"] == "original_text"
 
 
-def test_interactive_cancel(client: testing.FlaskClient):
+def test_interactive_cancel(client: testing.FlaskClient, monkeypatch):
     action = "cancel"
     params = {
         "payload": json.dumps(
-            {"token": config.slack_verification_token, "actions": [{"name": action}]}
+            {
+                "token": config.slack_verification_token,
+                "actions": [{"action_id": action, "block_id": "share_buttons"}],
+                "response_url": "response_url",
+            }
         )
     }
+    mock_requests = MockRequests()
+    monkeypatch.setattr("gargbot_3000.server.requests", mock_requests)
     response = client.post("/interactive", data=params)
     assert response.status_code == 200
-    data = json.loads(response.data.decode())
-    assert data["replace_original"] is True
-    assert data["response_type"] == "ephemeral"
-    assert data["text"].startswith("Canceled!")
+    assert mock_requests.url == "response_url"
+    assert mock_requests.json["replace_original"] is True
+    assert mock_requests.json["response_type"] == "ephemeral"
+    assert mock_requests.json["text"].startswith("Canceled!")
 
 
 @pytest.mark.parametrize("cmd", ["pic", "forum", "msn"])
@@ -161,6 +207,8 @@ def test_interactive_shuffle(
 ):
     mock_commands = MockCommands()
     monkeypatch.setattr("gargbot_3000.server.commands", mock_commands)
+    mock_requests = MockRequests()
+    monkeypatch.setattr("gargbot_3000.server.requests", mock_requests)
 
     action = "shuffle"
     params = {
@@ -169,23 +217,23 @@ def test_interactive_shuffle(
                 "token": config.slack_verification_token,
                 "actions": [
                     {
-                        "name": action,
+                        "action_id": action,
+                        "block_id": "share_buttons",
                         "value": json.dumps(
                             {"original_func": cmd, "original_args": args}
                         ),
                     }
                 ],
-                "callback_id": "callback_id",
+                "response_url": "response_url",
             }
         )
     }
     response = client.post("/interactive", data=params)
     assert response.status_code == 200
-
-    data = json.loads(response.data.decode())
-    assert data["replace_original"] is True
-    assert data["response_type"] == "ephemeral"
-    assert data["text"] == "text"
+    assert mock_requests.url == "response_url"
+    assert mock_requests.json["replace_original"] is True
+    assert mock_requests.json["response_type"] == "ephemeral"
+    assert mock_requests.json["text"] == cmd
 
     assert mock_commands.command_str == cmd
     assert mock_commands.args == args
@@ -198,17 +246,27 @@ def test_interactive_gargbot_commands(
 ):
     mock_commands = MockCommands()
     monkeypatch.setattr("gargbot_3000.server.commands", mock_commands)
+    mock_requests = MockRequests()
+    monkeypatch.setattr("gargbot_3000.server.requests", mock_requests)
     params = {
         "payload": json.dumps(
             {
                 "token": config.slack_verification_token,
-                "actions": [{"name": cmd}],
-                "trigger_id": "trigger_id",
+                "actions": [{"action_id": cmd, "block_id": "commands_buttons"}],
+                "response_url": "response_url",
             }
         )
     }
     response = client.post("/interactive", data=params)
     assert response.status_code == 200
-    data = json.loads(response.data.decode())
-    print(data)
-    assert "attachments" in data
+
+    assert mock_commands.command_str == cmd
+    assert mock_commands.db_connection == db_connection
+
+    assert mock_requests.url == "response_url"
+    assert mock_requests.url == "response_url"
+    assert mock_requests.json["text"] == cmd
+    action_ids = {
+        elem["action_id"] for elem in mock_requests.json["blocks"][0]["elements"]
+    }
+    assert all(action_id in action_ids for action_id in ["share", "shuffle", "cancel"])

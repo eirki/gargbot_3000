@@ -28,7 +28,13 @@ def attach_share_buttons(result: dict, func: str, args: list) -> dict:
                 "type": "button",
                 "action_id": "share",
                 "style": "primary",
-                "value": json.dumps({"original_response": result}),
+                "value": json.dumps(
+                    {
+                        "original_func": func,
+                        "original_args": args,
+                        "original_response": result,
+                    }
+                ),
             },
             {
                 "text": {"type": "plain_text", "text": "Shuffle"},
@@ -52,9 +58,7 @@ def attach_share_buttons(result: dict, func: str, args: list) -> dict:
 def attach_original_request(
     result: dict, user_id: str, user_name: str, func: str, args: str
 ) -> dict:
-    db_connection = database_manager.connect_to_database()
-
-    with db_connection.cursor() as cursor:
+    with app.pool.get_db_cursor() as cursor:
         cursor.execute(
             "SELECT slack_avatar FROM user_ids WHERE slack_id = %s", (user_id,)
         )
@@ -114,13 +118,13 @@ def delete_ephemeral(response_url: str) -> None:
 
 
 def handle_share_interaction(action: str, data: dict) -> dict:
-    action_data = json.loads(data["actions"][0]["value"])
-    original_func = action_data["original_func"]
-    original_args = action_data["original_args"]
     if action == "share":
         response_url = data["response_url"]
         delete_ephemeral(response_url)
 
+        action_data = json.loads(data["actions"][0]["value"])
+        original_func = action_data["original_func"]
+        original_args = action_data["original_args"]
         result = action_data["original_response"]
         result["replace_original"] = False
         result["response_type"] = "in_channel"
@@ -142,6 +146,9 @@ def handle_share_interaction(action: str, data: dict) -> dict:
             ),
         }
     elif action == "shuffle":
+        action_data = json.loads(data["actions"][0]["value"])
+        original_func = action_data["original_func"]
+        original_args = action_data["original_args"]
         result = handle_command(original_func, original_args)
         result["replace_original"] = True
     return result

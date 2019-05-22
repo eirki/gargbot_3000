@@ -7,5 +7,5 @@ CREATE TABLE user_ids (
     first_name TEXT,
     bday DATE NOT NULL,
     avatar TEXT,
-    slack_avatar TEXT,
+    slack_avatar TEXT
 );
