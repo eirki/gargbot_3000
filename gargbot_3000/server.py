@@ -56,7 +56,7 @@ def attach_share_buttons(result: dict, func: str, args: list) -> dict:
 
 
 def attach_original_request(
-    result: dict, user_id: str, user_name: str, func: str, args: str
+    result: dict, user_id: str, user_name: str, func: str, args: t.List[str]
 ) -> dict:
     with app.pool.get_db_cursor() as cursor:
         cursor.execute(
@@ -73,7 +73,7 @@ def attach_original_request(
         },
         {
             "type": "context",
-            "elements": [{"type": "mrkdwn", "text": f"/{func} {args}"}],
+            "elements": [{"type": "mrkdwn", "text": f"/{func} {' '.join(args)}"}],
         },
     ]
     result["blocks"][0:0] = context_blocks
