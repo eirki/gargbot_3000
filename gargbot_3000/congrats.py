@@ -6,7 +6,7 @@ from operator import attrgetter
 
 import psycopg2
 
-from gargbot_3000 import config
+from gargbot_3000 import commands, config
 
 greetings = [
     "Grattis med dagen",
@@ -22,6 +22,8 @@ greetings = [
 ]
 
 jabs = ["din digge jævel!", "kjekken!", "håper det feires!"]
+
+mort_picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
 
 
 class Birthday:
@@ -74,19 +76,19 @@ def get_greeting(person, db, drop_pics):
         f"Hurra! Vår felles venn <@{person.slack_id}> fyller {person.age} i dag!\n"
         f"{greeting}, {jab}"
     )
-    congrats_picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
-
     try:
-        person_picurl, timestamp, _ = drop_pics.get_pic(db, [person.nick])
+        person_picurl, date, _ = drop_pics.get_pic(db, [person.nick])
     except psycopg2.OperationalError:
         db.ping(True)
-        person_picurl, timestamp, _ = drop_pics.get_pic(db, [person.nick])
-
+        person_picurl, date, _ = drop_pics.get_pic(db, [person.nick])
+    pretty_date = commands.prettify_date(date)
     response = {
         "text": text,
-        "attachments": [
-            {"fallback": person_picurl, "image_url": person_picurl, "ts": timestamp},
-            {"fallback": congrats_picurl, "image_url": congrats_picurl},
+        "blocks": [
+            {"type": "section", "text": {"type": "mrkdwn", "text": text}},
+            {"type": "image", "image_url": person_picurl, "alt_text": person_picurl},
+            {"type": "context", "elements": [{"type": "mrkdwn", "text": pretty_date}]},
+            {"type": "image", "image_url": mort_picurl, "alt_text": mort_picurl},
         ],
     }
 

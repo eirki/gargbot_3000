@@ -14,7 +14,7 @@ from gargbot_3000 import droppics, quotes
 from gargbot_3000.logger import log
 
 
-def _prettify_date(date: dt.datetime) -> str:
+def prettify_date(date: dt.datetime) -> str:
     timestamp = int(time.mktime(date.timetuple()))
     return (
         f"<!date^{timestamp}^{{date_pretty}} "
@@ -75,7 +75,7 @@ def cmd_pic(
 ) -> t.Dict:
     """if command is 'pic'"""
     picurl, date, description = drop_pics.get_pic(db, args)
-    pretty_date = _prettify_date(date)
+    pretty_date = prettify_date(date)
     blocks = []
     image_block = {"type": "image", "image_url": picurl, "alt_text": picurl}
     blocks.append(image_block)
@@ -100,7 +100,7 @@ def cmd_forum(
 ) -> t.Dict:
     """if command is 'forum'"""
     text, user, avatar_url, date, url, description = quotes_db.forum(db, args)
-    pretty_date = _prettify_date(date)
+    pretty_date = prettify_date(date)
     text_block = {"type": "section", "text": {"type": "mrkdwn", "text": text}}
 
     context_block = {
