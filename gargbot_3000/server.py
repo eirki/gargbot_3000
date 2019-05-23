@@ -51,7 +51,10 @@ def attach_share_buttons(result: dict, func: str, args: list) -> dict:
         ],
     }
     result["response_type"] = "ephemeral"
-    result["blocks"].append(buttons_block)
+    try:
+        result["blocks"].append(buttons_block)
+    except KeyError:
+        result["blocks"] = [buttons_block]
     return result
 
 

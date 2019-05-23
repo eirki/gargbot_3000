@@ -55,7 +55,10 @@ class MockCommands:
         self.db_connection = db_connection
         self.drop_pics = drop_pics
         self.quotes_db = quotes_db
-        return {"text": command_str, "blocks": []}
+        if command_str == "msn":
+            return {"text": command_str, "attachments": [{"blocks": []}]}
+        else:
+            return {"text": command_str, "blocks": []}
 
 
 def test_home(client: testing.FlaskClient):
@@ -126,7 +129,7 @@ def test_slash(
     assert mock_requests.url == "response_url"
     assert mock_requests.json["text"] == cmd
     action_ids = {
-        elem["action_id"] for elem in mock_requests.json["blocks"][0]["elements"]
+        elem["action_id"] for elem in mock_requests.json["blocks"][-1]["elements"]
     }
     assert all(action_id in action_ids for action_id in ["share", "shuffle", "cancel"])
 
@@ -267,6 +270,6 @@ def test_interactive_gargbot_commands(
     assert mock_requests.url == "response_url"
     assert mock_requests.json["text"] == cmd
     action_ids = {
-        elem["action_id"] for elem in mock_requests.json["blocks"][0]["elements"]
+        elem["action_id"] for elem in mock_requests.json["blocks"][-1]["elements"]
     }
     assert all(action_id in action_ids for action_id in ["share", "shuffle", "cancel"])
