@@ -79,7 +79,11 @@ def attach_original_request(
             "elements": [{"type": "mrkdwn", "text": f"/{func} {' '.join(args)}"}],
         },
     ]
-    result["blocks"][0:0] = context_blocks
+    try:
+        result["blocks"][0:0] = context_blocks
+    except KeyError:
+        result["blocks"] = context_blocks
+
     return result
 
 

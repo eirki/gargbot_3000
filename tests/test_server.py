@@ -49,16 +49,20 @@ class MockRequests:
 
 
 class MockCommands:
-    def execute(self, command_str, args, db_connection, drop_pics, quotes_db):
+    def execute(
+        self, command_str, args, db_connection, drop_pics, quotes_db
+    ) -> t.Dict[str, t.Any]:
         self.command_str = command_str
         self.args = args
         self.db_connection = db_connection
         self.drop_pics = drop_pics
         self.quotes_db = quotes_db
-        if command_str == "msn":
-            return {"text": command_str, "attachments": [{"blocks": []}]}
-        else:
-            return {"text": command_str, "blocks": []}
+        response = (
+            {"text": command_str, "blocks": []}
+            if command_str != "msn"
+            else {"text": command_str, "attachments": [{"blocks": []}]}
+        )
+        return response
 
 
 def test_home(client: testing.FlaskClient):
@@ -140,6 +144,11 @@ def test_interactive_share(
     client: testing.FlaskClient, monkeypatch, cmd: str, args: t.List[str]
 ):
     user = conftest.users[0]
+    original_response: t.Dict[str, t.Any] = (
+        {"text": cmd, "blocks": []}
+        if cmd != "msn"
+        else {"text": cmd, "attachments": [{"blocks": []}]}
+    )
     action = "share"
     params = {
         "payload": json.dumps(
@@ -151,10 +160,7 @@ def test_interactive_share(
                         "block_id": "share_buttons",
                         "value": json.dumps(
                             {
-                                "original_response": {
-                                    "text": "original_text",
-                                    "blocks": [],
-                                },
+                                "original_response": original_response,
                                 "original_func": cmd,
                                 "original_args": args,
                             }
@@ -179,7 +185,7 @@ def test_interactive_share(
     assert mock_requests.urls[1] == "response_url"
     assert mock_requests.jsons[1]["replace_original"] is False
     assert mock_requests.jsons[1]["response_type"] == "in_channel"
-    assert mock_requests.jsons[1]["text"] == "original_text"
+    assert mock_requests.jsons[1]["text"] == cmd
 
 
 def test_interactive_cancel(client: testing.FlaskClient, monkeypatch):
