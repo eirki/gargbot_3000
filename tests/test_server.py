@@ -44,7 +44,7 @@ class MockRequests:
         self.urls.append(url)
         self.json = json
         self.jsons.append(json)
-        mock_response = SimpleNamespace(text="text")
+        mock_response = SimpleNamespace(text="text", raise_for_status=lambda: None)
         return mock_response
 
 

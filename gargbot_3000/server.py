@@ -121,7 +121,7 @@ def delete_ephemeral(response_url: str) -> None:
         "text": "Sharing is caring!",
     }
     r = requests.post(response_url, json=delete_original)
-    log.info(r.text)
+    r.raise_for_status()
 
 
 def handle_share_interaction(action: str, data: dict) -> dict:
@@ -176,7 +176,8 @@ def interactive() -> Response:
     elif block_id == "commands_buttons":
         result = handle_command(command_str=action_id, args=[])
     response_url = data["response_url"]
-    requests.post(response_url, json=result)
+    r = requests.post(response_url, json=result)
+    r.raise_for_status()
     return Response(status=200)
 
 
@@ -196,7 +197,8 @@ def slash_cmds() -> Response:
     result = handle_command(command_str, args)
     log.info(f"result: {result}")
     response_url = data["response_url"]
-    requests.post(response_url, json=result)
+    r = requests.post(response_url, json=result)
+    r.raise_for_status()
     return Response(status=200)
 
 
