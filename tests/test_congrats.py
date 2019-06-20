@@ -18,5 +18,6 @@ def test_congrat(db_connection: connection, drop_pics: DropPics) -> None:
     image_url = response["blocks"][1]["image_url"]
     response_pic = next(pic for pic in conftest.pics if image_url.endswith(pic.path))
     assert chosen_user.slack_id in response["text"]
+    assert "Test sentence" in response["text"]
     assert "28" in response["text"]
     assert chosen_user.db_id in response_pic.faces

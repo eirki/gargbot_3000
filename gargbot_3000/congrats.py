@@ -1,27 +1,11 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
 import datetime as dt
-import random
 from operator import attrgetter
 
 import psycopg2
 
-from gargbot_3000 import commands, config
-
-greetings = [
-    "Grattis med dagen",
-    "Congarats med dagen til deg",
-    "Woop woop",
-    "Hurra for deg",
-    "Huzzah for deg",
-    "Supergrattis med dagen",
-    "Grættis med dagen",
-    "Congratulatore",
-    "Gratubalasjoner i massevis",
-    "Gratz",
-]
-
-jabs = ["din digge jævel!", "kjekken!", "håper det feires!"]
+from gargbot_3000 import config
 
 mort_picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
 
@@ -69,25 +53,31 @@ def get_birthdays(db):
     return birthdays
 
 
+def get_sentence(db):
+    with db.cursor() as cursor:
+        sql_command = "SELECT sentence FROM congrats ORDER BY RANDOM() LIMIT 1"
+        cursor.execute(sql_command)
+        result = cursor.fetchone()
+    sentence = result["sentence"]
+    return sentence
+
+
 def get_greeting(person, db, drop_pics):
-    greeting = random.choice(greetings)
-    jab = random.choice(jabs)
+    sentence = get_sentence(db)
     text = (
         f"Hurra! Vår felles venn <@{person.slack_id}> fyller {person.age} i dag!\n"
-        f"{greeting}, {jab}"
+        f"{sentence}"
     )
     try:
         person_picurl, date, _ = drop_pics.get_pic(db, [person.nick])
     except psycopg2.OperationalError:
         db.ping(True)
         person_picurl, date, _ = drop_pics.get_pic(db, [person.nick])
-    pretty_date = commands.prettify_date(date)
     response = {
         "text": text,
         "blocks": [
             {"type": "section", "text": {"type": "mrkdwn", "text": text}},
             {"type": "image", "image_url": person_picurl, "alt_text": person_picurl},
-            {"type": "context", "elements": [{"type": "mrkdwn", "text": pretty_date}]},
             {"type": "image", "image_url": mort_picurl, "alt_text": mort_picurl},
         ],
     }

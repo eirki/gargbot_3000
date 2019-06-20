@@ -65,6 +65,16 @@ messages = [
     Message("session3", dt.datetime(2006, 12, 8, 18, 21,  8), "#541575", "msn_nick3", "text3_session3", 3),
     Message("session3", dt.datetime(2006, 12, 8, 18, 21,  8), "#541575", "msn_nick3", "text4_session3", 3),
 ]
+
+Congrat = namedtuple("Congrats", ["sentence"])
+congrats = [
+    Congrat("Test sentence1"),
+    Congrat("Test sentence2"),
+    Congrat("Test sentence3"),
+    Congrat("Test sentence4"),
+    Congrat("Test sentence5"),
+]
+
 # fmt: on
 
 
@@ -172,6 +182,15 @@ def populate_quotes_table(db: connection) -> None:
             cursor.execute(sql_command, data)
 
 
+def populate_congrats_table(db: connection) -> None:
+    with db.cursor() as cursor:
+        for congrat in congrats:
+            sql_command = """INSERT INTO congrats (sentence)
+            VALUES (%(sentence)s);"""
+            data = {"sentence": congrat.sentence}
+            cursor.execute(sql_command, data)
+
+
 @pytest.fixture
 def db_connection(postgresql: connection):
     db = postgresql
@@ -180,6 +199,7 @@ def db_connection(postgresql: connection):
     populate_user_table(db)
     populate_pics_table(db)
     populate_quotes_table(db)
+    populate_congrats_table(db)
     yield db
 
 
