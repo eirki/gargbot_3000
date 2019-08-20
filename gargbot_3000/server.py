@@ -110,8 +110,13 @@ def attach_commands_buttons(result: dict) -> dict:
 
 
 @app.route("/")
-def hello_world() -> str:
+def home_page() -> str:
     return "home"
+
+
+@app.route("/version")
+def version_page() -> str:
+    return config.app_version
 
 
 def delete_ephemeral(response_url: str) -> None:
@@ -190,9 +195,8 @@ def slash_cmds() -> Response:
     if not data.get("token") == config.slack_verification_token:
         return Response(status=403)
 
-    command_str = data["command"][1:]
-    args = data["text"]
-    args = args.replace("@", "").split()
+    command_str = data["command"].replace("/", "")
+    args = data["text"].replace("@", "").split()
 
     result = handle_command(command_str, args)
     log.info(f"result: {result}")
@@ -245,10 +249,10 @@ def countdown():
 
 
 class StandaloneApplication(BaseApplication):
-    def __init__(self, app, options=None):
+    def __init__(self, app, options: t.Dict[str, t.Any] = None):
         self.options = options if options is not None else {}
         self.application = app
-        super(StandaloneApplication, self).__init__()
+        super().__init__()
 
     def load_config(self):
         for key, value in self.options.items():
