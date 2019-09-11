@@ -16,7 +16,7 @@ from gargbot_3000 import commands, config, database_manager, droppics, quotes
 from gargbot_3000.logger import log
 
 
-def wait_for_slack_output(slack_client: SlackClient) -> t.Tuple[str, str, str]:
+def wait_for_slack_output(slack_client: SlackClient) -> t.Tuple[str, str, str, str]:
     """
         The Slack Real Time Messaging API is an events firehose.
         This parsing function returns when a message is
@@ -50,13 +50,22 @@ def wait_for_slack_output(slack_client: SlackClient) -> t.Tuple[str, str, str]:
             text = "new_channel"
         channel = bot_msg["channel"]
         user = bot_msg["user"]
-        return text, channel, user
+        thread_ts = bot_msg.get("thread_ts")
+        return text, channel, user, thread_ts
 
 
-def send_response(slack_client: SlackClient, response: t.Dict, channel: str):
+def send_response(
+    slack_client: SlackClient, response: t.Dict, channel: str, thread_ts: str
+):
     log.info(dt.datetime.now())
     log.info(f"response: {response}")
-    slack_client.api_call("chat.postMessage", channel=channel, as_user=True, **response)
+    slack_client.api_call(
+        "chat.postMessage",
+        channel=channel,
+        as_user=True,
+        thread_ts=thread_ts,
+        **response,
+    )
 
 
 def setup() -> t.Tuple[SlackClient, droppics.DropPics, quotes.Quotes, connection]:
@@ -81,7 +90,7 @@ def main():
     try:
         while True:
             time.sleep(1)
-            text, channel, user = wait_for_slack_output(slack_client)
+            text, channel, user, thread_ts = wait_for_slack_output(slack_client)
 
             try:
                 command_str, *args = text.split()
@@ -108,7 +117,7 @@ def main():
                     log.error("Error in command execution", exc_info=True)
                     response = commands.cmd_panic(exc)
 
-            send_response(slack_client, response, channel)
+            send_response(slack_client, response, channel, thread_ts)
 
     except KeyboardInterrupt:
         sys.exit()
