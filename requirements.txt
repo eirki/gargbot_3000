@@ -11,3 +11,4 @@ python-dotenv
 bbcode
 html-slacker
 pyopenssl
+pendulum

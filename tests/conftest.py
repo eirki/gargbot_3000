@@ -10,7 +10,8 @@ from psycopg2.extras import RealDictCursor
 
 from gargbot_3000 import config, droppics
 
-byear = dt.datetime.now(config.tz).year - 28
+age = 28
+byear = dt.datetime.now(config.tz).year - age
 
 # flake8: noqa
 # fmt: off
@@ -22,7 +23,7 @@ users = [
     User(db_id=6, name="name6", slack_id="s_id6", slack_nick="slack_nick6", bday=dt.datetime(byear, 6, 1), avatar="6.jpg"),
     User(db_id=7, name="name7", slack_id="s_id7", slack_nick="slack_nick7", bday=dt.datetime(byear, 7, 1), avatar="7.jpg"),
     User(db_id=9, name="name9", slack_id="s_id9", slack_nick="slack_nick9", bday=dt.datetime(byear, 9, 1), avatar="9.jpg"),
-    User(db_id=10, name="name10", slack_id="s_id10", slack_nick="slack_nick10", bday=dt.datetime(byear, 10, 1), avatar="10.jpg"),
+    User(db_id=10, name="name10", slack_id="s_id10", slack_nick="slack_nick10", bday=dt.datetime(byear, 11, 1), avatar="10.jpg"),
     User(db_id=11, name="name11", slack_id="s_id11", slack_nick="slack_nick11", bday=dt.datetime(byear, 11, 1), avatar="11.jpg"),
 ]
 

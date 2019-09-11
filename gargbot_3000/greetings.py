@@ -1,62 +1,48 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-import datetime as dt
-import itertools
+import sys
 import time
 import typing as t
-from operator import attrgetter
 
+import pendulum
 import psycopg2
 from psycopg2.extensions import connection
 from slackclient import SlackClient
 
+from dataclasses import dataclass
 from gargbot_3000 import config, database_manager, droppics, task
 from gargbot_3000.logger import log
 
 mort_picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
 
 
-class Birthday:
-    def __init__(self, nick: str, slack_id: str, date: dt.date):
-        self.nick = nick
-        born_midnight_utc = dt.datetime.combine(date, dt.datetime.min.time())
-        born_midnight_local = born_midnight_utc.astimezone(config.tz)
-        born_morning_local = born_midnight_local.replace(hour=7)
-        self.born = born_morning_local
-        self.slack_id = slack_id
-
-    def __repr__(self):
-        return f"{self.nick}, {self.age} years. Next bday: {self.next_bday}"
-
-    def seconds_to_bday(self) -> int:
-        to_next_bday = self.next_bday - dt.datetime.now(config.tz)
-
-        secs = int(to_next_bday.total_seconds())
-        return secs if secs > 0 else 0
-
-    @property
-    def age(self) -> int:
-        return dt.datetime.now(config.tz).year - self.born.year
-
-    @property
-    def next_bday(self) -> dt.datetime:
-        now = dt.datetime.now(config.tz)
-        bday_thisyear = self.born.replace(year=now.year)
-        bday_nextyear = self.born.replace(year=now.year + 1)
-        next_bday = bday_thisyear if bday_thisyear > now else bday_nextyear
-        return next_bday
+@dataclass
+class Recipient:
+    nick: str
+    slack_id: str
+    age: int
 
 
-def get_birthdays(db: connection) -> t.List[Birthday]:
+def get_recipients(db: connection) -> t.List[Recipient]:
+    now_tz = pendulum.now(config.tz)
     with db.cursor() as cursor:
-        sql_command = "SELECT slack_nick, slack_id, bday FROM user_ids"
-        cursor.execute(sql_command)
+        sql_command = (
+            "SELECT slack_nick, slack_id, EXTRACT(YEAR FROM bday)::int as year "
+            "FROM user_ids "
+            "WHERE EXTRACT(MONTH FROM bday) = %(month)s "
+            "AND EXTRACT(DAY FROM bday) = %(day)s"
+        )
+        cursor.execute(sql_command, {"month": now_tz.month, "day": now_tz.day})
         data = cursor.fetchall()
-    birthdays = [
-        Birthday(row["slack_nick"], row["slack_id"], row["bday"]) for row in data
+    recipients = [
+        Recipient(
+            nick=row["slack_nick"],
+            slack_id=row["slack_id"],
+            age=(now_tz.year - row["year"]),
+        )
+        for row in data
     ]
-    birthdays.sort(key=attrgetter("next_bday"))
-    return birthdays
+    return recipients
 
 
 def get_sentence(db: connection) -> str:
@@ -68,7 +54,7 @@ def get_sentence(db: connection) -> str:
     return sentence
 
 
-def get_greeting(person: Birthday, db: connection, drop_pics) -> t.Dict:
+def get_greeting(person: Recipient, db: connection, drop_pics) -> t.Dict:
     sentence = get_sentence(db)
     text = (
         f"Hurra! Vår felles venn <@{person.slack_id}> fyller {person.age} i dag!\n"
@@ -91,33 +77,42 @@ def get_greeting(person: Birthday, db: connection, drop_pics) -> t.Dict:
     return response
 
 
-def handle_congrats(
-    slack_client: SlackClient, drop_pics: droppics.DropPics, db_connection: connection
-) -> None:
-    birthdays = get_birthdays(db_connection)
-    db_connection.close()
-    for birthday in itertools.cycle(birthdays):
-        log.info(f"Next birthday: {birthday.nick}, at {birthday.next_bday}")
-        try:
-            time.sleep(birthday.seconds_to_bday())
-        except OverflowError:
-            log.info(
-                "Too long sleep length for OS. "
-                f"Restart before next birthday, at {birthday.next_bday}"
-            )
-            break
-        db_connection = database_manager.connect_to_database()
-        response = get_greeting(birthday, db_connection, drop_pics)
+def handle_greet() -> None:
+    db_connection = database_manager.connect_to_database()
+    recipients = get_recipients(db_connection)
+    log.info(f"Recipients today {recipients}")
+    for recipient in recipients:
+        drop_pics = droppics.DropPics(db=db_connection)
+        slack_client = SlackClient(config.slack_bot_user_token)
+        response = get_greeting(recipient, db_connection, drop_pics)
         task.send_response(slack_client, response=response, channel=config.main_channel)
-        db_connection.close()
+    db_connection.close()
+
+
+def get_period_to_morning() -> pendulum.Period:
+    morning_today_tz = pendulum.today(config.tz).add(hours=7)
+    morning_tmrw_tz = pendulum.tomorrow(config.tz).add(hours=7)
+    now_tz = pendulum.now(config.tz)
+    next_greeting_time = (
+        morning_today_tz if morning_today_tz > now_tz else morning_tmrw_tz
+    )
+    until_next = next_greeting_time - now_tz
+    return until_next
 
 
 def main() -> None:
-    db_connection = database_manager.connect_to_database()
-    drop_pics = droppics.DropPics(db=db_connection)
-    slack_client = SlackClient(config.slack_bot_user_token)
-    connected = slack_client.rtm_connect()
-    if not connected:
-        raise Exception("Connection failed. Invalid Slack token or bot ID?")
-
-    handle_congrats(slack_client, drop_pics, db_connection)
+    log.info("GargBot 3000 greeter starter")
+    try:
+        while True:
+            until_next = get_period_to_morning()
+            log.info(
+                f"Next greeting check at: {until_next.end}, "
+                f"sleeping for {until_next.in_words()}"
+            )
+            time.sleep(until_next.seconds)
+            try:
+                handle_greet()
+            except Exception:
+                log.error("Error in command execution", exc_info=True)
+    except KeyboardInterrupt:
+        sys.exit()
