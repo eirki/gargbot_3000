@@ -1,11 +1,15 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
 import datetime as dt
+import itertools
+import time
 from operator import attrgetter
 
 import psycopg2
+from slackclient import SlackClient
 
-from gargbot_3000 import config
+from gargbot_3000 import config, database_manager, droppics, task
+from gargbot_3000.logger import log
 
 mort_picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
 
@@ -83,3 +87,33 @@ def get_greeting(person, db, drop_pics):
     }
 
     return response
+
+
+def handle_congrats(slack_client: SlackClient, drop_pics, db_connection):
+    birthdays = get_birthdays(db_connection)
+    db_connection.close()
+    for birthday in itertools.cycle(birthdays):
+        log.info(f"Next birthday: {birthday.nick}, at {birthday.next_bday}")
+        try:
+            time.sleep(birthday.seconds_to_bday())
+        except OverflowError:
+            log.info(
+                "Too long sleep length for OS. "
+                f"Restart before next birthday, at {birthday.next_bday}"
+            )
+            break
+        db_connection = database_manager.connect_to_database()
+        response = get_greeting(birthday, db_connection, drop_pics)
+        task.send_response(slack_client, response=response, channel=config.main_channel)
+        db_connection.close()
+
+
+def main():
+    db_connection = database_manager.connect_to_database()
+    drop_pics = droppics.DropPics(db=db_connection)
+    slack_client = SlackClient(config.slack_bot_user_token)
+    connected = slack_client.rtm_connect()
+    if not connected:
+        raise Exception("Connection failed. Invalid Slack token or bot ID?")
+
+    handle_congrats(slack_client, drop_pics, db_connection)

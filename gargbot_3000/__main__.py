@@ -2,7 +2,7 @@
 # coding: utf-8
 import argparse
 
-from gargbot_3000 import server, task
+from gargbot_3000 import greetings, server, task
 from gargbot_3000.logger import log
 
 
@@ -19,10 +19,11 @@ def main():
 
         if args.mode == "task":
             task.main()
-
         elif args.mode == "server":
             options = {"bind": "%s%s" % (args.bind, args.port), "workers": args.workers}
             server.main(options=options, debug=args.debug)
+        elif args.mode == "greeter":
+            greetings.main()
         else:
             raise Exception(f"Incorrect mode, {args.mode}")
 

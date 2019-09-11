@@ -1,9 +1,7 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
 import datetime as dt
-import itertools
 import sys
-import threading
 import time
 import typing as t
 from functools import partial
@@ -14,7 +12,7 @@ from psycopg2.extensions import connection
 from slackclient import SlackClient
 from slackclient.server import SlackConnectionError
 
-from gargbot_3000 import commands, config, congrats, database_manager, droppics, quotes
+from gargbot_3000 import commands, config, database_manager, droppics, quotes
 from gargbot_3000.logger import log
 
 
@@ -61,26 +59,6 @@ def send_response(slack_client: SlackClient, response: t.Dict, channel: str):
     slack_client.api_call("chat.postMessage", channel=channel, as_user=True, **response)
 
 
-def handle_congrats(slack_client: SlackClient, drop_pics):
-    db_connection = database_manager.connect_to_database()
-    birthdays = congrats.get_birthdays(db_connection)
-    db_connection.close()
-    for birthday in itertools.cycle(birthdays):
-        log.info(f"Next birthday: {birthday.nick}, at {birthday.next_bday}")
-        try:
-            time.sleep(birthday.seconds_to_bday())
-        except OverflowError:
-            log.info(
-                "Too long sleep length for OS. "
-                f"Restart before next birthday, at {birthday.next_bday}"
-            )
-            break
-        db_connection = database_manager.connect_to_database()
-        response = congrats.get_greeting(birthday, db_connection, drop_pics)
-        send_response(slack_client, response=response, channel=config.main_channel)
-        db_connection.close()
-
-
 def setup() -> t.Tuple[SlackClient, droppics.DropPics, quotes.Quotes, connection]:
     db_connection = database_manager.connect_to_database()
 
@@ -92,12 +70,6 @@ def setup() -> t.Tuple[SlackClient, droppics.DropPics, quotes.Quotes, connection
     connected = slack_client.rtm_connect()
     if not connected:
         raise Exception("Connection failed. Invalid Slack token or bot ID?")
-
-    congrats_thread = threading.Thread(
-        target=handle_congrats, args=(slack_client, drop_pics)
-    )
-    congrats_thread.daemon = True
-    congrats_thread.start()
 
     return slack_client, drop_pics, quotes_db, db_connection
 

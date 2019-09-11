@@ -30,6 +30,19 @@ services:
       - postgres_db
     networks:
       - gargbot_network
+  gargbot_greeter:
+    container_name: gargbot_greeter
+    build: .
+    env_file:
+      - .env
+    environment:
+      - app_version
+    command: "venv/bin/python -m gargbot_3000 --mode greeter"
+    restart: always
+    depends_on:
+      - postgres_db
+    networks:
+      - gargbot_network
   postgres_db:
     container_name: postgres_db
     image: "postgres"
