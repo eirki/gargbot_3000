@@ -3,9 +3,11 @@
 import datetime as dt
 import itertools
 import time
+import typing as t
 from operator import attrgetter
 
 import psycopg2
+from psycopg2.extensions import connection
 from slackclient import SlackClient
 
 from gargbot_3000 import config, database_manager, droppics, task
@@ -15,7 +17,7 @@ mort_picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
 
 
 class Birthday:
-    def __init__(self, nick, slack_id, date):
+    def __init__(self, nick: str, slack_id: str, date: dt.date):
         self.nick = nick
         born_midnight_utc = dt.datetime.combine(date, dt.datetime.min.time())
         born_midnight_local = born_midnight_utc.astimezone(config.tz)
@@ -26,18 +28,18 @@ class Birthday:
     def __repr__(self):
         return f"{self.nick}, {self.age} years. Next bday: {self.next_bday}"
 
-    def seconds_to_bday(self):
+    def seconds_to_bday(self) -> int:
         to_next_bday = self.next_bday - dt.datetime.now(config.tz)
 
-        secs = to_next_bday.total_seconds()
+        secs = int(to_next_bday.total_seconds())
         return secs if secs > 0 else 0
 
     @property
-    def age(self):
+    def age(self) -> int:
         return dt.datetime.now(config.tz).year - self.born.year
 
     @property
-    def next_bday(self):
+    def next_bday(self) -> dt.datetime:
         now = dt.datetime.now(config.tz)
         bday_thisyear = self.born.replace(year=now.year)
         bday_nextyear = self.born.replace(year=now.year + 1)
@@ -45,7 +47,7 @@ class Birthday:
         return next_bday
 
 
-def get_birthdays(db):
+def get_birthdays(db: connection) -> t.List[Birthday]:
     with db.cursor() as cursor:
         sql_command = "SELECT slack_nick, slack_id, bday FROM user_ids"
         cursor.execute(sql_command)
@@ -57,7 +59,7 @@ def get_birthdays(db):
     return birthdays
 
 
-def get_sentence(db):
+def get_sentence(db: connection) -> str:
     with db.cursor() as cursor:
         sql_command = "SELECT sentence FROM congrats ORDER BY RANDOM() LIMIT 1"
         cursor.execute(sql_command)
@@ -66,7 +68,7 @@ def get_sentence(db):
     return sentence
 
 
-def get_greeting(person, db, drop_pics):
+def get_greeting(person: Birthday, db: connection, drop_pics) -> t.Dict:
     sentence = get_sentence(db)
     text = (
         f"Hurra! Vår felles venn <@{person.slack_id}> fyller {person.age} i dag!\n"
@@ -89,7 +91,9 @@ def get_greeting(person, db, drop_pics):
     return response
 
 
-def handle_congrats(slack_client: SlackClient, drop_pics, db_connection):
+def handle_congrats(
+    slack_client: SlackClient, drop_pics: droppics.DropPics, db_connection: connection
+) -> None:
     birthdays = get_birthdays(db_connection)
     db_connection.close()
     for birthday in itertools.cycle(birthdays):
@@ -108,7 +112,7 @@ def handle_congrats(slack_client: SlackClient, drop_pics, db_connection):
         db_connection.close()
 
 
-def main():
+def main() -> None:
     db_connection = database_manager.connect_to_database()
     drop_pics = droppics.DropPics(db=db_connection)
     slack_client = SlackClient(config.slack_bot_user_token)
