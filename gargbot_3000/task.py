@@ -55,7 +55,10 @@ def wait_for_slack_output(slack_client: SlackClient) -> t.Tuple[str, str, str, s
 
 
 def send_response(
-    slack_client: SlackClient, response: t.Dict, channel: str, thread_ts: str
+    slack_client: SlackClient,
+    response: t.Dict,
+    channel: str,
+    thread_ts: t.Optional[str] = None,
 ):
     log.info(dt.datetime.now())
     log.info(f"response: {response}")
