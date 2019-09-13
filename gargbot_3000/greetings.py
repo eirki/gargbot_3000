@@ -90,13 +90,11 @@ def handle_greet() -> None:
 
 
 def get_period_to_morning() -> pendulum.Period:
-    morning_today_tz = pendulum.today(config.tz).add(hours=7)
-    morning_tmrw_tz = pendulum.tomorrow(config.tz).add(hours=7)
-    now_tz = pendulum.now(config.tz)
-    next_greeting_time = (
-        morning_today_tz if morning_today_tz > now_tz else morning_tmrw_tz
-    )
-    until_next = next_greeting_time - now_tz
+    morning_today = pendulum.today(config.tz).add(hours=7)
+    morning_tmrw = pendulum.tomorrow(config.tz).add(hours=7)
+    now = pendulum.now(config.tz)
+    next_greeting_time = morning_today if morning_today > now else morning_tmrw
+    until_next = next_greeting_time - now
     return until_next
 
 
@@ -109,7 +107,7 @@ def main() -> None:
                 f"Next greeting check at: {until_next.end}, "
                 f"sleeping for {until_next.in_words()}"
             )
-            time.sleep(until_next.seconds)
+            time.sleep(until_next.total_seconds())
             try:
                 handle_greet()
             except Exception:
