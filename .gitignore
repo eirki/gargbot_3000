@@ -1,9 +1,17 @@
 .env
 
+postgres-data
+.isort.cfg
+.mypy_cache/
 data/*
 venv/*
 setup/*
+.vscode/
+
 logs/*
+
+node_modules
+dist
 
 *.pyc
 *.pyo
