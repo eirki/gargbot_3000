@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   gargbot_server:
     container_name: gargbot_server
@@ -17,6 +17,8 @@ services:
     networks:
       - gargbot_network
       - nginx_network
+    restart: always
+
   gargbot_worker:
     container_name: gargbot_worker
     build: .
@@ -30,6 +32,7 @@ services:
       - postgres_db
     networks:
       - gargbot_network
+
   gargbot_greeter:
     container_name: gargbot_greeter
     build: .
@@ -43,6 +46,7 @@ services:
       - postgres_db
     networks:
       - gargbot_network
+
   postgres_db:
     container_name: postgres_db
     image: "postgres"
@@ -53,6 +57,7 @@ services:
       - ./postgres-data:/var/lib/postgresql/data
     networks:
       - gargbot_network
+    restart: always
 
 networks:
   nginx_network:
