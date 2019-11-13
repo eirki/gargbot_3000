@@ -9,6 +9,7 @@ from flask import testing
 from psycopg2.extensions import connection
 
 from gargbot_3000 import config, database_manager, server
+from gargbot_3000.droppics import DropPics
 from tests import conftest
 
 
@@ -279,3 +280,14 @@ def test_interactive_gargbot_commands(
         elem["action_id"] for elem in mock_requests.json["blocks"][-1]["elements"]
     }
     assert all(action_id in action_ids for action_id in ["share", "shuffle", "cancel"])
+
+
+@pytest.mark.parametrize("args", [[], ["arg1"], ["arg1", "arg2"]])
+def test_pic_api(
+    client: testing.FlaskClient, args: list, monkeypatch, drop_pics: DropPics
+):
+    monkeypatch.setattr("gargbot_3000.server.app.drop_pics", drop_pics)
+    args_fmt = ",".join(args)
+    response = client.get(f"/pic/{args_fmt}")
+    assert response.status_code == 200
+    assert response.json["url"].startswith("https://")

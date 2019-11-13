@@ -6,7 +6,8 @@ import os
 import typing as t
 
 import requests
-from flask import Flask, Response, render_template, request
+from flask import Flask, Response, jsonify, request
+from flask_cors import cross_origin
 from gunicorn.app.base import BaseApplication
 
 from gargbot_3000 import commands, config, database_manager, droppics, quotes
@@ -233,23 +234,18 @@ def handle_command(command_str: str, args: list) -> dict:
     return result
 
 
-@app.route("/countdown", methods=["GET"])
-def countdown():
-    milli_timestamp = config.countdown_date.timestamp() * 1000
+@app.route("/pic/", methods=["GET"])
+@app.route("/pic/<args>", methods=["GET"])
+@cross_origin()
+def pic(args: t.Optional[str] = None):
+    arg_list = args.split(",") if args is not None else []
     with app.pool.get_db_connection() as db:
-        pic_url, *_ = app.drop_pics.get_pic(db, arg_list=config.countdown_args)
-    return render_template(
-        "countdown.html",
-        date=milli_timestamp,
-        image_url=pic_url,
-        countdown_message=config.countdown_message,
-        ongoing_message=config.ongoing_message,
-        finished_message=config.finished_message,
-    )
+        pic_url, *_ = app.drop_pics.get_pic(db, arg_list=arg_list)
+    return jsonify({"url": pic_url})
 
 
 class StandaloneApplication(BaseApplication):
-    def __init__(self, app, options: t.Dict[str, t.Any] = None):
+    def __init__(self, app, options: t.Dict[str, t.Any] = None) -> None:
         self.options = options if options is not None else {}
         self.application = app
         super().__init__()

@@ -1,5 +1,15 @@
 version: "3"
 services:
+  gargbot_frontend:
+    container_name: gargbot_frontend
+    build: frontend/.
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      - nginx_network
+    restart: always
+
   gargbot_server:
     container_name: gargbot_server
     build: .

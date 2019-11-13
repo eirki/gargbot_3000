@@ -1,6 +1,5 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-import datetime as dt
 import os
 from pathlib import Path
 
@@ -40,7 +39,3 @@ ongoing_message = os.environ["ongoing_message"]
 finished_message = os.environ["finished_message"]
 
 forum_url = os.environ["forum_url"]
-
-countdown_date = dt.datetime.fromtimestamp(int(os.environ["countdown_date"]), tz=tz)
-
-countdown_args = os.environ["countdown_args"].split(", ")

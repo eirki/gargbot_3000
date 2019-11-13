@@ -6,6 +6,7 @@ dropbox
 Pillow
 pytz
 flask
+flask-cors
 gunicorn
 python-dotenv
 bbcode
