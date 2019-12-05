@@ -9,13 +9,14 @@ import requests
 from flask import Flask, Response, render_template, request
 from gunicorn.app.base import BaseApplication
 
-from gargbot_3000 import commands, config, database_manager, droppics, quotes
+from gargbot_3000 import commands, config, database_manager, droppics, health, quotes
 from gargbot_3000.logger import log
 
 app = Flask(__name__)
 app.pool = database_manager.ConnectionPool()
 app.drop_pics = None
 app.quotes_db = None
+app.register_blueprint(health.blueprint)
 
 
 def attach_share_buttons(result: dict, func: str, args: list) -> dict:
@@ -266,6 +267,7 @@ class StandaloneApplication(BaseApplication):
 def main(options: t.Optional[dict], debug: bool = False):
     try:
         app.pool.setup()
+        health.setup_bluebrint()
         with app.pool.get_db_connection() as db:
             app.drop_pics = droppics.DropPics(db=db)
             app.quotes_db = quotes.Quotes(db=db)

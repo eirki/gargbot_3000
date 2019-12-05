@@ -32,7 +32,7 @@ dbx_pic_folder = os.environ["dbx_pic_folder"]
 tz = pytz.timezone(os.environ["tz"])
 
 test_channel = os.environ["test_channel"]
-
+health_channel = os.environ["health_channel"]
 main_channel = os.environ["main_channel"]
 
 countdown_message = os.environ["countdown_message"]
@@ -44,3 +44,7 @@ forum_url = os.environ["forum_url"]
 countdown_date = dt.datetime.fromtimestamp(int(os.environ["countdown_date"]), tz=tz)
 
 countdown_args = os.environ["countdown_args"].split(", ")
+
+fitbit_client_ID = os.environ["fitbit_client_ID"]
+fitbit_client_secret = os.environ["fitbit_client_secret"]
+fitbit_redirect_uri = os.environ["fitbit_redirect_uri"]

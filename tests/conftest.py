@@ -1,6 +1,7 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
 import datetime as dt
+import typing as t
 from collections import namedtuple
 from pathlib import Path
 
@@ -8,6 +9,7 @@ import pytest
 from psycopg2.extensions import connection
 from psycopg2.extras import RealDictCursor
 
+from dataclasses import asdict, dataclass
 from gargbot_3000 import config, droppics
 
 age = 28
@@ -15,20 +17,34 @@ byear = dt.datetime.now(config.tz).year - age
 
 # flake8: noqa
 # fmt: off
-User = namedtuple("TestUser", ["db_id", "name", "slack_id", "slack_nick", "bday", "avatar"])
+@dataclass
+class User:
+    db_id: int
+    first_name: str
+    slack_id: str
+    slack_nick: str
+    bday: dt.datetime
+    avatar: str
+
 users = [
-    User(db_id=2, name="name2", slack_id="s_id2", slack_nick="slack_nick2", bday=dt.datetime(byear, 2, 1), avatar="2.jpg"),
-    User(db_id=3, name="name3", slack_id="s_id3", slack_nick="slack_nick3", bday=dt.datetime(byear, 3, 1), avatar="3.jpg"),
-    User(db_id=5, name="name5", slack_id="s_id5", slack_nick="slack_nick5", bday=dt.datetime(byear, 5, 1), avatar="5.jpg"),
-    User(db_id=6, name="name6", slack_id="s_id6", slack_nick="slack_nick6", bday=dt.datetime(byear, 6, 1), avatar="6.jpg"),
-    User(db_id=7, name="name7", slack_id="s_id7", slack_nick="slack_nick7", bday=dt.datetime(byear, 7, 1), avatar="7.jpg"),
-    User(db_id=9, name="name9", slack_id="s_id9", slack_nick="slack_nick9", bday=dt.datetime(byear, 9, 1), avatar="9.jpg"),
-    User(db_id=10, name="name10", slack_id="s_id10", slack_nick="slack_nick10", bday=dt.datetime(byear, 11, 1), avatar="10.jpg"),
-    User(db_id=11, name="name11", slack_id="s_id11", slack_nick="slack_nick11", bday=dt.datetime(byear, 11, 1), avatar="11.jpg"),
+    User(db_id=2, first_name="name2", slack_id="s_id2", slack_nick="slack_nick2", bday=dt.datetime(byear, 2, 1), avatar="2.jpg"),
+    User(db_id=3, first_name="name3", slack_id="s_id3", slack_nick="slack_nick3", bday=dt.datetime(byear, 3, 1), avatar="3.jpg"),
+    User(db_id=5, first_name="name5", slack_id="s_id5", slack_nick="slack_nick5", bday=dt.datetime(byear, 5, 1), avatar="5.jpg"),
+    User(db_id=6, first_name="name6", slack_id="s_id6", slack_nick="slack_nick6", bday=dt.datetime(byear, 6, 1), avatar="6.jpg"),
+    User(db_id=7, first_name="name7", slack_id="s_id7", slack_nick="slack_nick7", bday=dt.datetime(byear, 7, 1), avatar="7.jpg"),
+    User(db_id=9, first_name="name9", slack_id="s_id9", slack_nick="slack_nick9", bday=dt.datetime(byear, 9, 1), avatar="9.jpg"),
+    User(db_id=10, first_name="name10", slack_id="s_id10", slack_nick="slack_nick10", bday=dt.datetime(byear, 11, 1), avatar="10.jpg"),
+    User(db_id=11, first_name="name11", slack_id="s_id11", slack_nick="slack_nick11", bday=dt.datetime(byear, 11, 1), avatar="11.jpg"),
 ]
 
 
-Pic = namedtuple("TestPic", ["path", "topic", "taken", "faces"])
+@dataclass
+class Pic:
+    path: str
+    topic: str
+    taken: dt.datetime
+    faces: t.List[int]
+
 pics = [
     Pic("path/test_pic1", "topic1", dt.datetime(2001, 1, 1), [2]),
     Pic("path/test_pic2", "topic1", dt.datetime(2002, 2, 2), []),
@@ -41,7 +57,15 @@ pics = [
     Pic("path/test_pic9", "topic3", dt.datetime(2009, 9, 9), [2]),
 ]
 
-Quote = namedtuple("Quote", ["db_id", "post_text", "post_timestamp", "post_id", "bbcode_uid"])
+@dataclass
+class Quote:
+    db_id: int
+    post_text: str
+    post_timestamp: dt.datetime
+    post_id: int
+    bbcode_uid: str
+
+
 quotes = [
     Quote(2, "[b]text2[/b]", dt.datetime.fromtimestamp(1172690211), 3, "1dz6ywqv"),
     Quote(3, "[b]text3[/b]", dt.datetime.fromtimestamp(1172690257), 4, "xw0i6wvy"),
@@ -53,7 +77,16 @@ quotes = [
     Quote(11, "[b]text9[/b]", dt.datetime.fromtimestamp(1172691974), 11, "2v1czw2o"),
 ]
 
-Message = namedtuple("MSN", ["session_id", "msg_time", "msg_color", "from_user", "msg_text", "db_id"])
+@dataclass
+class Message:
+    session_id: str
+    msg_time: dt.datetime
+    msg_color: str
+    from_user: str
+    msg_text: str
+    db_id: int
+
+
 messages = [
     Message("session1", dt.datetime(2004, 12, 8, 18, 12, 50), "#800080", "msn_nick2", "text1_session1", 2),
     Message("session1", dt.datetime(2004, 12, 8, 18, 13, 12), "#541575", "msn_nick3", "text2_session1", 3),
@@ -67,7 +100,11 @@ messages = [
     Message("session3", dt.datetime(2006, 12, 8, 18, 21,  8), "#541575", "msn_nick3", "text4_session3", 3),
 ]
 
-Congrat = namedtuple("Congrats", ["sentence"])
+@dataclass
+class Congrat:
+    sentence: str
+
+
 congrats = [
     Congrat("Test sentence1"),
     Congrat("Test sentence2"),
@@ -76,6 +113,31 @@ congrats = [
     Congrat("Test sentence5"),
 ]
 
+@dataclass
+class FitbitUser:
+    fitbit_id: str
+    db_id: t.Optional[int]
+    access_token: str
+    refresh_token: str
+    expires_at: float
+
+
+fitbit_users = [
+    FitbitUser("fitbit_id1", 2, "access_token1", "refresh_token1", 1573921366.6757),
+    FitbitUser("fitbit_id2", 3, "access_token2", "refresh_token2", 1573921366.6757),
+    FitbitUser("fitbit_id3", None, "access_token3", "refresh_token3", 1573921366.6757),
+    FitbitUser("fitbit_id5", 5, "access_token5", "refresh_token5", 1573921366.6757),
+]
+
+@dataclass
+class HealthReport:
+    db_id: int
+
+
+health_report_users = [
+    HealthReport(2),
+    HealthReport(5)
+]
 # fmt: on
 
 
@@ -86,122 +148,106 @@ class MockDropbox:
         return self.responsetuple("https://" + path)
 
 
-def create_tables(db: connection) -> None:
-    with db.cursor() as cursor:
-        for file in (Path(".") / "schema").iterdir():
-            with open(file) as f:
-                input = f.read()
-            for sql in input.split("\n\n"):
-                cursor.execute(sql)
+def create_tables(cursor: RealDictCursor) -> None:
+    for file in (Path(".") / "schema").iterdir():
+        with open(file) as f:
+            input = f.read()
+        for sql in input.split("\n\n"):
+            cursor.execute(sql)
 
 
-def populate_user_table(db: connection) -> None:
-    with db.cursor() as cursor:
-        for user in users:
-            sql_command = """INSERT INTO faces (db_id, name)
-            VALUES (%(db_id)s,
-                   %(name)s);"""
-            data = {"db_id": user.db_id, "name": user.name}
-            cursor.execute(sql_command, data)
+def populate_user_table(cursor: RealDictCursor) -> None:
+    for user in users:
+        sql_command = """INSERT INTO faces (db_id, name)
+        VALUES (%(db_id)s,
+                %(name)s);"""
+        data = {"db_id": user.db_id, "name": user.first_name}
+        cursor.execute(sql_command, data)
 
-            sql_command = """INSERT INTO user_ids (db_id, slack_id, slack_nick, first_name, bday, avatar)
-            VALUES (%(db_id)s,
-                   %(slack_id)s,
-                   %(slack_nick)s,
-                   %(first_name)s,
-                   %(bday)s,
-                   %(avatar)s);"""
-            data = {
-                "db_id": user.db_id,
-                "slack_id": user.slack_id,
-                "slack_nick": user.slack_nick,
-                "first_name": user.name,
-                "bday": user.bday,
-                "avatar": user.avatar,
-            }
-            cursor.execute(sql_command, data)
+        sql_command = """INSERT INTO user_ids (db_id, slack_id, slack_nick, first_name, bday, avatar)
+        VALUES (%(db_id)s,
+                %(slack_id)s,
+                %(slack_nick)s,
+                %(first_name)s,
+                %(bday)s,
+                %(avatar)s);"""
+        cursor.execute(sql_command, asdict(user))
 
 
-def populate_pics_table(db: connection) -> None:
-    with db.cursor() as cursor:
-        for pic in pics:
-            sql_command = """INSERT INTO dbx_pictures (path, topic, taken)
-            VALUES (%(path)s,
-                   %(topic)s,
-                   %(taken)s);"""
-            data = {"path": pic.path, "topic": pic.topic, "taken": pic.taken}
-            cursor.execute(sql_command, data)
+def populate_pics_table(cursor: RealDictCursor) -> None:
+    for pic in pics:
+        sql_command = """INSERT INTO dbx_pictures (path, topic, taken)
+        VALUES (%(path)s,
+                %(topic)s,
+                %(taken)s);"""
+        data = {"path": pic.path, "topic": pic.topic, "taken": pic.taken}
+        cursor.execute(sql_command, data)
 
-    with db.cursor() as cursor:
-        for pic in pics:
-            sql_command = "SELECT pic_id FROM dbx_pictures WHERE path = %(path)s"
-            data = {"path": pic.path}
-            cursor.execute(sql_command, data)
-            pic_id = cursor.fetchone()["pic_id"]
-            for db_id in pic.faces:
-                sql_command = (
-                    "INSERT INTO dbx_pictures_faces (db_id, pic_id)"
-                    "VALUES (%(db_id)s, %(pic_id)s);"
-                )
-                data = {"db_id": db_id, "pic_id": pic_id}
-                cursor.execute(sql_command, data)
-
-
-def populate_quotes_table(db: connection) -> None:
-    with db.cursor() as cursor:
-        for quote in quotes:
-            sql_command = """INSERT INTO phpbb_posts (db_id, post_id, post_timestamp, post_text, bbcode_uid)
-            VALUES (%(db_id)s,
-                   %(post_id)s,
-                   %(post_timestamp)s,
-                   %(post_text)s,
-                   %(bbcode_uid)s);"""
-            data = {
-                "db_id": quote.db_id,
-                "post_id": quote.post_id,
-                "post_timestamp": quote.post_timestamp,
-                "post_text": quote.post_text,
-                "bbcode_uid": quote.bbcode_uid,
-            }
-            cursor.execute(sql_command, data)
-        for message in messages:
-            sql_command = """INSERT INTO msn_messages (session_id, msg_time, msg_color, from_user, msg_text, db_id)
-            VALUES (%(session_id)s,
-                   %(msg_time)s,
-                   %(msg_color)s,
-                   %(from_user)s,
-                   %(msg_text)s,
-                   %(db_id)s);"""
-            data = {
-                "session_id": message.session_id,
-                "msg_time": message.msg_time,
-                "msg_color": message.msg_color,
-                "from_user": message.from_user,
-                "msg_text": message.msg_text,
-                "db_id": message.db_id,
-            }
+    for pic in pics:
+        sql_command = "SELECT pic_id FROM dbx_pictures WHERE path = %(path)s"
+        data = {"path": pic.path}
+        cursor.execute(sql_command, data)
+        pic_id = cursor.fetchone()["pic_id"]
+        for db_id in pic.faces:
+            sql_command = (
+                "INSERT INTO dbx_pictures_faces (db_id, pic_id)"
+                "VALUES (%(db_id)s, %(pic_id)s);"
+            )
+            data = {"db_id": db_id, "pic_id": pic_id}
             cursor.execute(sql_command, data)
 
 
-def populate_congrats_table(db: connection) -> None:
-    with db.cursor() as cursor:
-        for congrat in congrats:
-            sql_command = """INSERT INTO congrats (sentence)
-            VALUES (%(sentence)s);"""
-            data = {"sentence": congrat.sentence}
-            cursor.execute(sql_command, data)
+def populate_quotes_table(cursor: RealDictCursor) -> None:
+    for quote in quotes:
+        sql_command = """INSERT INTO phpbb_posts (db_id, post_id, post_timestamp, post_text, bbcode_uid)
+        VALUES (%(db_id)s,
+                %(post_id)s,
+                %(post_timestamp)s,
+                %(post_text)s,
+                %(bbcode_uid)s);"""
+        cursor.execute(sql_command, asdict(quote))
+    for message in messages:
+        sql_command = """INSERT INTO msn_messages (session_id, msg_time, msg_color, from_user, msg_text, db_id)
+        VALUES (%(session_id)s,
+                %(msg_time)s,
+                %(msg_color)s,
+                %(from_user)s,
+                %(msg_text)s,
+                %(db_id)s);"""
+        cursor.execute(sql_command, asdict(message))
 
 
-@pytest.fixture
+def populate_congrats_table(cursor: RealDictCursor) -> None:
+    for congrat in congrats:
+        sql_command = "INSERT INTO congrats (sentence) VALUES (%(sentence)s);"
+        cursor.execute(sql_command, asdict(congrat))
+
+
+def populate_health_table(cursor: RealDictCursor) -> None:
+    for fitbit_user in fitbit_users:
+        sql_command = """INSERT INTO fitbit (fitbit_id, db_id, access_token, refresh_token, expires_at)
+        VALUES (%(fitbit_id)s,
+                %(db_id)s,
+                %(access_token)s,
+                %(refresh_token)s,
+                %(expires_at)s);"""
+        cursor.execute(sql_command, asdict(fitbit_user))
+    for health_report_user in health_report_users:
+        sql_command = "INSERT INTO health_report (db_id) VALUES (%(db_id)s);"
+        cursor.execute(sql_command, asdict(health_report_user))
+
+
+@pytest.fixture()
 def db_connection(postgresql: connection):
-    db = postgresql
-    db.cursor_factory = RealDictCursor
-    create_tables(db)
-    populate_user_table(db)
-    populate_pics_table(db)
-    populate_quotes_table(db)
-    populate_congrats_table(db)
-    yield db
+    postgresql.cursor_factory = RealDictCursor
+    with postgresql.cursor() as cursor:
+        create_tables(cursor)
+        populate_user_table(cursor)
+        populate_pics_table(cursor)
+        populate_quotes_table(cursor)
+        populate_congrats_table(cursor)
+        populate_health_table(cursor)
+    yield postgresql
 
 
 @pytest.fixture

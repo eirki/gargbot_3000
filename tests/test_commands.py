@@ -20,7 +20,7 @@ def test_cmd_hvem(db_connection: connection):
     arg_list = ["is", "it?"]
     response = commands.cmd_hvem(arg_list, db_connection)
     text = response["text"]
-    assert any(text.startswith(user.name) for user in conftest.users)
+    assert any(text.startswith(user.first_name) for user in conftest.users)
     assert text.endswith("!")
 
 

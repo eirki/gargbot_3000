@@ -12,3 +12,5 @@ bbcode
 html-slacker
 pyopenssl
 pendulum
+fitbit
+wtforms

@@ -12,7 +12,7 @@ def test_finds_recipient(db_connection: connection) -> None:
     chosen_user = conftest.users[0]
     test_now = pendulum.instance(chosen_user.bday, tz=config.tz).add(years=conftest.age)
     pendulum.set_test_now(test_now)
-    recipients = greetings.get_recipients(db_connection)
+    recipients = greetings.Recipient.get_todays(db_connection)
     assert len(recipients) == 1
     recipient = recipients[0]
     assert recipient.nick == chosen_user.slack_nick
@@ -24,7 +24,7 @@ def test_finds_2_recipients(db_connection: connection) -> None:
     chosen_user = conftest.users[7]
     test_now = pendulum.instance(chosen_user.bday, tz=config.tz).add(years=conftest.age)
     pendulum.set_test_now(test_now)
-    recipients = greetings.get_recipients(db_connection)
+    recipients = greetings.Recipient.get_todays(db_connection)
     assert len(recipients) == 2
 
 
@@ -33,7 +33,7 @@ def test_congrat(db_connection: connection, drop_pics: DropPics) -> None:
     recipient = greetings.Recipient(
         nick=chosen_user.slack_nick, slack_id=chosen_user.slack_id, age=conftest.age
     )
-    response = greetings.get_greeting(recipient, db_connection, drop_pics)
+    response = recipient.get_greeting(db_connection, drop_pics)
     image_url = response["blocks"][1]["image_url"]
     response_pic = next(pic for pic in conftest.pics if image_url.endswith(pic.path))
     assert chosen_user.slack_id in response["text"]
