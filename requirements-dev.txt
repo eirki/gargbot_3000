@@ -1,5 +1,6 @@
 pytest
 pytest-postgresql
+pytest-cov
 pre-commit==1.14.4
 black
 mypy
