@@ -49,7 +49,8 @@ def handle_redirect():
     blueprint.fitbit.client.fetch_access_token(code)
     token = blueprint.fitbit.client.session.token
     persist_token(token)
-    return redirect(url_for("health.whoisyou", fitbit_id=token["user_id"]))
+    url = url_for("health.whoisyou", fitbit_id=token["user_id"], _external=True)
+    return redirect(url)
 
 
 class WhoIsForm(Form):

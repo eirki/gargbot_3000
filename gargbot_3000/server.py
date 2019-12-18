@@ -8,12 +8,13 @@ import typing as t
 import requests
 from flask import Flask, Response, render_template, request
 from gunicorn.app.base import BaseApplication
+from werkzeug.contrib.fixers import ProxyFix
 
 from gargbot_3000 import commands, config, database_manager, droppics, health, quotes
 from gargbot_3000.logger import log
 
 app = Flask(__name__)
-app.config["SERVER_NAME"] = config.server_name
+app.wsgi_app = ProxyFix(app.wsgi_app)  # type: ignore
 app.pool = database_manager.ConnectionPool()
 app.drop_pics = None
 app.quotes_db = None
