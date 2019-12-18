@@ -110,14 +110,13 @@ def main() -> None:
                 recipients = Recipient.get_todays(db_connection)
                 log.info(f"Recipients today {recipients}")
                 for recipient in recipients:
-                    response = recipient.send_greet(db_connection)
+                    greet = recipient.send_greet(db_connection)
+                    task.send_response(slack_client, greet, channel=config.main_channel)
+                report = health.send_daily_report(db_connection)
+                if report is not None:
                     task.send_response(
-                        slack_client, response, channel=config.main_channel
+                        slack_client, report, channel=config.health_channel
                     )
-                response = health.send_daily_report(db_connection)
-                task.send_response(
-                    slack_client, response, channel=config.health_channel
-                )
                 db_connection.close()
             except Exception:
                 log.error("Error in command execution", exc_info=True)
