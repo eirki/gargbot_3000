@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 env_path = Path(".") / ".env"
 load_dotenv(dotenv_path=env_path)
 
+server_name = os.environ.get("SERVER_NAME")
+
 slack_verification_token = os.environ["slack_verification_token"]
 slack_bot_user_token = os.environ["slack_bot_user_token"]
 bot_id = os.environ["bot_id"]

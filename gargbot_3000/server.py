@@ -13,6 +13,7 @@ from gargbot_3000 import commands, config, database_manager, droppics, health, q
 from gargbot_3000.logger import log
 
 app = Flask(__name__)
+app.config["SERVER_NAME"] = config.server_name
 app.pool = database_manager.ConnectionPool()
 app.drop_pics = None
 app.quotes_db = None
