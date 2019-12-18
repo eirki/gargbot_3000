@@ -10,7 +10,7 @@ from psycopg2.extensions import connection
 from psycopg2.extras import RealDictCursor
 
 from dataclasses import asdict, dataclass
-from gargbot_3000 import config, droppics
+from gargbot_3000 import config, droppics, health
 
 age = 28
 byear = dt.datetime.now(config.tz).year - age
@@ -131,12 +131,12 @@ fitbit_users = [
 
 @dataclass
 class HealthReport:
-    db_id: int
+    fitbit_id: str
 
 
 health_report_users = [
-    HealthReport(2),
-    HealthReport(5)
+    HealthReport("fitbit_id1"),
+    HealthReport("fitbit_id5")
 ]
 # fmt: on
 
@@ -150,6 +150,8 @@ class MockDropbox:
 
 def create_tables(cursor: RealDictCursor) -> None:
     for file in (Path(".") / "schema").iterdir():
+        if file.stem == "health":
+            continue
         with open(file) as f:
             input = f.read()
         for sql in input.split("\n\n"):
@@ -223,18 +225,24 @@ def populate_congrats_table(cursor: RealDictCursor) -> None:
         cursor.execute(sql_command, asdict(congrat))
 
 
-def populate_health_table(cursor: RealDictCursor) -> None:
+def populate_health_table(conn: connection) -> None:
+    health.queries.create_schema(conn)
     for fitbit_user in fitbit_users:
-        sql_command = """INSERT INTO fitbit (fitbit_id, db_id, access_token, refresh_token, expires_at)
-        VALUES (%(fitbit_id)s,
-                %(db_id)s,
-                %(access_token)s,
-                %(refresh_token)s,
-                %(expires_at)s);"""
-        cursor.execute(sql_command, asdict(fitbit_user))
+        health.queries.persist_token(
+            conn,
+            user_id=fitbit_user.fitbit_id,
+            access_token=fitbit_user.access_token,
+            refresh_token=fitbit_user.refresh_token,
+            expires_at=fitbit_user.expires_at,
+        )
+        if fitbit_user.db_id is None:
+            continue
+        health.queries.match_ids(
+            conn, fitbit_id=fitbit_user.fitbit_id, db_id=fitbit_user.db_id
+        )
     for health_report_user in health_report_users:
-        sql_command = "INSERT INTO health_report (db_id) VALUES (%(db_id)s);"
-        cursor.execute(sql_command, asdict(health_report_user))
+        sql_command = "INSERT INTO health_report (fitbit_id) VALUES (%(fitbit_id)s);"
+        conn.cursor().execute(sql_command, asdict(health_report_user))
 
 
 @pytest.fixture()
@@ -246,7 +254,7 @@ def db_connection(postgresql: connection):
         populate_pics_table(cursor)
         populate_quotes_table(cursor)
         populate_congrats_table(cursor)
-        populate_health_table(cursor)
+    populate_health_table(postgresql)
     yield postgresql
 
 

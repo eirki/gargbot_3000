@@ -14,3 +14,4 @@ pyopenssl
 pendulum
 fitbit
 wtforms
+aiosql
