@@ -5,6 +5,7 @@ import time
 import typing as t
 from functools import partial
 
+import aiosql
 import dropbox
 import psycopg2
 from psycopg2.extensions import connection
@@ -12,6 +13,8 @@ from requests.exceptions import SSLError
 
 from gargbot_3000 import droppics, quotes
 from gargbot_3000.logger import log
+
+queries = aiosql.from_path("schema/user_ids.sql", "psycopg2")
 
 
 def prettify_date(date: dt.datetime) -> str:

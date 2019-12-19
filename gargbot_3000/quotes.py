@@ -7,11 +7,15 @@ import re
 import typing as t
 from operator import itemgetter
 
+import aiosql
 import bbcode
 from htmlslacker import HTMLSlacker
 from psycopg2.extensions import connection
 
 from gargbot_3000 import config
+
+forum_queries = aiosql.from_path("schema/phpbb_posts.sql", "psycopg2")
+msn_queries = aiosql.from_path("schema/msn_messages.sql", "psycopg2")
 
 
 class Quotes:

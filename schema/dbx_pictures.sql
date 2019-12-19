@@ -1,22 +1,30 @@
-DROP TABLE IF EXISTS dbx_pictures;
-
-CREATE TABLE dbx_pictures (
-	path TEXT,
-	topic TEXT,
-	taken TIMESTAMP,
-	pic_id SERIAL PRIMARY KEY
+-- name: create_schema#
+create table dbx_pictures (
+    path text,
+    topic text,
+    taken timestamp,
+    pic_id serial primary key
 );
 
-DROP TABLE IF EXISTS faces;
 
-CREATE TABLE faces (
-	db_id SMALLINT NOT NULL PRIMARY KEY,
-	name TEXT
+create table faces (
+    db_id smallint not null primary key,
+    name text
 );
 
-DROP TABLE IF EXISTS dbx_pictures_faces;
 
-CREATE TABLE dbx_pictures_faces (
-	db_id SMALLINT,
-	pic_id SMALLINT
-);
+create table dbx_pictures_faces (db_id smallint, pic_id smallint);
+
+
+--name: add_picture<!
+insert into
+    dbx_pictures (path, topic, taken)
+values
+    (:path, :topic, :taken) returning pic_id;
+
+
+--name: add_faces*!
+insert into
+    dbx_pictures_faces (db_id, pic_id)
+values
+    (:db_id, :pic_id);

@@ -4,6 +4,7 @@ import sys
 import time
 import typing as t
 
+import aiosql
 import pendulum
 import psycopg2
 from psycopg2.extensions import connection
@@ -12,6 +13,8 @@ from slackclient import SlackClient
 from dataclasses import dataclass
 from gargbot_3000 import config, database_manager, droppics, health, task
 from gargbot_3000.logger import log
+
+queries = aiosql.from_path("schema/congrats.sql", "psycopg2")
 
 mort_picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
 

@@ -1,11 +1,38 @@
-DROP TABLE IF EXISTS user_ids;
-CREATE TABLE user_ids (
-  db_id SMALLINT NOT NULL PRIMARY KEY,
-  slack_id TEXT,
-  slack_nick TEXT,
-  first_name TEXT,
-  bday DATE NOT NULL,
-  avatar TEXT,
-  slack_avatar TEXT,
-  fitbit_id TEXT UNIQUE
+-- name: create_schema#
+create table user_ids (
+  db_id smallint not null primary key,
+  slack_id text,
+  slack_nick text,
+  first_name text,
+  bday date not null,
+  avatar text,
+  slack_avatar text,
+  fitbit_id text unique
 );
+
+
+--name: add_users*!
+insert into
+  user_ids (
+    db_id,
+    slack_id,
+    slack_nick,
+    first_name,
+    bday,
+    avatar
+  )
+values
+  (
+    :db_id,
+    :slack_id,
+    :slack_nick,
+    :first_name,
+    :bday,
+    :avatar
+  );
+
+
+insert into
+  faces (db_id, name)
+values
+  (:db_id, :first_name);

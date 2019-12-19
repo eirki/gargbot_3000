@@ -6,12 +6,15 @@ import itertools
 import random
 import typing as t
 
+import aiosql
 import dropbox
 from psycopg2.extensions import connection
 
 from gargbot_3000 import config
 from gargbot_3000.database_manager import LoggingCursor
 from gargbot_3000.logger import log
+
+queries = aiosql.from_path("schema/dbx_pictures.sql", "psycopg2")
 
 
 class DropPics:

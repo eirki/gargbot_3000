@@ -10,7 +10,7 @@ from psycopg2.extensions import connection
 from psycopg2.extras import RealDictCursor
 
 from dataclasses import asdict, dataclass
-from gargbot_3000 import config, droppics, health
+from gargbot_3000 import commands, config, droppics, greetings, health, quotes
 
 age = 28
 byear = dt.datetime.now(config.tz).year - age
@@ -58,7 +58,7 @@ pics = [
 ]
 
 @dataclass
-class Quote:
+class ForumPost:
     db_id: int
     post_text: str
     post_timestamp: dt.datetime
@@ -66,15 +66,15 @@ class Quote:
     bbcode_uid: str
 
 
-quotes = [
-    Quote(2, "[b]text2[/b]", dt.datetime.fromtimestamp(1172690211), 3, "1dz6ywqv"),
-    Quote(3, "[b]text3[/b]", dt.datetime.fromtimestamp(1172690257), 4, "xw0i6wvy"),
-    Quote(5, "[b]text4[/b]", dt.datetime.fromtimestamp(1172690319), 5, "3ntrk0df"),
-    Quote(6, "[b]text5[/b]", dt.datetime.fromtimestamp(1172690396), 6, "1qmz5uwv"),
-    Quote(7, "[b]text6[/b]", dt.datetime.fromtimestamp(1172690466), 7, "2xuife66"),
-    Quote(9, "[b]text7[/b]", dt.datetime.fromtimestamp(1172690486), 8, "2wpgc113"),
-    Quote(10, "[b]text8[/b]", dt.datetime.fromtimestamp(1172690875), 9, "240k4drr"),
-    Quote(11, "[b]text9[/b]", dt.datetime.fromtimestamp(1172691974), 11, "2v1czw2o"),
+forum_posts = [
+    ForumPost(2, "[b]text2[/b]", dt.datetime.fromtimestamp(1172690211), 3, "1dz6ywqv"),
+    ForumPost(3, "[b]text3[/b]", dt.datetime.fromtimestamp(1172690257), 4, "xw0i6wvy"),
+    ForumPost(5, "[b]text4[/b]", dt.datetime.fromtimestamp(1172690319), 5, "3ntrk0df"),
+    ForumPost(6, "[b]text5[/b]", dt.datetime.fromtimestamp(1172690396), 6, "1qmz5uwv"),
+    ForumPost(7, "[b]text6[/b]", dt.datetime.fromtimestamp(1172690466), 7, "2xuife66"),
+    ForumPost(9, "[b]text7[/b]", dt.datetime.fromtimestamp(1172690486), 8, "2wpgc113"),
+    ForumPost(10, "[b]text8[/b]", dt.datetime.fromtimestamp(1172690875), 9, "240k4drr"),
+    ForumPost(11, "[b]text9[/b]", dt.datetime.fromtimestamp(1172691974), 11, "2v1czw2o"),
 ]
 
 @dataclass
@@ -148,81 +148,36 @@ class MockDropbox:
         return self.responsetuple("https://" + path)
 
 
-def create_tables(cursor: RealDictCursor) -> None:
-    for file in (Path(".") / "schema").iterdir():
-        if file.stem == "health":
-            continue
-        with open(file) as f:
-            input = f.read()
-        for sql in input.split("\n\n"):
-            cursor.execute(sql)
+def populate_user_table(conn: connection) -> None:
+    commands.queries.create_schema(conn)
+    user_dicts = [asdict(user) for user in users]
+    commands.queries.add_users(conn, user_dicts)
 
 
-def populate_user_table(cursor: RealDictCursor) -> None:
-    for user in users:
-        sql_command = """INSERT INTO faces (db_id, name)
-        VALUES (%(db_id)s,
-                %(name)s);"""
-        data = {"db_id": user.db_id, "name": user.first_name}
-        cursor.execute(sql_command, data)
-
-        sql_command = """INSERT INTO user_ids (db_id, slack_id, slack_nick, first_name, bday, avatar)
-        VALUES (%(db_id)s,
-                %(slack_id)s,
-                %(slack_nick)s,
-                %(first_name)s,
-                %(bday)s,
-                %(avatar)s);"""
-        cursor.execute(sql_command, asdict(user))
-
-
-def populate_pics_table(cursor: RealDictCursor) -> None:
+def populate_pics_table(conn: connection) -> None:
+    droppics.queries.create_schema(conn)
     for pic in pics:
-        sql_command = """INSERT INTO dbx_pictures (path, topic, taken)
-        VALUES (%(path)s,
-                %(topic)s,
-                %(taken)s);"""
-        data = {"path": pic.path, "topic": pic.topic, "taken": pic.taken}
-        cursor.execute(sql_command, data)
-
-    for pic in pics:
-        sql_command = "SELECT pic_id FROM dbx_pictures WHERE path = %(path)s"
-        data = {"path": pic.path}
-        cursor.execute(sql_command, data)
-        pic_id = cursor.fetchone()["pic_id"]
-        for db_id in pic.faces:
-            sql_command = (
-                "INSERT INTO dbx_pictures_faces (db_id, pic_id)"
-                "VALUES (%(db_id)s, %(pic_id)s);"
-            )
-            data = {"db_id": db_id, "pic_id": pic_id}
-            cursor.execute(sql_command, data)
+        pic_id = droppics.queries.add_picture(
+            conn, path=pic.path, topic=pic.topic, taken=pic.taken
+        )
+        faces = [{"pic_id": pic_id, "db_id": db_id} for db_id in pic.faces]
+        droppics.queries.add_faces(conn, faces)
 
 
-def populate_quotes_table(cursor: RealDictCursor) -> None:
-    for quote in quotes:
-        sql_command = """INSERT INTO phpbb_posts (db_id, post_id, post_timestamp, post_text, bbcode_uid)
-        VALUES (%(db_id)s,
-                %(post_id)s,
-                %(post_timestamp)s,
-                %(post_text)s,
-                %(bbcode_uid)s);"""
-        cursor.execute(sql_command, asdict(quote))
-    for message in messages:
-        sql_command = """INSERT INTO msn_messages (session_id, msg_time, msg_color, from_user, msg_text, db_id)
-        VALUES (%(session_id)s,
-                %(msg_time)s,
-                %(msg_color)s,
-                %(from_user)s,
-                %(msg_text)s,
-                %(db_id)s);"""
-        cursor.execute(sql_command, asdict(message))
+def populate_quotes_table(conn: connection) -> None:
+    quotes.forum_queries.create_schema(conn)
+    post_dicts = [asdict(post) for post in forum_posts]
+    quotes.forum_queries.add_posts(conn, post_dicts)
+
+    quotes.msn_queries.create_schema(conn)
+    message_dicts = [asdict(message) for message in messages]
+    quotes.msn_queries.add_messages(conn, message_dicts)
 
 
-def populate_congrats_table(cursor: RealDictCursor) -> None:
-    for congrat in congrats:
-        sql_command = "INSERT INTO congrats (sentence) VALUES (%(sentence)s);"
-        cursor.execute(sql_command, asdict(congrat))
+def populate_congrats_table(conn: connection) -> None:
+    greetings.queries.create_schema(conn)
+    congrat_dicts = [asdict(congrat) for congrat in congrats]
+    greetings.queries.add_congrats(conn, congrat_dicts)
 
 
 def populate_health_table(conn: connection) -> None:
@@ -247,14 +202,12 @@ def populate_health_table(conn: connection) -> None:
 
 @pytest.fixture()
 def db_connection(postgresql: connection):
-    postgresql.cursor_factory = RealDictCursor
-    with postgresql.cursor() as cursor:
-        create_tables(cursor)
-        populate_user_table(cursor)
-        populate_pics_table(cursor)
-        populate_quotes_table(cursor)
-        populate_congrats_table(cursor)
+    populate_pics_table(postgresql)
+    populate_user_table(postgresql)
+    populate_quotes_table(postgresql)
+    populate_congrats_table(postgresql)
     populate_health_table(postgresql)
+    postgresql.cursor_factory = RealDictCursor
     yield postgresql
 
 

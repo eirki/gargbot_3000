@@ -1,5 +1,9 @@
-DROP TABLE IF EXISTS congrats;
+-- name: create_schema#
+create table congrats (sentence text);
 
-CREATE TABLE congrats (
-	sentence TEXT
-);
+
+--name: add_congrats*!
+insert into
+    congrats (sentence)
+values
+    (:sentence);
