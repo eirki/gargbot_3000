@@ -8,7 +8,7 @@ import typing as t
 import requests
 from flask import Flask, Response, render_template, request
 from gunicorn.app.base import BaseApplication
-from werkzeug.contrib.fixers import ProxyFix
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from gargbot_3000 import commands, config, database_manager, droppics, health, quotes
 from gargbot_3000.logger import log
