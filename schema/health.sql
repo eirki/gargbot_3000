@@ -41,6 +41,13 @@ values
   (:fitbit_id);
 
 
+--name: disable_daily_report!
+delete from
+  health_report
+where
+  fitbit_id = :fitbit_id;
+
+
 -- name: match_ids!
 update
   user_ids
@@ -56,6 +63,15 @@ set
   fitbit_id = :fitbit_id
 where
   db_id = :db_id;
+
+
+-- name: is_id_matched^
+select
+  true
+from
+  user_ids
+where
+  fitbit_id = :fitbit_id;
 
 
 -- name: get_all_fitbit_tokens

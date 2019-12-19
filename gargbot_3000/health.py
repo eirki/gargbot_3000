@@ -70,13 +70,18 @@ def whoisyou(fitbit_id: str):
             return abort(403)
         form = WhoIsForm(request.form)
         if request.method == "POST":
+            if form.report.data == "yes":
+                queries.enable_daily_report(conn, fitbit_id=fitbit_id)
+            elif form.report.data == "no":
+                queries.disable_daily_report(conn, fitbit_id=fitbit_id)
             db_id = form.name.data
             if db_id != "":
                 queries.match_ids(conn, db_id=db_id, fitbit_id=fitbit_id)
-                if form.report.data == "yes":
-                    queries.enable_daily_report(conn, fitbit_id=fitbit_id)
                 conn.commit()
                 return "Fumbs up!"
+            else:
+                if queries.is_id_matched(conn, fitbit_id=fitbit_id):
+                    return "Fumbs up!"
         data = queries.get_nicks_ids(conn)
         form.name.choices.extend([(row["db_id"], row["slack_nick"]) for row in data])
     return render_template("whoisyou.html", form=form)
@@ -95,7 +100,7 @@ def persist_token(token: t.Dict) -> None:
 
 
 def parse_report_args(
-    conn: db.connection, args: t.List[str], all_topics: t.Set[str],
+    conn: db.connection, args: t.List[str], all_topics: t.Set[str]
 ) -> t.Tuple[t.Set[str], t.List[dict], t.Set[str], t.Set[str]]:
     topics = all_topics.intersection(args)
 
@@ -174,7 +179,7 @@ def report(args: t.Optional[t.List[str]], conn: db.connection):
 
     if args:
         topics, tokens, users_nonauthed, invalid_args = parse_report_args(
-            conn, args, all_topics,
+            conn, args, all_topics
         )
     if not topics:
         topics = all_topics

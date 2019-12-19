@@ -90,7 +90,7 @@ def test_who_is_you_form(
 
 
 def test_who_is_you_reask(client: testing.FlaskClient, db_connection: connection):
-    fitbut_user = conftest.fitbit_users[1]
+    fitbut_user = conftest.fitbit_users[2]
     print(fitbut_user)
     form = health.WhoIsForm()
     form.name.data = ""
@@ -151,9 +151,7 @@ def test_parse_report_args(
         token["slack_nick"] = slack_nick
         tokens.append(token)
 
-    res = health.parse_report_args(
-        conn=db_connection, args=args, all_topics=all_topics,
-    )
+    res = health.parse_report_args(conn=db_connection, args=args, all_topics=all_topics)
     assert res[0] == set(topics)
     assert res[1] == tokens
     assert res[2] == set(non_authed)
