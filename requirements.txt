@@ -23,7 +23,7 @@ markupsafe==1.1.1         # via jinja2
 oauthlib==3.1.0           # via requests-oauthlib
 pendulum==2.0.5
 pillow==6.2.1
-psycopg2==2.8.4
+psycopg2-binary==2.8.4
 pycparser==2.19           # via cffi
 pyopenssl==19.1.0
 python-dateutil==2.8.1    # via fitbit, pendulum
