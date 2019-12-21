@@ -38,7 +38,7 @@ def setup_bluebrint():
 
 @blueprint.route("/fitbit-auth", methods=["GET"])
 def authorize_user():
-    scope = ["activity", "heartrate", "profile", "sleep", "weight"]
+    scope = ["activity", "heartrate", "sleep", "weight"]
     url, _ = blueprint.fitbit.client.authorize_token_url(scope=scope)
     return redirect(url)
 
