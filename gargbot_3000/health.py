@@ -137,7 +137,7 @@ def init_fitbit_clients(tokens: t.List[dict]) -> t.Dict[str, Fitbit]:
 
 
 def get_weight(client: Fitbit) -> dict:
-    data = client.get_bodyweight(period="1m")
+    data = client.get_bodyweight()
     rec = data["weight"][0]
     date_obj = pendulum.parse(f"{rec['date']}T{rec['time']}")
     rec["datetime"] = date_obj
