@@ -171,7 +171,7 @@ def test_daily_report(mock_Fitbit: Mock, db_connection: connection):
             {"date": pendulum.now().to_date_string(), "time": "10:11:12", "weight": 100}
         ]
     }
-    response = health.send_daily_report(db_connection)
+    response = health.get_daily_report(db_connection)
     assert response is not None
     print(response)
     num_users = 2

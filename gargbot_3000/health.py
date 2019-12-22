@@ -201,7 +201,7 @@ def report(args: t.Optional[t.List[str]], conn: db.connection):
     return data, invalid_args, users_nonauthed
 
 
-def send_daily_report(conn: db.connection) -> t.Optional[dict]:
+def get_daily_report(conn: db.connection) -> t.Optional[dict]:
     tokens = queries.get_daily_report_tokens(conn)
     if not tokens:
         return None

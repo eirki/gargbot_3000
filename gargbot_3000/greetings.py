@@ -82,7 +82,7 @@ class Recipient:
         sentence = result["sentence"]
         return sentence
 
-    def send_greet(self, db_connection: connection) -> dict:
+    def get_greet(self, db_connection: connection) -> dict:
         drop_pics = droppics.DropPics(db=db_connection)
         response = self.get_greeting(db_connection, drop_pics)
         return response
@@ -113,9 +113,9 @@ def main() -> None:
                 recipients = Recipient.get_todays(db_connection)
                 log.info(f"Recipients today {recipients}")
                 for recipient in recipients:
-                    greet = recipient.send_greet(db_connection)
+                    greet = recipient.get_greet(db_connection)
                     task.send_response(slack_client, greet, channel=config.main_channel)
-                report = health.send_daily_report(db_connection)
+                report = health.get_daily_report(db_connection)
                 if report is not None:
                     task.send_response(
                         slack_client, report, channel=config.health_channel
