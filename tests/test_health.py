@@ -178,3 +178,14 @@ def test_daily_report(mock_Fitbit: Mock, db_connection: connection):
     assert len(response["blocks"]) == num_users + 1
     assert any("*100* kg" in block["text"]["text"] for block in response["blocks"])
     assert all("*50* kg" not in block["text"]["text"] for block in response["blocks"])
+
+
+@patch.object(health, "Fitbit")
+def test_daily_report_no_data(mock_Fitbit: Mock, db_connection: connection):
+    instance1 = Mock()
+    instance2 = Mock()
+    mock_Fitbit.side_effect = [instance1, instance2]
+    instance1.get_bodyweight.return_value = {"weight": []}
+    instance2.get_bodyweight.return_value = {"weight": []}
+    response = health.get_daily_report(db_connection)
+    assert response is None

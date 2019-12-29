@@ -136,9 +136,13 @@ def init_fitbit_clients(tokens: t.List[dict]) -> t.Dict[str, Fitbit]:
     return clients
 
 
-def get_weight(client: Fitbit) -> dict:
-    data = client.get_bodyweight()
-    rec = data["weight"][0]
+def get_weight(client: Fitbit) -> t.Optional[dict]:
+    data = client.get_bodyweight(period="7d")
+    try:
+        rec = data["weight"][0]
+    except IndexError:
+        log.info("No weight data")
+        return None
     date_obj = pendulum.parse(f"{rec['date']}T{rec['time']}")
     rec["datetime"] = date_obj
     log.info(f"weight data: {rec}")
@@ -206,17 +210,20 @@ def get_daily_report(conn: db.connection) -> t.Optional[dict]:
     if not tokens:
         return None
     clients = init_fitbit_clients(tokens)
-    data = {nick: get_weight(client) for nick, client in clients.items()}
     now = pendulum.now()
-    weight_descriptions = [
-        f"{nick} veier nå *{datum['weight']}* kg!"
-        if (now - datum["datetime"]).days < 2
-        else (
-            f"{nick} har ikke veid seg på *{(now - datum['datetime']).days}* dager. "
-            "Skjerpings!"
-        )
-        for nick, datum in data.items()
-    ]
+    blocks = []
+    for nick, client in clients.items():
+        weight_data = get_weight(client)
+        if weight_data is None:
+            continue
+        elapsed = (now - weight_data["datetime"]).days
+        if elapsed < 2:
+            desc = f"{nick} veier nå *{weight_data['weight']}* kg!"
+        else:
+            desc = f"{nick} har ikke veid seg på *{elapsed}* dager. Skjerpings!"
+        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": desc}})
+    if not blocks:
+        return None
     response = {
         "text": "Attention garglings!",
         "blocks": [
@@ -225,9 +232,6 @@ def get_daily_report(conn: db.connection) -> t.Optional[dict]:
                 "text": {"type": "mrkdwn", "text": "*Attention garglings:*"},
             }
         ]
-        + [
-            {"type": "section", "text": {"type": "mrkdwn", "text": desc}}
-            for desc in weight_descriptions
-        ],
+        + blocks,
     }
     return response
