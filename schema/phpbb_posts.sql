@@ -11,8 +11,8 @@ create table phpbb_posts (
 create index db_idx on phpbb_posts (db_id);
 
 
---name: add_posts*!
-INSERT INTO
+-- name: add_posts*!
+insert into
     phpbb_posts (
         db_id,
         post_id,
@@ -20,7 +20,7 @@ INSERT INTO
         post_text,
         bbcode_uid
     )
-VALUES
+values
     (
         :db_id,
         :post_id,
@@ -28,3 +28,48 @@ VALUES
         :post_text,
         :bbcode_uid
     );
+
+
+-- name: get_random_post^
+select
+    post.db_id,
+    post.post_text,
+    post.post_timestamp,
+    post.post_id,
+    post.bbcode_uid,
+    user_ids.slack_nick,
+    user_ids.avatar
+from
+    (
+        select
+            *
+        from
+            phpbb_posts
+        where
+            db_id in (2, 3, 5, 6, 7, 9, 10, 11)
+        order by
+            random()
+        limit
+            1
+    ) as post
+    inner join user_ids on post.db_id = user_ids.db_id;
+
+
+-- name: get_random_post_for_user^
+select
+    post.db_id,
+    post.post_text,
+    post.post_timestamp,
+    post.post_id,
+    post.bbcode_uid,
+    user_ids.slack_nick,
+    user_ids.avatar
+from
+    phpbb_posts as post
+    inner join user_ids on post.db_id = user_ids.db_id
+where
+    user_ids.slack_nick = :slack_nick
+order by
+    random()
+limit
+    1;

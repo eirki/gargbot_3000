@@ -61,41 +61,28 @@ class Quotes:
         return inp
 
     def forum(
-        self, db: connection, args: t.Optional[t.List[str]]
+        self, conn: connection, args: t.Optional[t.List[str]]
     ) -> t.Tuple[str, str, str, dt.datetime, str, str]:
         user = args[0] if args else None
         if user and user not in self.slack_nicks_to_db_ids:
-            description = (
+            desc = (
                 f"Gargling not found: {user}. Husk å bruke slack nick."
                 "Her er et tilfeldig quote i stedet."
             )
             user = None
         else:
-            description = " "
+            desc = " "
 
         if user:
-            user_filter = f"= {self.slack_nicks_to_db_ids[user]}"
+            post = forum_queries.get_random_post_for_user(conn, slack_nick=user)
         else:
-            user_filter = "IN (2, 3, 5, 6, 7, 9, 10, 11)"
-
-        sql = (
-            "SELECT db_id, post_text, post_timestamp, post_id, bbcode_uid "
-            f"FROM phpbb_posts WHERE db_id {user_filter} ORDER BY RANDOM() LIMIT 1"
+            post = forum_queries.get_random_post(conn)
+        text = self._sanitize(post["post_text"], post["bbcode_uid"])
+        avatarurl = (
+            f"{config.forum_url}/download/file.php?avatar={post['avatar']}".strip()
         )
-
-        cursor = db.cursor()
-        cursor.execute(sql)
-        result = cursor.fetchone()
-        db_id = result["db_id"]
-        post_id = result["post_id"]
-        post_datetime = result["post_timestamp"]
-        cursor.execute("SELECT avatar FROM user_ids WHERE db_id = %s", (db_id,))
-        avatar_name = cursor.fetchone()["avatar"]
-        avatarurl = f"{config.forum_url}/download/file.php?avatar={avatar_name}".strip()
-        user = user if user is not None else self.db_ids_to_slack_nicks[db_id]
-        text = self._sanitize(result["post_text"], result["bbcode_uid"])
-        url = f"{config.forum_url}/viewtopic.php?p={post_id}#p{post_id}"
-        return text, user, avatarurl, post_datetime, url, description
+        url = f"{config.forum_url}/viewtopic.php?p={post['post_id']}#p{post['post_id']}"
+        return (text, post["slack_nick"], avatarurl, post["post_timestamp"], url, desc)
 
     def msn(self, db: connection, args: t.Optional[t.List[str]]):
         user = args[0] if args else None
