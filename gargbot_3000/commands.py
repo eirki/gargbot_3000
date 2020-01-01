@@ -60,9 +60,9 @@ def cmd_server_explanation() -> t.Dict:
     return response
 
 
-def cmd_hvem(args: t.List[str], db: connection) -> t.Dict:
+def cmd_hvem(args: t.List[str], conn: connection) -> t.Dict:
     """if command.lower().startswith("hvem")"""
-    with db.cursor() as cursor:
+    with conn.cursor() as cursor:
         sql = "SELECT first_name FROM user_ids ORDER BY RANDOM() LIMIT 1"
         cursor.execute(sql)
         data = cursor.fetchone()
@@ -74,10 +74,10 @@ def cmd_hvem(args: t.List[str], db: connection) -> t.Dict:
 
 
 def cmd_pic(
-    args: t.Optional[t.List[str]], db: connection, drop_pics: droppics.DropPics
+    args: t.Optional[t.List[str]], conn: connection, drop_pics: droppics.DropPics
 ) -> t.Dict:
     """if command is 'pic'"""
-    picurl, date, description = drop_pics.get_pic(db, args)
+    picurl, date, description = drop_pics.get_pic(conn, args)
     pretty_date = prettify_date(date)
     blocks = []
     image_block = {"type": "image", "image_url": picurl, "alt_text": picurl}
@@ -98,11 +98,9 @@ def cmd_pic(
     return response
 
 
-def cmd_forum(
-    args: t.Optional[t.List[str]], db: connection, quotes_db: quotes.Quotes
-) -> t.Dict:
+def cmd_forum(args: t.Optional[t.List[str]], conn: connection) -> t.Dict:
     """if command is 'forum'"""
-    text, user, avatar_url, date, url, description = quotes_db.forum(db, args)
+    text, user, avatar_url, date, url, description = quotes.forum(conn, args)
     pretty_date = prettify_date(date)
     text_block = {"type": "section", "text": {"type": "mrkdwn", "text": text}}
 
@@ -121,11 +119,9 @@ def cmd_forum(
     return response
 
 
-def cmd_msn(
-    args: t.Optional[t.List[str]], db: connection, quotes_db: quotes.Quotes
-) -> t.Dict:
+def cmd_msn(args: t.Optional[t.List[str]], conn: connection) -> t.Dict:
     """if command is 'msn'"""
-    date, text = quotes_db.msn(db, args)
+    date, text, description = quotes.msn(conn, args)
 
     response: t.Dict[str, t.Any] = {
         "text": date,
@@ -141,7 +137,8 @@ def cmd_msn(
                 ],
             }
             for msg_user, msg_text, msg_color in text
-        ],
+        ]
+        + [{"type": "mrkdwn", "text": description}],
     }
     return response
 
@@ -170,7 +167,6 @@ def execute(
     args: t.List,
     db_connection: connection,
     drop_pics: droppics.DropPics,
-    quotes_db: quotes.Quotes,
 ) -> t.Dict:
     log.info(f"command: {command_str}")
     log.info(f"args: {args}")
@@ -179,10 +175,10 @@ def execute(
         "ping": cmd_ping,
         "new_channel": cmd_welcome,
         "gargbot": cmd_server_explanation,
-        "hvem": partial(cmd_hvem, args, db=db_connection),
-        "pic": partial(cmd_pic, args, db=db_connection, drop_pics=drop_pics),
-        "forum": partial(cmd_forum, args, db=db_connection, quotes_db=quotes_db),
-        "msn": partial(cmd_msn, args, db=db_connection, quotes_db=quotes_db),
+        "hvem": partial(cmd_hvem, args, conn=db_connection),
+        "pic": partial(cmd_pic, args, conn=db_connection, drop_pics=drop_pics),
+        "forum": partial(cmd_forum, args, conn=db_connection),
+        "msn": partial(cmd_msn, args, conn=db_connection),
     }
     try:
         command_func = switch[command_str]

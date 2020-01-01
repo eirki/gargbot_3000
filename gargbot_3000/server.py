@@ -10,14 +10,13 @@ from flask import Flask, Response, render_template, request
 from gunicorn.app.base import BaseApplication
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from gargbot_3000 import commands, config, database_manager, droppics, health, quotes
+from gargbot_3000 import commands, config, database_manager, droppics, health
 from gargbot_3000.logger import log
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)  # type: ignore
 app.pool = database_manager.ConnectionPool()
 app.drop_pics = None
-app.quotes_db = None
 app.register_blueprint(health.blueprint)
 
 
@@ -221,7 +220,6 @@ def handle_command(command_str: str, args: list) -> dict:
             args=args,
             db_connection=db,
             drop_pics=app.drop_pics,
-            quotes_db=app.quotes_db,
         )
 
     error = result.get("text", "").startswith("Error")
@@ -272,7 +270,6 @@ def main(options: t.Optional[dict], debug: bool = False):
         health.setup_bluebrint()
         with app.pool.get_db_connection() as db:
             app.drop_pics = droppics.DropPics(db=db)
-            app.quotes_db = quotes.Quotes(db=db)
         if debug is False:
             gunicorn_app = StandaloneApplication(app, options)
             gunicorn_app.run()

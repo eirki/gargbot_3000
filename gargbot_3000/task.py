@@ -12,7 +12,7 @@ from psycopg2.extensions import connection
 from slackclient import SlackClient
 from slackclient.server import SlackConnectionError
 
-from gargbot_3000 import commands, config, database_manager, droppics, quotes
+from gargbot_3000 import commands, config, database_manager, droppics
 from gargbot_3000.logger import log
 
 
@@ -71,23 +71,21 @@ def send_response(
     )
 
 
-def setup() -> t.Tuple[SlackClient, droppics.DropPics, quotes.Quotes, connection]:
+def setup() -> t.Tuple[SlackClient, droppics.DropPics, connection]:
     db_connection = database_manager.connect_to_database()
 
     drop_pics = droppics.DropPics(db=db_connection)
-
-    quotes_db = quotes.Quotes(db=db_connection)
 
     slack_client = SlackClient(config.slack_bot_user_token)
     connected = slack_client.rtm_connect()
     if not connected:
         raise Exception("Connection failed. Invalid Slack token or bot ID?")
 
-    return slack_client, drop_pics, quotes_db, db_connection
+    return slack_client, drop_pics, db_connection
 
 
 def main():
-    slack_client, drop_pics, quotes_db, db_connection = setup()
+    slack_client, drop_pics, db_connection = setup()
 
     log.info("GargBot 3000 task operational!")
     try:
@@ -105,9 +103,8 @@ def main():
                 commands.execute,
                 command_str=command_str,
                 args=args,
-                db_connection=db_connection,
+                conn=db_connection,
                 drop_pics=drop_pics,
-                quotes_db=quotes_db,
             )
             try:
                 response = command_func()

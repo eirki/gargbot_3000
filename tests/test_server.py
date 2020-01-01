@@ -50,13 +50,12 @@ class MockRequests:
 
 class MockCommands:
     def execute(
-        self, command_str, args, db_connection, drop_pics, quotes_db
+        self, command_str, args, db_connection, drop_pics
     ) -> t.Dict[str, t.Any]:
         self.command_str = command_str
         self.args = args
         self.db_connection = db_connection
         self.drop_pics = drop_pics
-        self.quotes_db = quotes_db
         response = (
             {"text": command_str, "blocks": []}
             if command_str != "msn"
