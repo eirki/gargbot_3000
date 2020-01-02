@@ -97,7 +97,7 @@ from
   fitbit_tokens t
   inner join user_ids u on t.fitbit_id = u.fitbit_id
 where
-  u.slack_nick = ANY(:slack_nicks);
+  u.slack_nick = any(:slack_nicks);
 
 
 -- name: get_daily_report_tokens
@@ -123,17 +123,17 @@ where
 
 
 -- name: get_nicks_ids
-SELECT
+select
   db_id,
   slack_nick
-FROM
+from
   user_ids;
 
 
 --name: parse_nicks_from_args
-SELECT
+select
   slack_nick
-FROM
+from
   user_ids
 where
-  slack_nick = ANY(:args);
+  slack_nick = any(:args);
