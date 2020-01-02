@@ -44,7 +44,7 @@ def test_msn_random(db_connection: connection):
     date, conv, desc = quotes.msn(db_connection, args=None)
     assert type(date) == str
     assert type(conv) == list
-    assert desc == " "
+    assert desc is None
 
 
 def test_msn_user(db_connection: connection):
@@ -52,7 +52,7 @@ def test_msn_user(db_connection: connection):
     date, conv, desc = quotes.msn(db_connection, args=[user.slack_nick])
     assert type(date) == str
     assert type(conv) == list
-    assert desc == " "
+    assert desc is None
 
 
 def test_msn_user_nonexistent(db_connection: connection):
