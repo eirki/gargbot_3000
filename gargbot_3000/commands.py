@@ -137,9 +137,10 @@ def cmd_msn(args: t.Optional[t.List[str]], conn: connection) -> t.Dict:
                 ],
             }
             for msg_user, msg_text, msg_color in text
-        ]
-        + [{"type": "mrkdwn", "text": description}],
+        ],
     }
+    if description:
+        response["attachments"].append({"type": "mrkdwn", "text": description})
     return response
 
 

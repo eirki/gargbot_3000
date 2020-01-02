@@ -103,7 +103,7 @@ def main():
                 commands.execute,
                 command_str=command_str,
                 args=args,
-                conn=db_connection,
+                db_connection=db_connection,
                 drop_pics=drop_pics,
             )
             try:
