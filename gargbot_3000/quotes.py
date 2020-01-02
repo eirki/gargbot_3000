@@ -67,9 +67,11 @@ def forum(
     return (text, post["slack_nick"], avatarurl, post["post_timestamp"], url, desc)
 
 
-def msn(conn: connection, args: t.Optional[t.List[str]]):
+def msn(
+    conn: connection, args: t.Optional[t.List[str]]
+) -> t.Tuple[dt.datetime, list, t.Optional[str]]:
     user = args[0] if args else None
-    desc = " "
+    desc = None
     messages = None
     if user:
         messages = msn_queries.get_random_message_for_user(conn, slack_nick=user)
