@@ -74,7 +74,7 @@ def send_response(
 def setup() -> t.Tuple[SlackClient, droppics.DropPics, connection]:
     db_connection = database_manager.connect_to_database()
 
-    drop_pics = droppics.DropPics(db=db_connection)
+    drop_pics = droppics.DropPics()
 
     slack_client = SlackClient(config.slack_bot_user_token)
     connected = slack_client.rtm_connect()

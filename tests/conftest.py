@@ -162,6 +162,7 @@ def populate_pics_table(conn: connection) -> None:
         )
         faces = [{"pic_id": pic_id, "db_id": db_id} for db_id in pic.faces]
         droppics.queries.add_faces(conn, faces)
+    droppics.queries.define_args(conn)
 
 
 def populate_quotes_table(conn: connection) -> None:
@@ -217,6 +218,6 @@ def drop_pics(db_connection):
         pass
 
     droppics.DropPics._connect_dbx = nothing
-    inited_drop_pics = droppics.DropPics(db=db_connection)
+    inited_drop_pics = droppics.DropPics()
     inited_drop_pics.dbx = MockDropbox()
     yield inited_drop_pics

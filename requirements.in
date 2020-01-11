@@ -15,4 +15,5 @@ pendulum
 fitbit
 wtforms
 aiosql
+jinja2
 werkzeug

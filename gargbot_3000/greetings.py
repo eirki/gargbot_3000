@@ -83,7 +83,7 @@ class Recipient:
         return sentence
 
     def get_greet(self, db_connection: connection) -> dict:
-        drop_pics = droppics.DropPics(db=db_connection)
+        drop_pics = droppics.DropPics()
         response = self.get_greeting(db_connection, drop_pics)
         return response
 

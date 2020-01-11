@@ -9,7 +9,9 @@ from pathlib import Path
 from xml.dom.minidom import parseString
 
 import dropbox
+import jinja2
 import psycopg2
+from aiosql.adapters.psycopg2 import PsycoPG2Adapter
 from PIL import Image
 from psycopg2.extensions import connection
 from psycopg2.extras import DictCursor
@@ -22,11 +24,11 @@ from gargbot_3000.logger import log
 class LoggingCursor(DictCursor):
     def execute(self, query, args=None):
         log.info(query % args if args else query)
-        super().execute(query, args)
+        return super().execute(query, args)
 
     def executemany(self, query, args=None):
         log.info(query % args if args else query)
-        super().executemany(query, args)
+        return super().executemany(query, args)
 
 
 class ConnectionPool:
@@ -103,6 +105,57 @@ def connect_to_database() -> connection:
 
 def close_database_connection(db_connection: connection) -> None:
     db_connection.close()
+
+
+class JinjaSqlAdapter(PsycoPG2Adapter):
+    jinja_env = jinja2.Environment(
+        block_start_string="/*{%",
+        block_end_string="%}*/",
+        variable_start_string="/*{{",
+        variable_end_string="}}*/",
+    )
+
+    @classmethod
+    def render_template(cls, sql: str, parameters: dict) -> str:
+        template = cls.jinja_env.from_string(sql)
+        query = template.render(**parameters) if parameters else template.render()
+        return query
+
+    @classmethod
+    def select(cls, conn, _query_name, sql, parameters: dict, record_class=None):
+        sql = cls.render_template(sql, parameters)
+        return super().select(conn, _query_name, sql, parameters, record_class=None)
+
+    @classmethod
+    def select_one(cls, conn, _query_name, sql, parameters: dict, record_class=None):
+        sql = cls.render_template(sql, parameters)
+        return super().select_one(conn, _query_name, sql, parameters, record_class=None)
+
+    @classmethod
+    @contextmanager
+    def select_cursor(cls, conn, _query_name, sql, parameters: dict):
+        sql = cls.render_template(sql, parameters)
+        return super().select_cursor(conn, _query_name, sql, parameters)
+
+    @classmethod
+    def insert_update_delete(cls, conn, _query_name, sql, parameters: dict):
+        sql = cls.render_template(sql, parameters)
+        return super().insert_update_delete(conn, _query_name, sql, parameters)
+
+    @classmethod
+    def insert_update_delete_many(cls, conn, _query_name, sql, parmeters: t.List[dict]):
+        sql = cls.render_template(sql, parmeters[0] if parmeters else {})
+        return super().insert_update_delete_many(conn, _query_name, sql, parmeters)
+
+    @classmethod
+    def insert_returning(cls, conn, _query_name, sql, parameters: dict):
+        sql = cls.render_template(sql, parameters)
+        return super().insert_returning(conn, _query_name, sql, parameters)
+
+    @classmethod
+    def execute_script(cls, conn, sql):
+        sql = cls.render_template(sql, parameters={})
+        return super().execute_script(conn, sql)
 
 
 class MSN:
