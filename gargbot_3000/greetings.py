@@ -11,7 +11,7 @@ from psycopg2.extensions import connection
 from slackclient import SlackClient
 
 from dataclasses import dataclass
-from gargbot_3000 import config, database_manager, health, pictures, task
+from gargbot_3000 import config, database, health, pictures, task
 from gargbot_3000.logger import log
 
 queries = aiosql.from_path("schema/congrats.sql", "psycopg2")
@@ -109,7 +109,7 @@ def main() -> None:
             time.sleep(until_next.total_seconds())
             try:
                 slack_client = SlackClient(config.slack_bot_user_token)
-                conn = database_manager.connect_to_database()
+                conn = database.connect_to_database()
                 recipients = Recipient.get_todays(conn)
                 log.info(f"Recipients today {recipients}")
                 for recipient in recipients:

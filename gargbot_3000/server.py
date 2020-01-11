@@ -10,12 +10,12 @@ from flask import Flask, Response, render_template, request
 from gunicorn.app.base import BaseApplication
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from gargbot_3000 import commands, config, database_manager, health, pictures
+from gargbot_3000 import commands, config, database, health, pictures
 from gargbot_3000.logger import log
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)  # type: ignore
-app.pool = database_manager.ConnectionPool()
+app.pool = database.ConnectionPool()
 app.drop_pics = None
 app.register_blueprint(health.blueprint)
 

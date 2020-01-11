@@ -9,7 +9,7 @@ import dropbox
 from psycopg2.extensions import connection
 
 from gargbot_3000 import config
-from gargbot_3000.database_manager import JinjaSqlAdapter
+from gargbot_3000.database import JinjaSqlAdapter
 from gargbot_3000.logger import log
 
 queries = aiosql.from_path("schema/dbx_pictures.sql", driver_adapter=JinjaSqlAdapter)

@@ -8,7 +8,7 @@ import pytest
 from flask import testing
 from psycopg2.extensions import connection
 
-from gargbot_3000 import config, database_manager, server
+from gargbot_3000 import config, database, server
 from tests import conftest
 
 
@@ -18,7 +18,7 @@ def client(conn) -> t.Generator[testing.FlaskClient, None, None]:
     yield server.app.test_client()
 
 
-class MockPool(database_manager.ConnectionPool):
+class MockPool(database.ConnectionPool):
     def __init__(self, conn: connection) -> None:
         self.conn = conn
 

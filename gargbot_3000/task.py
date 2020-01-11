@@ -12,7 +12,7 @@ from psycopg2.extensions import connection
 from slackclient import SlackClient
 from slackclient.server import SlackConnectionError
 
-from gargbot_3000 import commands, config, database_manager, pictures
+from gargbot_3000 import commands, config, database, pictures
 from gargbot_3000.logger import log
 
 
@@ -72,7 +72,7 @@ def send_response(
 
 
 def setup() -> t.Tuple[SlackClient, pictures.DropPics, connection]:
-    conn = database_manager.connect_to_database()
+    conn = database.connect_to_database()
 
     drop_pics = pictures.DropPics()
 
@@ -109,7 +109,7 @@ def main():
             try:
                 response = command_func()
             except psycopg2.OperationalError:
-                conn = database_manager.connect_to_database()
+                conn = database.connect_to_database()
                 try:
                     response = command_func()
                 except Exception as exc:
@@ -122,4 +122,4 @@ def main():
     except KeyboardInterrupt:
         sys.exit()
     finally:
-        database_manager.close_database_connection(conn)
+        database.close_database_connection(conn)

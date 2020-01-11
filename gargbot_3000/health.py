@@ -18,7 +18,7 @@ from flask import (
 from wtforms import Form, RadioField, SelectField, SubmitField
 
 from gargbot_3000 import config
-from gargbot_3000 import database_manager as db
+from gargbot_3000 import database as db
 from gargbot_3000.logger import log
 
 blueprint = Blueprint("health", __name__)
