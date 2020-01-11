@@ -4,7 +4,7 @@ import datetime as dt
 
 from psycopg2.extensions import connection
 
-from gargbot_3000.droppics import DropPics
+from gargbot_3000.pictures import DropPics
 
 
 def assert_valid_returns(url: str, timestamp: dt.datetime, description: str) -> None:

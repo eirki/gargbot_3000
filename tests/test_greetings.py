@@ -4,7 +4,7 @@ import pendulum
 from psycopg2.extensions import connection
 
 from gargbot_3000 import config, greetings
-from gargbot_3000.droppics import DropPics
+from gargbot_3000.pictures import DropPics
 from tests import conftest
 
 

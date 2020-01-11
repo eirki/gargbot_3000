@@ -11,7 +11,7 @@ from psycopg2.extensions import connection
 from slackclient import SlackClient
 
 from dataclasses import dataclass
-from gargbot_3000 import config, database_manager, droppics, health, task
+from gargbot_3000 import config, database_manager, health, pictures, task
 from gargbot_3000.logger import log
 
 queries = aiosql.from_path("schema/congrats.sql", "psycopg2")
@@ -83,7 +83,7 @@ class Recipient:
         return sentence
 
     def get_greet(self, db_connection: connection) -> dict:
-        drop_pics = droppics.DropPics()
+        drop_pics = pictures.DropPics()
         response = self.get_greeting(db_connection, drop_pics)
         return response
 

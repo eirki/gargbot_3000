@@ -10,7 +10,7 @@ from psycopg2.extensions import connection
 from psycopg2.extras import RealDictCursor
 
 from dataclasses import asdict, dataclass
-from gargbot_3000 import commands, config, droppics, greetings, health, quotes
+from gargbot_3000 import commands, config, greetings, health, pictures, quotes
 
 age = 28
 byear = dt.datetime.now(config.tz).year - age
@@ -155,14 +155,14 @@ def populate_user_table(conn: connection) -> None:
 
 
 def populate_pics_table(conn: connection) -> None:
-    droppics.queries.create_schema(conn)
+    pictures.queries.create_schema(conn)
     for pic in pics:
-        pic_id = droppics.queries.add_picture(
+        pic_id = pictures.queries.add_picture(
             conn, path=pic.path, topic=pic.topic, taken=pic.taken
         )
         faces = [{"pic_id": pic_id, "db_id": db_id} for db_id in pic.faces]
-        droppics.queries.add_faces(conn, faces)
-    droppics.queries.define_args(conn)
+        pictures.queries.add_faces(conn, faces)
+    pictures.queries.define_args(conn)
 
 
 def populate_quotes_table(conn: connection) -> None:
@@ -217,7 +217,7 @@ def drop_pics(db_connection):
     def nothing(*args, **kwargs):
         pass
 
-    droppics.DropPics._connect_dbx = nothing
-    inited_drop_pics = droppics.DropPics()
+    pictures.DropPics._connect_dbx = nothing
+    inited_drop_pics = pictures.DropPics()
     inited_drop_pics.dbx = MockDropbox()
     yield inited_drop_pics

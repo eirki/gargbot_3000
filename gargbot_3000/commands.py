@@ -11,7 +11,7 @@ import psycopg2
 from psycopg2.extensions import connection
 from requests.exceptions import SSLError
 
-from gargbot_3000 import droppics, quotes
+from gargbot_3000 import pictures, quotes
 from gargbot_3000.logger import log
 
 queries = aiosql.from_path("schema/user_ids.sql", "psycopg2")
@@ -74,7 +74,7 @@ def cmd_hvem(args: t.List[str], conn: connection) -> t.Dict:
 
 
 def cmd_pic(
-    args: t.Optional[t.List[str]], conn: connection, drop_pics: droppics.DropPics
+    args: t.Optional[t.List[str]], conn: connection, drop_pics: pictures.DropPics
 ) -> t.Dict:
     """if command is 'pic'"""
     picurl, date, description = drop_pics.get_pic(conn, args)
@@ -167,7 +167,7 @@ def execute(
     command_str: str,
     args: t.List,
     db_connection: connection,
-    drop_pics: droppics.DropPics,
+    drop_pics: pictures.DropPics,
 ) -> t.Dict:
     log.info(f"command: {command_str}")
     log.info(f"args: {args}")

@@ -10,7 +10,7 @@ from flask import Flask, Response, render_template, request
 from gunicorn.app.base import BaseApplication
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from gargbot_3000 import commands, config, database_manager, droppics, health
+from gargbot_3000 import commands, config, database_manager, health, pictures
 from gargbot_3000.logger import log
 
 app = Flask(__name__)
@@ -269,8 +269,8 @@ def main(options: t.Optional[dict], debug: bool = False):
         app.pool.setup()
         health.setup_bluebrint()
         with app.pool.get_db_connection() as conn:
-            droppics.queries.define_args(conn)
-        app.drop_pics = droppics.DropPics()
+            pictures.queries.define_args(conn)
+        app.drop_pics = pictures.DropPics()
         if debug is False:
             gunicorn_app = StandaloneApplication(app, options)
             gunicorn_app.run()

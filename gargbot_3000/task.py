@@ -12,7 +12,7 @@ from psycopg2.extensions import connection
 from slackclient import SlackClient
 from slackclient.server import SlackConnectionError
 
-from gargbot_3000 import commands, config, database_manager, droppics
+from gargbot_3000 import commands, config, database_manager, pictures
 from gargbot_3000.logger import log
 
 
@@ -71,10 +71,10 @@ def send_response(
     )
 
 
-def setup() -> t.Tuple[SlackClient, droppics.DropPics, connection]:
+def setup() -> t.Tuple[SlackClient, pictures.DropPics, connection]:
     db_connection = database_manager.connect_to_database()
 
-    drop_pics = droppics.DropPics()
+    drop_pics = pictures.DropPics()
 
     slack_client = SlackClient(config.slack_bot_user_token)
     connected = slack_client.rtm_connect()
