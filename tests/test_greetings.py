@@ -8,11 +8,11 @@ from gargbot_3000.pictures import DropPics
 from tests import conftest
 
 
-def test_finds_recipient(db_connection: connection) -> None:
+def test_finds_recipient(conn: connection) -> None:
     chosen_user = conftest.users[0]
     test_now = pendulum.instance(chosen_user.bday, tz=config.tz).add(years=conftest.age)
     pendulum.set_test_now(test_now)
-    recipients = greetings.Recipient.get_todays(db_connection)
+    recipients = greetings.Recipient.get_todays(conn)
     assert len(recipients) == 1
     recipient = recipients[0]
     assert recipient.nick == chosen_user.slack_nick
@@ -20,20 +20,20 @@ def test_finds_recipient(db_connection: connection) -> None:
     assert recipient.age == conftest.age
 
 
-def test_finds_2_recipients(db_connection: connection) -> None:
+def test_finds_2_recipients(conn: connection) -> None:
     chosen_user = conftest.users[7]
     test_now = pendulum.instance(chosen_user.bday, tz=config.tz).add(years=conftest.age)
     pendulum.set_test_now(test_now)
-    recipients = greetings.Recipient.get_todays(db_connection)
+    recipients = greetings.Recipient.get_todays(conn)
     assert len(recipients) == 2
 
 
-def test_congrat(db_connection: connection, drop_pics: DropPics) -> None:
+def test_congrat(conn: connection, drop_pics: DropPics) -> None:
     chosen_user = conftest.users[0]
     recipient = greetings.Recipient(
         nick=chosen_user.slack_nick, slack_id=chosen_user.slack_id, age=conftest.age
     )
-    response = recipient.get_greeting(db_connection, drop_pics)
+    response = recipient.get_greeting(conn, drop_pics)
     image_url = response["blocks"][1]["image_url"]
     response_pic = next(pic for pic in conftest.pics if image_url.endswith(pic.path))
     assert chosen_user.slack_id in response["text"]

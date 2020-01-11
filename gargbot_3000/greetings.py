@@ -26,9 +26,9 @@ class Recipient:
     age: int
 
     @classmethod
-    def get_todays(cls, db: connection) -> t.List["Recipient"]:
+    def get_todays(cls, conn: connection) -> t.List["Recipient"]:
         now_tz = pendulum.now(config.tz)
-        with db.cursor() as cursor:
+        with conn.cursor() as cursor:
             sql_command = (
                 "SELECT slack_nick, slack_id, EXTRACT(YEAR FROM bday)::int as year "
                 "FROM user_ids "
@@ -47,17 +47,17 @@ class Recipient:
         ]
         return recipients
 
-    def get_greeting(self, db: connection, drop_pics) -> t.Dict:
-        sentence = self.get_sentence(db)
+    def get_greeting(self, conn: connection, drop_pics) -> t.Dict:
+        sentence = self.get_sentence(conn)
         text = (
             f"Hurra! Vår felles venn <@{self.slack_id}> fyller {self.age} i dag!\n"
             f"{sentence}"
         )
         try:
-            person_picurl, date, _ = drop_pics.get_pic(db, [self.nick])
+            person_picurl, date, _ = drop_pics.get_pic(conn, [self.nick])
         except psycopg2.OperationalError:
-            db.ping(True)
-            person_picurl, date, _ = drop_pics.get_pic(db, [self.nick])
+            conn.ping(True)
+            person_picurl, date, _ = drop_pics.get_pic(conn, [self.nick])
         response = {
             "text": text,
             "blocks": [
@@ -74,17 +74,17 @@ class Recipient:
         return response
 
     @staticmethod
-    def get_sentence(db: connection) -> str:
-        with db.cursor() as cursor:
+    def get_sentence(conn: connection) -> str:
+        with conn.cursor() as cursor:
             sql_command = "SELECT sentence FROM congrats ORDER BY RANDOM() LIMIT 1"
             cursor.execute(sql_command)
             result = cursor.fetchone()
         sentence = result["sentence"]
         return sentence
 
-    def get_greet(self, db_connection: connection) -> dict:
+    def get_greet(self, conn: connection) -> dict:
         drop_pics = pictures.DropPics()
-        response = self.get_greeting(db_connection, drop_pics)
+        response = self.get_greeting(conn, drop_pics)
         return response
 
 
@@ -109,18 +109,18 @@ def main() -> None:
             time.sleep(until_next.total_seconds())
             try:
                 slack_client = SlackClient(config.slack_bot_user_token)
-                db_connection = database_manager.connect_to_database()
-                recipients = Recipient.get_todays(db_connection)
+                conn = database_manager.connect_to_database()
+                recipients = Recipient.get_todays(conn)
                 log.info(f"Recipients today {recipients}")
                 for recipient in recipients:
-                    greet = recipient.get_greet(db_connection)
+                    greet = recipient.get_greet(conn)
                     task.send_response(slack_client, greet, channel=config.main_channel)
-                report = health.get_daily_report(db_connection)
+                report = health.get_daily_report(conn)
                 if report is not None:
                     task.send_response(
                         slack_client, report, channel=config.health_channel
                     )
-                db_connection.close()
+                conn.close()
             except Exception:
                 log.error("Error in command execution", exc_info=True)
     except KeyboardInterrupt:

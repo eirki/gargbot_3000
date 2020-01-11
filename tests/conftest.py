@@ -202,7 +202,7 @@ def populate_health_table(conn: connection) -> None:
 
 
 @pytest.fixture()
-def db_connection(postgresql: connection):
+def conn(postgresql: connection):
     populate_pics_table(postgresql)
     populate_user_table(postgresql)
     populate_quotes_table(postgresql)
@@ -213,7 +213,7 @@ def db_connection(postgresql: connection):
 
 
 @pytest.fixture
-def drop_pics(db_connection):
+def drop_pics(conn):
     def nothing(*args, **kwargs):
         pass
 

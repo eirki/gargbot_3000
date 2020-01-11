@@ -53,7 +53,7 @@ class ConnectionPool:
             cursor_factory=LoggingCursor,
         )
 
-    def getconn(self) -> connection:
+    def _getconn(self) -> connection:
         current_pid = os.getpid()
         if not (current_pid == self.last_seen_process_id):
             self._init()
@@ -61,38 +61,38 @@ class ConnectionPool:
                 f"New id is {current_pid}, old id was {self.last_seen_process_id}"
             )
             self.last_seen_process_id = current_pid
-        db_connection = self._pool.getconn()
-        return db_connection
+        conn = self._pool.getconn()
+        return conn
 
-    def putconn(self, conn: connection):
+    def _putconn(self, conn: connection):
         return self._pool.putconn(conn)
 
     def closeall(self):
         self._pool.closeall()
 
     @contextmanager
-    def get_db_connection(self) -> t.Generator[connection, None, None]:
+    def get_connection(self) -> t.Generator[connection, None, None]:
         try:
-            connection = self.getconn()
-            yield connection
+            conn = self._getconn()
+            yield conn
         finally:
-            self.putconn(connection)
+            self._putconn(conn)
 
     @contextmanager
     def get_db_cursor(self, commit=False) -> t.Generator[LoggingCursor, None, None]:
-        with self.get_db_connection() as connection:
-            cursor = connection.cursor(cursor_factory=LoggingCursor)
+        with self.get_connection() as conn:
+            cursor = conn.cursor(cursor_factory=LoggingCursor)
             try:
                 yield cursor
                 if commit:
-                    connection.commit()
+                    conn.commit()
             finally:
                 cursor.close()
 
 
 def connect_to_database() -> connection:
     log.info("Connecting to db")
-    db_connection = psycopg2.connect(
+    conn = psycopg2.connect(
         dbname=config.db_name,
         user=config.db_user,
         password=config.db_password,
@@ -100,11 +100,11 @@ def connect_to_database() -> connection:
         port=config.db_port,
         cursor_factory=LoggingCursor,
     )
-    return db_connection
+    return conn
 
 
-def close_database_connection(db_connection: connection) -> None:
-    db_connection.close()
+def close_database_connection(conn: connection) -> None:
+    conn.close()
 
 
 class JinjaSqlAdapter(PsycoPG2Adapter):
@@ -160,7 +160,7 @@ class JinjaSqlAdapter(PsycoPG2Adapter):
 
 class MSN:
     def __init__(self):
-        self.db = connect_to_database()
+        self.conn = connect_to_database()
 
     def main(self, cursor):
         for fname in os.listdir(os.path.join(config.home, "data", "logs")):
@@ -171,7 +171,7 @@ class MSN:
             for message_data in MSN.parse_log(fname):
                 MSN.add_entry(cursor, *message_data)
 
-        self.db.commit()
+        self.conn.commit()
 
     @staticmethod
     def parse_log(fname):
@@ -265,9 +265,9 @@ class MSN:
 
     @staticmethod
     def add_user_ids_to_msn():
-        db = connect_to_database()
+        conn = connect_to_database()
 
-        cursor = db.cursor()
+        cursor = conn.cursor()
         sql_command = "SELECT slack_nick, db_id FROM user_ids"
         cursor.execute(sql_command)
         users = cursor.fetchall()
@@ -279,14 +279,14 @@ class MSN:
                     f'WHERE from_user LIKE "%{msn_nick}%"'
                 )
                 cursor.execute(sql_command)
-        db.commit()
-        db.close()
+        conn.commit()
+        conn.close()
 
 
 def add_user_ids_table():
-    db = connect_to_database()
+    conn = connect_to_database()
     users = []
-    cursor = db.cursor()
+    cursor = conn.cursor()
     for slack_id, db_id, slack_nick, first_name in users:
         sql_command = (
             "INSERT INTO user_ids (db_id, slack_id, slack_nick, first_name) "
@@ -299,20 +299,20 @@ def add_user_ids_table():
             "first_name": first_name,
         }
         cursor.execute(sql_command, data)
-    db.commit()
-    db.close()
+    conn.commit()
+    conn.close()
 
 
 class DropPics:
     def __init__(self):
-        self.db = None
+        self.conn = None
         self.dbx = None
         self._firstname_to_db_id = None
 
     @property
     def firstname_to_db_id(self):
         if self._firstname_to_db_id is None:
-            cursor = self.db.cursor()
+            cursor = self.conn.cursor()
             sql_command = "SELECT first_name, db_id FROM user_ids"
             cursor.execute(sql_command)
             self._firstname_to_db_id = {
@@ -321,7 +321,7 @@ class DropPics:
         return self._firstname_to_db_id
 
     def connect_to_database(self):
-        self.db = connect_to_database()
+        self.conn = connect_to_database()
 
     def connect_dbx(self):
         self.dbx = dropbox.Dropbox(config.dropbox_token)
@@ -377,7 +377,7 @@ class DropPics:
             cursor.execute(sql_command, data)
 
     def add_pics_in_folder(self, folder: Path, topic: str, dbx_folder: str) -> None:
-        cursor = self.db.cursor()
+        cursor = self.conn.cursor()
         for pic in folder.iterdir():
             if not pic.suffix.lower() in {".jpg", ".jpeg"}:
                 continue
@@ -401,15 +401,15 @@ class DropPics:
             cursor.execute(sql_command, data)
 
             self.add_faces_in_pic(cursor, pic, dbx_path)
-        self.db.commit()
+        self.conn.commit()
 
     def add_faces_to_existing_pics(self, folder: Path, dbx_folder: str):
         self.connect_to_database()
         try:
             for pic in list(folder.iterdir()):
                 dbx_path = dbx_folder + "/" + pic.name.lower()
-                with self.db.cursor() as cursor:
+                with self.conn.cursor() as cursor:
                     self.add_faces_in_pic(cursor, pic, dbx_path)
         finally:
-            self.db.commit()
-            self.db.close()
+            self.conn.commit()
+            self.conn.close()

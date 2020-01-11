@@ -164,10 +164,7 @@ def cmd_panic(exc: Exception) -> t.Dict:
 
 
 def execute(
-    command_str: str,
-    args: t.List,
-    db_connection: connection,
-    drop_pics: pictures.DropPics,
+    command_str: str, args: t.List, conn: connection, drop_pics: pictures.DropPics
 ) -> t.Dict:
     log.info(f"command: {command_str}")
     log.info(f"args: {args}")
@@ -176,10 +173,10 @@ def execute(
         "ping": cmd_ping,
         "new_channel": cmd_welcome,
         "gargbot": cmd_server_explanation,
-        "hvem": partial(cmd_hvem, args, conn=db_connection),
-        "pic": partial(cmd_pic, args, conn=db_connection, drop_pics=drop_pics),
-        "forum": partial(cmd_forum, args, conn=db_connection),
-        "msn": partial(cmd_msn, args, conn=db_connection),
+        "hvem": partial(cmd_hvem, args, conn=conn),
+        "pic": partial(cmd_pic, args, conn=conn, drop_pics=drop_pics),
+        "forum": partial(cmd_forum, args, conn=conn),
+        "msn": partial(cmd_msn, args, conn=conn),
     }
     try:
         command_func = switch[command_str]

@@ -16,18 +16,16 @@ def test_cmd_welcome():
     assert response["text"].endswith(commands.command_explanation())
 
 
-def test_cmd_hvem(db_connection: connection):
+def test_cmd_hvem(conn: connection):
     arg_list = ["is", "it?"]
-    response = commands.cmd_hvem(arg_list, db_connection)
+    response = commands.cmd_hvem(arg_list, conn)
     text = response["text"]
     assert any(text.startswith(user.first_name) for user in conftest.users)
     assert text.endswith("!")
 
 
 def test_cmd_not_found():
-    response = commands.execute(
-        command_str="blarg", args=[], db_connection=None, drop_pics=None
-    )
+    response = commands.execute(command_str="blarg", args=[], conn=None, drop_pics=None)
     assert response["text"].startswith("Beep boop beep!")
     assert "blarg" in response["text"]
 
@@ -37,8 +35,6 @@ def test_cmd_panic(monkeypatch):
         1 / 0
 
     monkeypatch.setattr("gargbot_3000.commands.cmd_ping", blowup)
-    response = commands.execute(
-        command_str="ping", args=[], db_connection=None, drop_pics=None
-    )
+    response = commands.execute(command_str="ping", args=[], conn=None, drop_pics=None)
     assert response["text"].startswith("Error, error!")
     assert "division by zero" in response["text"]

@@ -65,7 +65,7 @@ class WhoIsForm(Form):
 
 @blueprint.route("/whoisyou/<fitbit_id>", methods=("GET", "POST"))
 def whoisyou(fitbit_id: str):
-    with current_app.pool.get_db_connection() as conn:
+    with current_app.pool.get_connection() as conn:
         if queries.is_fitbit_user(conn, fitbit_id=fitbit_id) is None:
             return abort(403)
         form = WhoIsForm(request.form)
@@ -89,7 +89,7 @@ def whoisyou(fitbit_id: str):
 
 def persist_token(token: t.Dict) -> None:
     try:
-        with current_app.pool.get_db_connection() as conn:
+        with current_app.pool.get_connection() as conn:
             queries.persist_token(conn, **token)
             conn.commit()
     except RuntimeError:

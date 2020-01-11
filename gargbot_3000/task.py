@@ -72,7 +72,7 @@ def send_response(
 
 
 def setup() -> t.Tuple[SlackClient, pictures.DropPics, connection]:
-    db_connection = database_manager.connect_to_database()
+    conn = database_manager.connect_to_database()
 
     drop_pics = pictures.DropPics()
 
@@ -81,11 +81,11 @@ def setup() -> t.Tuple[SlackClient, pictures.DropPics, connection]:
     if not connected:
         raise Exception("Connection failed. Invalid Slack token or bot ID?")
 
-    return slack_client, drop_pics, db_connection
+    return slack_client, drop_pics, conn
 
 
 def main():
-    slack_client, drop_pics, db_connection = setup()
+    slack_client, drop_pics, conn = setup()
 
     log.info("GargBot 3000 task operational!")
     try:
@@ -103,13 +103,13 @@ def main():
                 commands.execute,
                 command_str=command_str,
                 args=args,
-                db_connection=db_connection,
+                conn=conn,
                 drop_pics=drop_pics,
             )
             try:
                 response = command_func()
             except psycopg2.OperationalError:
-                db_connection = database_manager.connect_to_database()
+                conn = database_manager.connect_to_database()
                 try:
                     response = command_func()
                 except Exception as exc:
@@ -122,4 +122,4 @@ def main():
     except KeyboardInterrupt:
         sys.exit()
     finally:
-        database_manager.close_database_connection(db_connection)
+        database_manager.close_database_connection(conn)

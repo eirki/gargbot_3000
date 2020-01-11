@@ -73,34 +73,34 @@ class DropPics:
         return url, date_taken
 
     def get_pic(
-        self, db: connection, arg_list: t.Optional[t.List[str]]
+        self, conn: connection, arg_list: t.Optional[t.List[str]]
     ) -> t.Tuple[str, dt.datetime, str]:
         description = ""
 
         if not arg_list:
-            url, date_taken = self.get_random_pic(db)
+            url, date_taken = self.get_random_pic(conn)
             return url, date_taken, description
 
         args = {arg.lower() for arg in arg_list}
-        parsed = queries.parse_args(db, args=list(args))
+        parsed = queries.parse_args(conn, args=list(args))
         valid_args, invalid_args = self.sortout_args(args, **parsed)
 
         if invalid_args:
-            all_args = queries.get_possible_args(db)
+            all_args = queries.get_possible_args(conn)
             description = self.get_description_for_invalid_args(
                 invalid_args, **all_args
             )
             if not valid_args:
                 description += "Her er et tilfeldig bilde i stedet."
-                url, date_taken = self.get_random_pic(db)
+                url, date_taken = self.get_random_pic(conn)
                 return url, date_taken, description
 
-        db_data = queries.pic_for_topic_year_users(db, **parsed)
-        if db_data is not None:
+        data = queries.pic_for_topic_year_users(conn, **parsed)
+        if data is not None:
             valid_args_fmt = ", ".join(f"`{arg}`" for arg in valid_args)
             description += f"Her er et bilde med {valid_args_fmt}."
-            path = db_data["path"]
-            date_taken = db_data["taken"]
+            path = data["path"]
+            date_taken = data["taken"]
             url = self.get_url_for_dbx_path(path)
             return url, date_taken, description
 
@@ -110,17 +110,17 @@ class DropPics:
         for length in reversed(range(1, len(valid_args))):
             for arg_combination in itertools.combinations(valid_args, length):
                 log.info(f"arg_combination: {arg_combination}")
-                parsed = queries.parse_args(db, args=list(arg_combination))
-                db_data = queries.pic_for_topic_year_users(db, **parsed)
-                if db_data is None:
+                parsed = queries.parse_args(conn, args=list(arg_combination))
+                data = queries.pic_for_topic_year_users(conn, **parsed)
+                if data is None:
                     continue
 
                 arg_combination_fmt = ", ".join(f"`{arg}`" for arg in arg_combination)
                 description += f"Her er et bilde med {arg_combination_fmt} i stedet."
-                date_taken = db_data["taken"]
-                url = self.get_url_for_dbx_path(path=db_data["path"])
+                date_taken = data["taken"]
+                url = self.get_url_for_dbx_path(path=data["path"])
                 return url, date_taken, description
 
         #  No pics found for any args
-        url, date_taken = self.get_random_pic(db)
+        url, date_taken = self.get_random_pic(conn)
         return url, date_taken, description

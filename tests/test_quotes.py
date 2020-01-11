@@ -8,8 +8,8 @@ from gargbot_3000 import config, quotes
 from tests import conftest
 
 
-def test_forum_random(db_connection: connection):
-    text, user, avatar_url, date, url, desc = quotes.forum(db_connection, args=None)
+def test_forum_random(conn: connection):
+    text, user, avatar_url, date, url, desc = quotes.forum(conn, args=None)
     assert isinstance(date, dt.datetime)
     assert url.startswith(config.forum_url)
     assert "*" in text
@@ -17,10 +17,10 @@ def test_forum_random(db_connection: connection):
     assert desc == " "
 
 
-def test_forum_user(db_connection: connection):
+def test_forum_user(conn: connection):
     in_user = conftest.users[0]
     text, out_user, avatar_url, date, url, desc = quotes.forum(
-        db_connection, args=[in_user.slack_nick]
+        conn, args=[in_user.slack_nick]
     )
     assert isinstance(date, dt.datetime)
     assert url.startswith(config.forum_url)
@@ -30,9 +30,9 @@ def test_forum_user(db_connection: connection):
     assert desc == " "
 
 
-def test_forum_user_nonexistent(db_connection: connection):
+def test_forum_user_nonexistent(conn: connection):
     text, out_user, avatar_url, date, url, desc = quotes.forum(
-        db_connection, args=["Non-existant user"]
+        conn, args=["Non-existant user"]
     )
     assert desc == (
         "Gargling not found: Non-existant user. Husk å bruke slack nick. "
@@ -40,23 +40,23 @@ def test_forum_user_nonexistent(db_connection: connection):
     )
 
 
-def test_msn_random(db_connection: connection):
-    date, conv, desc = quotes.msn(db_connection, args=None)
+def test_msn_random(conn: connection):
+    date, conv, desc = quotes.msn(conn, args=None)
     assert type(date) == str
     assert type(conv) == list
     assert desc is None
 
 
-def test_msn_user(db_connection: connection):
+def test_msn_user(conn: connection):
     user = conftest.users[0]
-    date, conv, desc = quotes.msn(db_connection, args=[user.slack_nick])
+    date, conv, desc = quotes.msn(conn, args=[user.slack_nick])
     assert type(date) == str
     assert type(conv) == list
     assert desc is None
 
 
-def test_msn_user_nonexistent(db_connection: connection):
-    date, conv, desc = quotes.msn(db_connection, args=["Non-existant user"])
+def test_msn_user_nonexistent(conn: connection):
+    date, conv, desc = quotes.msn(conn, args=["Non-existant user"])
     assert desc == (
         "Gargling not found: Non-existant user. Husk å bruke slack nick. "
         "Her er en tilfeldig samtale i stedet."

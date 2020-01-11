@@ -210,16 +210,13 @@ def slash_cmds() -> Response:
 
 def handle_command(command_str: str, args: list) -> dict:
     db_func = (
-        app.pool.get_db_connection
+        app.pool.get_connection
         if command_str in {"hvem", "pic", "forum", "msn"}
         else contextlib.nullcontext
     )
-    with db_func() as db:
+    with db_func() as conn:
         result = commands.execute(
-            command_str=command_str,
-            args=args,
-            db_connection=db,
-            drop_pics=app.drop_pics,
+            command_str=command_str, args=args, conn=conn, drop_pics=app.drop_pics
         )
 
     error = result.get("text", "").startswith("Error")
@@ -237,8 +234,8 @@ def handle_command(command_str: str, args: list) -> dict:
 @app.route("/countdown", methods=["GET"])
 def countdown():
     milli_timestamp = config.countdown_date.timestamp() * 1000
-    with app.pool.get_db_connection() as db:
-        pic_url, *_ = app.drop_pics.get_pic(db, arg_list=config.countdown_args)
+    with app.pool.get_connection() as conn:
+        pic_url, *_ = app.drop_pics.get_pic(conn, arg_list=config.countdown_args)
     return render_template(
         "countdown.html",
         date=milli_timestamp,
@@ -268,7 +265,7 @@ def main(options: t.Optional[dict], debug: bool = False):
     try:
         app.pool.setup()
         health.setup_bluebrint()
-        with app.pool.get_db_connection() as conn:
+        with app.pool.get_connection() as conn:
             pictures.queries.define_args(conn)
         app.drop_pics = pictures.DropPics()
         if debug is False:

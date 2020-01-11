@@ -20,7 +20,7 @@ def test_authorize_user(client: testing.FlaskClient):
     assert response.location.startswith("https://www.fitbit.com/oauth2/authorize")
 
 
-def test_handle_redirect(client: testing.FlaskClient, db_connection: connection):
+def test_handle_redirect(client: testing.FlaskClient, conn: connection):
     fake_user_id = "1FDG"
     fake_token = {
         "user_id": fake_user_id,
@@ -32,7 +32,7 @@ def test_handle_redirect(client: testing.FlaskClient, db_connection: connection)
         mock_fitbit.client.session.token = fake_token
         response = client.get("/fitbit-redirect", query_string={"code": "123"})
     assert response.status_code == 302
-    with db_connection.cursor() as cursor:
+    with conn.cursor() as cursor:
         cursor.execute(
             "SELECT * FROM fitbit_tokens where fitbit_id = %(fake_user_id)s",
             {"fake_user_id": fake_user_id},
@@ -59,7 +59,7 @@ def test_who_is_you_correct(client: testing.FlaskClient):
 
 @pytest.mark.parametrize("use_report", ["no", "yes"])
 def test_who_is_you_form(
-    client: testing.FlaskClient, db_connection: connection, use_report: str
+    client: testing.FlaskClient, conn: connection, use_report: str
 ):
     fitbut_user = conftest.fitbit_users[1]
     print(fitbut_user)
@@ -72,10 +72,10 @@ def test_who_is_you_form(
         user.slack_nick for user in conftest.users if user.db_id == fitbut_user.db_id
     )
     tokens = health.queries.get_fitbit_tokens_by_slack_nicks(
-        db_connection, slack_nicks=[slack_nick]
+        conn, slack_nicks=[slack_nick]
     )
     assert len(tokens) == 1
-    daily_tokens = health.queries.get_daily_report_tokens(db_connection)
+    daily_tokens = health.queries.get_daily_report_tokens(conn)
     print(daily_tokens)
     if use_report == "no":
         assert not any(
@@ -89,7 +89,7 @@ def test_who_is_you_form(
     assert response.data == b"Fumbs up!"
 
 
-def test_who_is_you_reask(client: testing.FlaskClient, db_connection: connection):
+def test_who_is_you_reask(client: testing.FlaskClient, conn: connection):
     fitbut_user = conftest.fitbit_users[2]
     print(fitbut_user)
     form = health.WhoIsForm()
@@ -112,9 +112,9 @@ def test_report_no_args(
     mock_get_sleep: Mock,
     mock_get_activity: Mock,
     mock_get_weight: Mock,
-    db_connection: connection,
+    conn: connection,
 ):
-    response, invalid_args, users_nonauthed = health.report(args=[], conn=db_connection)
+    response, invalid_args, users_nonauthed = health.report(args=[], conn=conn)
     print(response)
     assert len(invalid_args) == 0
     assert len(users_nonauthed) == 0
@@ -131,9 +131,7 @@ def test_report_no_args(
 @pytest.mark.parametrize(
     "non_authed", [[], ["slack_nick6"], ["slack_nick6", "slack_nick7"]]
 )
-def test_parse_report_args(
-    users, invalid_args, topics, non_authed, db_connection: connection
-):
+def test_parse_report_args(users, invalid_args, topics, non_authed, conn: connection):
     args = users + invalid_args + topics + non_authed
     if len(args) == 0:
         return
@@ -151,7 +149,7 @@ def test_parse_report_args(
         token["slack_nick"] = slack_nick
         tokens.append(token)
 
-    res = health.parse_report_args(conn=db_connection, args=args, all_topics=all_topics)
+    res = health.parse_report_args(conn=conn, args=args, all_topics=all_topics)
     assert res[0] == set(topics)
     assert res[1] == tokens
     assert res[2] == set(non_authed)
@@ -159,7 +157,7 @@ def test_parse_report_args(
 
 
 @patch.object(health, "Fitbit")
-def test_daily_report(mock_Fitbit: Mock, db_connection: connection):
+def test_daily_report(mock_Fitbit: Mock, conn: connection):
     instance1 = Mock()
     instance2 = Mock()
     mock_Fitbit.side_effect = [instance1, instance2]
@@ -171,7 +169,7 @@ def test_daily_report(mock_Fitbit: Mock, db_connection: connection):
             {"date": pendulum.now().to_date_string(), "time": "10:11:12", "weight": 100}
         ]
     }
-    response = health.get_daily_report(db_connection)
+    response = health.get_daily_report(conn)
     assert response is not None
     print(response)
     num_users = 2
@@ -181,11 +179,11 @@ def test_daily_report(mock_Fitbit: Mock, db_connection: connection):
 
 
 @patch.object(health, "Fitbit")
-def test_daily_report_no_data(mock_Fitbit: Mock, db_connection: connection):
+def test_daily_report_no_data(mock_Fitbit: Mock, conn: connection):
     instance1 = Mock()
     instance2 = Mock()
     mock_Fitbit.side_effect = [instance1, instance2]
     instance1.get_bodyweight.return_value = {"weight": []}
     instance2.get_bodyweight.return_value = {"weight": []}
-    response = health.get_daily_report(db_connection)
+    response = health.get_daily_report(conn)
     assert response is None
