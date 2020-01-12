@@ -28,15 +28,7 @@ class Recipient:
     @classmethod
     def get_todays(cls, conn: connection) -> t.List["Recipient"]:
         now_tz = pendulum.now(config.tz)
-        with conn.cursor() as cursor:
-            sql_command = (
-                "SELECT slack_nick, slack_id, EXTRACT(YEAR FROM bday)::int as year "
-                "FROM user_ids "
-                "WHERE EXTRACT(MONTH FROM bday) = %(month)s "
-                "AND EXTRACT(DAY FROM bday) = %(day)s"
-            )
-            cursor.execute(sql_command, {"month": now_tz.month, "day": now_tz.day})
-            data = cursor.fetchall()
+        data = queries.get_congrats(conn, month=now_tz.month, day=now_tz.day)
         recipients = [
             cls(
                 nick=row["slack_nick"],
@@ -75,10 +67,7 @@ class Recipient:
 
     @staticmethod
     def get_sentence(conn: connection) -> str:
-        with conn.cursor() as cursor:
-            sql_command = "SELECT sentence FROM congrats ORDER BY RANDOM() LIMIT 1"
-            cursor.execute(sql_command)
-            result = cursor.fetchone()
+        result = queries.get_sentence(conn)
         sentence = result["sentence"]
         return sentence
 
