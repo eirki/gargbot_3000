@@ -93,10 +93,12 @@ def persist_token(token: t.Dict) -> None:
             queries.persist_token(conn, **token)
             conn.commit()
     except RuntimeError:
-        conn = db.connect_to_database()
-        queries.persist_token(conn, **token)
-        conn.commit()
-        conn.close()
+        conn = db.connect()
+        try:
+            queries.persist_token(conn, **token)
+            conn.commit()
+        finally:
+            conn.close()
 
 
 def parse_report_args(

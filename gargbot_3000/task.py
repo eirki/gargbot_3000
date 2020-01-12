@@ -72,7 +72,7 @@ def send_response(
 
 
 def setup() -> t.Tuple[SlackClient, pictures.DropPics, connection]:
-    conn = database.connect_to_database()
+    conn = database.connect()
 
     drop_pics = pictures.DropPics()
 
@@ -109,7 +109,7 @@ def main():
             try:
                 response = command_func()
             except psycopg2.OperationalError:
-                conn = database.connect_to_database()
+                conn = database.connect()
                 try:
                     response = command_func()
                 except Exception as exc:
@@ -122,4 +122,4 @@ def main():
     except KeyboardInterrupt:
         sys.exit()
     finally:
-        database.close_database_connection(conn)
+        database.close(conn)

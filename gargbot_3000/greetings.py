@@ -109,7 +109,7 @@ def main() -> None:
             time.sleep(until_next.total_seconds())
             try:
                 slack_client = SlackClient(config.slack_bot_user_token)
-                conn = database.connect_to_database()
+                conn = database.connect()
                 recipients = Recipient.get_todays(conn)
                 log.info(f"Recipients today {recipients}")
                 for recipient in recipients:

@@ -63,7 +63,7 @@ def attach_share_buttons(result: dict, func: str, args: list) -> dict:
 def attach_original_request(
     result: dict, user_id: str, user_name: str, func: str, args: t.List[str]
 ) -> dict:
-    with app.pool.get_db_cursor() as cursor:
+    with app.pool.get_cursor() as cursor:
         cursor.execute(
             "SELECT slack_avatar FROM user_ids WHERE slack_id = %s", (user_id,)
         )

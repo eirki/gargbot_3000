@@ -79,7 +79,7 @@ class ConnectionPool:
             self._putconn(conn)
 
     @contextmanager
-    def get_db_cursor(self, commit=False) -> t.Generator[LoggingCursor, None, None]:
+    def get_cursor(self, commit=False) -> t.Generator[LoggingCursor, None, None]:
         with self.get_connection() as conn:
             cursor = conn.cursor(cursor_factory=LoggingCursor)
             try:
@@ -90,7 +90,7 @@ class ConnectionPool:
                 cursor.close()
 
 
-def connect_to_database() -> connection:
+def connect() -> connection:
     log.info("Connecting to db")
     conn = psycopg2.connect(
         dbname=config.db_name,
@@ -103,7 +103,7 @@ def connect_to_database() -> connection:
     return conn
 
 
-def close_database_connection(conn: connection) -> None:
+def close(conn: connection) -> None:
     conn.close()
 
 
@@ -160,7 +160,7 @@ class JinjaSqlAdapter(PsycoPG2Adapter):
 
 class MSN:
     def __init__(self):
-        self.conn = connect_to_database()
+        self.conn = connect()
 
     def main(self, cursor):
         for fname in os.listdir(os.path.join(config.home, "data", "logs")):
@@ -265,7 +265,7 @@ class MSN:
 
     @staticmethod
     def add_user_ids_to_msn():
-        conn = connect_to_database()
+        conn = connect()
 
         cursor = conn.cursor()
         sql_command = "SELECT slack_nick, db_id FROM user_ids"
@@ -284,7 +284,7 @@ class MSN:
 
 
 def add_user_ids_table():
-    conn = connect_to_database()
+    conn = connect()
     users = []
     cursor = conn.cursor()
     for slack_id, db_id, slack_nick, first_name in users:
@@ -320,8 +320,8 @@ class DropPics:
             }
         return self._firstname_to_db_id
 
-    def connect_to_database(self):
-        self.conn = connect_to_database()
+    def connect(self):
+        self.conn = connect()
 
     def connect_dbx(self):
         self.dbx = dropbox.Dropbox(config.dropbox_token)
@@ -404,7 +404,7 @@ class DropPics:
         self.conn.commit()
 
     def add_faces_to_existing_pics(self, folder: Path, dbx_folder: str):
-        self.connect_to_database()
+        self.connect()
         try:
             for pic in list(folder.iterdir()):
                 dbx_path = dbx_folder + "/" + pic.name.lower()
