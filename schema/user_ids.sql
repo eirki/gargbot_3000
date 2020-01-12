@@ -36,3 +36,12 @@ insert into
   faces (db_id, name)
 values
   (:db_id, :first_name);
+
+
+-- name: avatar_for_slack_id^
+select
+  slack_avatar
+from
+  user_ids
+where
+  slack_id = :slack_id;

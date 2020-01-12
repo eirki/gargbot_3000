@@ -63,11 +63,9 @@ def attach_share_buttons(result: dict, func: str, args: list) -> dict:
 def attach_original_request(
     result: dict, user_id: str, user_name: str, func: str, args: t.List[str]
 ) -> dict:
-    with app.pool.get_cursor() as cursor:
-        cursor.execute(
-            "SELECT slack_avatar FROM user_ids WHERE slack_id = %s", (user_id,)
-        )
-        avatar_url = cursor.fetchone()["slack_avatar"]
+    with app.pool.get_connection() as conn:
+        data = commands.queries.avatar_for_slack_id(conn, slack_id=user_id)
+        avatar_url = data["slack_avatar"]
     context_blocks = [
         {
             "type": "context",
