@@ -62,11 +62,8 @@ def cmd_server_explanation() -> t.Dict:
 
 def cmd_hvem(args: t.List[str], conn: connection) -> t.Dict:
     """if command.lower().startswith("hvem")"""
-    with conn.cursor() as cursor:
-        sql = "SELECT first_name FROM user_ids ORDER BY RANDOM() LIMIT 1"
-        cursor.execute(sql)
-        data = cursor.fetchone()
-        user = data["first_name"]
+    data = queries.random_first_name(conn)
+    user = data["first_name"]
     answ = " ".join(args).replace("?", "!")
     text = f"{user} {answ}"
     response: t.Dict[str, t.Any] = {"text": text}

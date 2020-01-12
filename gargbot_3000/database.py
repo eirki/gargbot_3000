@@ -103,10 +103,6 @@ def connect() -> connection:
     return conn
 
 
-def close(conn: connection) -> None:
-    conn.close()
-
-
 class JinjaSqlAdapter(PsycoPG2Adapter):
     jinja_env = jinja2.Environment(
         block_start_string="/*{%",

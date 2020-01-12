@@ -38,6 +38,17 @@ values
   (:db_id, :first_name);
 
 
+-- name: random_first_name^
+select
+  first_name
+from
+  user_ids
+order by
+  random()
+limit
+  1;
+
+
 -- name: avatar_for_slack_id^
 select
   slack_avatar

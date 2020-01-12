@@ -122,4 +122,4 @@ def main():
     except KeyboardInterrupt:
         sys.exit()
     finally:
-        database.close(conn)
+        conn.close()
