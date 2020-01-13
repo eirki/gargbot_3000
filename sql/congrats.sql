@@ -19,7 +19,7 @@ select
             bday
     ) :: int as year
 from
-    user_ids
+    gargling
 where
     extract(
         month

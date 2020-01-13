@@ -1,5 +1,5 @@
 -- name: create_schema#
-create table msn_messages (
+create table msn_message (
     session_id text,
     msg_type text,
     msg_time timestamp(3),
@@ -14,7 +14,7 @@ create table msn_messages (
 
 --name: add_messages*!
 insert into
-    msn_messages (
+    msn_message (
         session_id,
         msg_time,
         msg_color,
@@ -41,13 +41,13 @@ select
     msg_color,
     db_id
 from
-    msn_messages
+    msn_message
 where
     session_id = (
         select
             session_id
         from
-            msn_messages
+            msn_message
         order by
             random()
         limit
@@ -63,7 +63,7 @@ with session as (
         msg.session_id,
         msg.db_id
     from
-        msn_messages as msg
+        msn_message as msg
         inner join user_ids as usr on msg.db_id = usr.db_id
     where
         usr.slack_nick = :slack_nick
@@ -88,9 +88,9 @@ select
         else FALSE
     end as is_user
 from
-    msn_messages
+    msn_message
 where
-    msn_messages.session_id = (
+    msn_message.session_id = (
         select
             session_id
         from

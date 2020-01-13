@@ -50,7 +50,7 @@ where
 
 -- name: match_ids!
 update
-  user_ids
+  gargling
 set
   fitbit_id = null
 where
@@ -58,59 +58,59 @@ where
 
 
 update
-  user_ids
+  gargling
 set
   fitbit_id = :fitbit_id
 where
-  db_id = :db_id;
+  id = :id;
 
 
 -- name: is_id_matched^
 select
   true
 from
-  user_ids
+  gargling
 where
   fitbit_id = :fitbit_id;
 
 
 -- name: all_fitbit_tokens
 select
-  t.fitbit_id as fitbit_id,
-  t.access_token as access_token,
-  t.refresh_token as refresh_token,
-  t.expires_at as expires_at,
-  u.slack_nick as slack_nick
+  fitbit_tokens.fitbit_id,
+  fitbit_tokens.access_token,
+  fitbit_tokens.refresh_token,
+  fitbit_tokens.expires_at,
+  gargling.slack_nick
 from
-  fitbit_tokens t
-  inner join user_ids u on t.fitbit_id = u.fitbit_id;
+  fitbit_tokens
+  inner join gargling on fitbit_tokens.fitbit_id = gargling.fitbit_id;
 
 
 -- name: fitbit_tokens_for_slack_nicks
 select
-  t.fitbit_id as fitbit_id,
-  t.access_token as access_token,
-  t.refresh_token as refresh_token,
-  t.expires_at as expires_at,
-  u.slack_nick as slack_nick
+  fitbit_tokens.fitbit_id,
+  fitbit_tokens.access_token,
+  fitbit_tokens.refresh_token,
+  fitbit_tokens.expires_at,
+  gargling.slack_nick
 from
-  fitbit_tokens t
-  inner join user_ids u on t.fitbit_id = u.fitbit_id
+  fitbit_tokens
+  inner join gargling on fitbit_tokens.fitbit_id = gargling.fitbit_id
 where
-  u.slack_nick = any(:slack_nicks);
+  gargling.slack_nick = any(:slack_nicks);
 
 
 -- name: daily_report_tokens
 select
-  t.fitbit_id as fitbit_id,
-  t.access_token as access_token,
-  t.refresh_token as refresh_token,
-  t.expires_at as expires_at,
-  u.slack_nick as slack_nick
+  fitbit_tokens.fitbit_id,
+  fitbit_tokens.access_token,
+  fitbit_tokens.refresh_token,
+  fitbit_tokens.expires_at,
+  gargling.slack_nick
 from
-  fitbit_tokens t
-  inner join user_ids u on t.fitbit_id = u.fitbit_id
-  inner join health_report h on t.fitbit_id = h.fitbit_id;
+  fitbit_tokens
+  inner join gargling on fitbit_tokens.fitbit_id = gargling.fitbit_id
+  inner join health_report on fitbit_tokens.fitbit_id = health_report.fitbit_id;
 
 
 -- name: is_fitbit_user^
@@ -124,16 +124,16 @@ where
 
 -- name: all_ids_nicks
 select
-  db_id,
+  id,
   slack_nick
 from
-  user_ids;
+  gargling;
 
 
 --name: parse_nicks_from_args
 select
   slack_nick
 from
-  user_ids
+  gargling
 where
   slack_nick = any(:args);

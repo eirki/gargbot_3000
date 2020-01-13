@@ -1,33 +1,30 @@
 -- name: create_schema#
-create table dbx_pictures (
+create table picture (
+    id serial primary key,
     path text,
     topic text,
-    taken timestamp,
-    pic_id serial primary key
+    taken timestamp
 );
 
 
-create table faces (
-    db_id smallint not null primary key,
-    name text
+create table picture_gargling (
+    picture_id smallint not null references picture(id),
+    gargling_id smallint not null references gargling(id)
 );
-
-
-create table dbx_pictures_faces (db_id smallint, pic_id smallint);
 
 
 --name: add_picture<!
 insert into
-    dbx_pictures (path, topic, taken)
+    picture (path, topic, taken)
 values
-    (:path, :topic, :taken) returning pic_id;
+    (:path, :topic, :taken) returning picture_id;
 
 
 --name: add_faces*!
 insert into
-    dbx_pictures_faces (db_id, pic_id)
+    picture_gargling (gargling_id, picture_id)
 values
-    (:db_id, :pic_id);
+    (:gargling_id, :picture_id);
 
 
 --name: define_args#
@@ -39,7 +36,7 @@ select
             taken
     ) :: text as year
 from
-    dbx_pictures
+    picture
 order by
     year;
 
@@ -48,7 +45,7 @@ create materialized view if not exists picture_topic as
 select
     distinct topic
 from
-    dbx_pictures;
+    picture;
 
 
 -- name: get_possible_args^
@@ -77,9 +74,9 @@ select
                 select
                     slack_nick
                 from
-                    user_ids
+                    gargling_ids
             )
-    ) as users;
+    ) as garglings;
 
 
 -- name: parse_args^
@@ -104,12 +101,12 @@ select
         select
             array(
                 select
-                    array [db_id :: text, slack_nick]
+                    array [id :: text, slack_nick]
                 from
-                    user_ids
+                    gargling_ids
                 where
                     slack_nick = any(:args)
-            ) as users
+            ) as garglings
     );
 
 
@@ -118,7 +115,7 @@ select
     path,
     taken
 from
-    dbx_pictures
+    picture
 where
     topic = (
         select
@@ -136,24 +133,24 @@ limit
     1;
 
 
--- name: pic_for_topic_year_users^
+-- name: pic_for_topic_year_garglings^
 select
     picture.path,
     picture.taken
 from
-    dbx_pictures as picture
-    /*{% if users|length == 1 %}*/
-    left join dbx_pictures_faces as face on picture.pic_id = face.pic_id
-    /*{% elif users|length > 1 %}*/
+    picture
+    /*{% if garglings|length == 1 %}*/
+    left join picture_gargling on picture.picture_id = picture_gargling.picture_id
+    /*{% elif garglings|length > 1 %}*/
     left join (
         select
-            array_agg(db_id) as db_ids,
-            pic_id
+            array_agg(gargling_id) as gargling_ids,
+            picture_id
         from
-            dbx_pictures_faces
+            picture_gargling
         group by
-            pic_id
-    ) as face on picture.pic_id = face.pic_id
+            picture_id
+    ) on picture.picture_id = picture_gargling.picture_id
     /*{% endif %}*/
 where
     /*{% set and = joiner(" and ") %}*/
@@ -169,14 +166,14 @@ where
             picture.taken
     ) = :year
     /*{% endif %}*/
-    /*{% if users|length == 1 %}*/
+    /*{% if garglings|length == 1 %}*/
     /*{{ and() }}*/
-    face.db_id = (:users) [1] [1] :: smallint
-    /*{% elif users|length > 1 %}*/
-    /*{% for db_id, slack_nick in users %}*/
+    picture_gargling.gargling_id = (:garglings) [1] [1] :: smallint
+    /*{% elif garglings|length > 1 %}*/
+    /*{% for id, slack_nick in garglings %}*/
     /*{{ and() }}*/
-    /*{{ db_id }}*/
-    :: smallint = any(face.db_ids)
+    /*{{ id }}*/
+    :: smallint = any(picture_gargling.gargling_ids)
     /*{% endfor %}*/
     /*{% endif %}*/
 order by
