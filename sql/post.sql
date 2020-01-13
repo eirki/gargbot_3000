@@ -2,7 +2,7 @@
 create table post (
     id serial primary key,
     gargling_id smallint not null references gargling(id),
-    post_timestamp timestamp not null,
+    posted_at timestamp not null,
     content text not null,
     bbcode_uid text not null
 );
@@ -11,17 +11,17 @@ create table post (
 -- name: add_posts*!
 insert into
     post (
-        gargling_id,
         id,
-        post_timestamp,
+        gargling_id,
+        posted_at,
         content,
         bbcode_uid
     )
 values
     (
-        :gargling_id,
         :id,
-        :post_timestamp,
+        :gargling_id,
+        :posted_at,
         :content,
         :bbcode_uid
     );
@@ -31,11 +31,11 @@ values
 select
     post.gargling_id,
     post.content,
-    post.post_timestamp,
+    post.posted_at,
     post.id,
     post.bbcode_uid,
-    user_ids.slack_nick,
-    user_ids.avatar
+    gargling.slack_nick,
+    gargling.avatar
 from
     (
         select
@@ -49,23 +49,23 @@ from
         limit
             1
     ) as post
-    inner join user_ids on post.gargling_id = user_ids.gargling_id;
+    inner join gargling on post.gargling_id = gargling.id;
 
 
 -- name: post_for_user^
 select
     post.gargling_id,
     post.content,
-    post.post_timestamp,
+    post.posted_at,
     post.id,
     post.bbcode_uid,
-    user_ids.slack_nick,
-    user_ids.avatar
+    gargling.slack_nick,
+    gargling.avatar
 from
     post as post
-    inner join user_ids on post.gargling_id = user_ids.gargling_id
+    inner join gargling on post.gargling_id = gargling.id
 where
-    user_ids.slack_nick = :slack_nick
+    gargling.slack_nick = :slack_nick
 order by
     random()
 limit
