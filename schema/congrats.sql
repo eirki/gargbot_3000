@@ -9,7 +9,7 @@ values
     (:sentence);
 
 
--- name: get_congrats
+-- name: congrats_for_date
 select
     slack_nick,
     slack_id,
@@ -33,7 +33,7 @@ where
     ) = :day;
 
 
--- name: get_sentence^
+-- name: random_sentence^
 select
     sentence
 from

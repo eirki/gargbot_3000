@@ -33,7 +33,7 @@ values
     );
 
 
--- name: get_random_message
+-- name: random_message_session
 select
     msg_time,
     from_user,
@@ -57,7 +57,7 @@ order by
     msg_time;
 
 
--- name: get_random_message_for_user
+-- name: message_session_for_user_id
 with session as (
     select
         msg.session_id,

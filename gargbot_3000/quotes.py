@@ -53,14 +53,14 @@ def forum(
     desc = " "
     post = None
     if user:
-        post = forum_queries.get_random_post_for_user(conn, slack_nick=user)
+        post = forum_queries.post_for_user(conn, slack_nick=user)
         if not post:
             desc = (
                 f"Gargling not found: {user}. Husk å bruke slack nick. "
                 "Her er et tilfeldig quote i stedet."
             )
     if not post:
-        post = forum_queries.get_random_post(conn)
+        post = forum_queries.random_post(conn)
     text = _sanitize_post(post["post_text"], post["bbcode_uid"])
     avatarurl = f"{config.forum_url}/download/file.php?avatar={post['avatar']}".strip()
     url = f"{config.forum_url}/viewtopic.php?p={post['post_id']}#p{post['post_id']}"
@@ -74,7 +74,7 @@ def msn(
     desc = None
     messages = None
     if user:
-        messages = msn_queries.get_random_message_for_user(conn, slack_nick=user)
+        messages = msn_queries.message_session_for_user_id(conn, slack_nick=user)
         if messages:
             first = next(i for i, message in enumerate(messages) if message["is_user"])
         else:
@@ -83,7 +83,7 @@ def msn(
                 "Her er en tilfeldig samtale i stedet."
             )
     if not messages:
-        messages = msn_queries.get_random_message(conn)
+        messages = msn_queries.random_message_session(conn)
         if len(messages) <= 10:
             first = 0
         else:

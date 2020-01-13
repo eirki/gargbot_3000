@@ -28,7 +28,7 @@ class Recipient:
     @classmethod
     def get_todays(cls, conn: connection) -> t.List["Recipient"]:
         now_tz = pendulum.now(config.tz)
-        data = queries.get_congrats(conn, month=now_tz.month, day=now_tz.day)
+        data = queries.congrats_for_date(conn, month=now_tz.month, day=now_tz.day)
         recipients = [
             cls(
                 nick=row["slack_nick"],
@@ -67,7 +67,7 @@ class Recipient:
 
     @staticmethod
     def get_sentence(conn: connection) -> str:
-        result = queries.get_sentence(conn)
+        result = queries.random_sentence(conn)
         sentence = result["sentence"]
         return sentence
 

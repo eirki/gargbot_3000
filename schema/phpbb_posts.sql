@@ -30,7 +30,7 @@ values
     );
 
 
--- name: get_random_post^
+-- name: random_post^
 select
     post.db_id,
     post.post_text,
@@ -55,7 +55,7 @@ from
     inner join user_ids on post.db_id = user_ids.db_id;
 
 
--- name: get_random_post_for_user^
+-- name: post_for_user^
 select
     post.db_id,
     post.post_text,

@@ -82,7 +82,7 @@ def whoisyou(fitbit_id: str):
             else:
                 if queries.is_id_matched(conn, fitbit_id=fitbit_id):
                     return "Fumbs up!"
-        data = queries.get_nicks_ids(conn)
+        data = queries.all_ids_nicks(conn)
         form.name.choices.extend([(row["db_id"], row["slack_nick"]) for row in data])
     return render_template("whoisyou.html", form=form)
 
@@ -111,9 +111,7 @@ def parse_report_args(
     )
     tokens: t.List[dict] = [
         dict(data)
-        for data in queries.get_fitbit_tokens_by_slack_nicks(
-            conn, slack_nicks=list(users)
-        )
+        for data in queries.fitbit_tokens_for_slack_nicks(conn, slack_nicks=list(users))
     ]
     users_authed = {token["slack_nick"] for token in tokens}
     users_nonauthed = users - users_authed
@@ -190,7 +188,7 @@ def report(args: t.Optional[t.List[str]], conn: db.connection):
     if not topics:
         topics = all_topics
     if not tokens:
-        tokens = queries.get_all_fitbit_tokens(conn)
+        tokens = queries.all_fitbit_tokens(conn)
 
     clients = init_fitbit_clients(tokens)
 
@@ -208,7 +206,7 @@ def report(args: t.Optional[t.List[str]], conn: db.connection):
 
 
 def get_daily_report(conn: db.connection) -> t.Optional[dict]:
-    tokens = queries.get_daily_report_tokens(conn)
+    tokens = queries.daily_report_tokens(conn)
     if not tokens:
         return None
     clients = init_fitbit_clients(tokens)

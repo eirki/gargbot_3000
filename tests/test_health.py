@@ -71,11 +71,11 @@ def test_who_is_you_form(
     slack_nick = next(
         user.slack_nick for user in conftest.users if user.db_id == fitbut_user.db_id
     )
-    tokens = health.queries.get_fitbit_tokens_by_slack_nicks(
+    tokens = health.queries.fitbit_tokens_for_slack_nicks(
         conn, slack_nicks=[slack_nick]
     )
     assert len(tokens) == 1
-    daily_tokens = health.queries.get_daily_report_tokens(conn)
+    daily_tokens = health.queries.daily_report_tokens(conn)
     print(daily_tokens)
     if use_report == "no":
         assert not any(

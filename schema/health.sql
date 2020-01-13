@@ -74,7 +74,7 @@ where
   fitbit_id = :fitbit_id;
 
 
--- name: get_all_fitbit_tokens
+-- name: all_fitbit_tokens
 select
   t.fitbit_id as fitbit_id,
   t.access_token as access_token,
@@ -86,7 +86,7 @@ from
   inner join user_ids u on t.fitbit_id = u.fitbit_id;
 
 
--- name: get_fitbit_tokens_by_slack_nicks
+-- name: fitbit_tokens_for_slack_nicks
 select
   t.fitbit_id as fitbit_id,
   t.access_token as access_token,
@@ -100,7 +100,7 @@ where
   u.slack_nick = any(:slack_nicks);
 
 
--- name: get_daily_report_tokens
+-- name: daily_report_tokens
 select
   t.fitbit_id as fitbit_id,
   t.access_token as access_token,
@@ -122,7 +122,7 @@ where
   fitbit_id = :fitbit_id;
 
 
--- name: get_nicks_ids
+-- name: all_ids_nicks
 select
   db_id,
   slack_nick
