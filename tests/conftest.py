@@ -209,6 +209,7 @@ def conn(postgresql: connection):
     populate_congrats_table(postgresql)
     populate_health_table(postgresql)
     postgresql.cursor_factory = RealDictCursor
+    postgresql.commit()
     yield postgresql
 
 

@@ -265,6 +265,7 @@ def main(options: t.Optional[dict], debug: bool = False):
         health.setup_bluebrint()
         with app.pool.get_connection() as conn:
             pictures.queries.define_args(conn)
+            conn.commit()
         app.drop_pics = pictures.DropPics()
         if debug is False:
             gunicorn_app = StandaloneApplication(app, options)

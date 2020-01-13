@@ -31,7 +31,7 @@ values
 
 
 --name: define_args#
-create materialized view picture_year as
+create materialized view if not exists picture_year as
 select
     distinct extract(
         year
@@ -44,7 +44,7 @@ order by
     year;
 
 
-create materialized view picture_topic as
+create materialized view if not exists picture_topic as
 select
     distinct topic
 from
