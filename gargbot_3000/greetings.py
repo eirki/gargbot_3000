@@ -25,56 +25,42 @@ class Recipient:
     slack_id: str
     age: int
 
-    @classmethod
-    def get_todays(cls, conn: connection) -> t.List["Recipient"]:
-        now_tz = pendulum.now(config.tz)
-        data = queries.congrats_for_date(conn, month=now_tz.month, day=now_tz.day)
-        recipients = [
-            cls(
-                nick=row["slack_nick"],
-                slack_id=row["slack_id"],
-                age=(now_tz.year - row["year"]),
-            )
-            for row in data
-        ]
-        return recipients
 
-    def get_greeting(self, conn: connection, drop_pics) -> t.Dict:
-        sentence = self.get_sentence(conn)
-        text = (
-            f"Hurra! Vår felles venn <@{self.slack_id}> fyller {self.age} i dag!\n"
-            f"{sentence}"
+def todays_recipients(conn: connection) -> t.List[Recipient]:
+    now_tz = pendulum.now(config.tz)
+    data = queries.congrats_for_date(conn, month=now_tz.month, day=now_tz.day)
+    recipients = [
+        Recipient(
+            nick=row["slack_nick"],
+            slack_id=row["slack_id"],
+            age=(now_tz.year - row["year"]),
         )
-        try:
-            person_picurl, date, _ = drop_pics.get_pic(conn, [self.nick])
-        except psycopg2.OperationalError:
-            conn.ping(True)
-            person_picurl, date, _ = drop_pics.get_pic(conn, [self.nick])
-        response = {
-            "text": text,
-            "blocks": [
-                {"type": "section", "text": {"type": "mrkdwn", "text": text}},
-                {
-                    "type": "image",
-                    "image_url": person_picurl,
-                    "alt_text": person_picurl,
-                },
-                {"type": "image", "image_url": mort_picurl, "alt_text": mort_picurl},
-            ],
-        }
+        for row in data
+    ]
+    return recipients
 
-        return response
 
-    @staticmethod
-    def get_sentence(conn: connection) -> str:
-        result = queries.random_sentence(conn)
-        sentence = result["sentence"]
-        return sentence
+def formulate_congrats(recipient: Recipient, conn: connection, drop_pics) -> t.Dict:
+    sentence = queries.random_sentence(conn)["sentence"]
+    text = (
+        f"Hurra! Vår felles venn <@{recipient.slack_id}> fyller {recipient.age} i dag!\n"
+        f"{sentence}"
+    )
+    try:
+        person_picurl, date, _ = drop_pics.get_pic(conn, [recipient.nick])
+    except psycopg2.OperationalError:
+        conn.ping(True)
+        person_picurl, date, _ = drop_pics.get_pic(conn, [recipient.nick])
+    response = {
+        "text": text,
+        "blocks": [
+            {"type": "section", "text": {"type": "mrkdwn", "text": text}},
+            {"type": "image", "image_url": person_picurl, "alt_text": person_picurl},
+            {"type": "image", "image_url": mort_picurl, "alt_text": mort_picurl},
+        ],
+    }
 
-    def get_greet(self, conn: connection) -> dict:
-        drop_pics = pictures.DropPics()
-        response = self.get_greeting(conn, drop_pics)
-        return response
+    return response
 
 
 def get_period_to_morning() -> pendulum.Period:
@@ -88,6 +74,7 @@ def get_period_to_morning() -> pendulum.Period:
 
 def main() -> None:
     log.info("GargBot 3000 greeter starter")
+    drop_pics = pictures.DropPics()
     try:
         while True:
             until_next = get_period_to_morning()
@@ -99,10 +86,10 @@ def main() -> None:
             try:
                 slack_client = SlackClient(config.slack_bot_user_token)
                 conn = database.connect()
-                recipients = Recipient.get_todays(conn)
+                recipients = todays_recipients(conn)
                 log.info(f"Recipients today {recipients}")
                 for recipient in recipients:
-                    greet = recipient.get_greet(conn)
+                    greet = formulate_congrats(recipient, conn, drop_pics)
                     task.send_response(slack_client, greet, channel=config.main_channel)
                 report = health.get_daily_report(conn)
                 if report is not None:
