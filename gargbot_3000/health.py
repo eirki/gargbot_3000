@@ -2,6 +2,7 @@
 # coding: utf-8
 import datetime as dt
 import typing as t
+from operator import itemgetter
 
 import aiosql
 import pendulum
@@ -138,15 +139,16 @@ def init_fitbit_clients(tokens: t.List[dict]) -> t.Dict[str, Fitbit]:
 
 def get_weight(client: Fitbit) -> t.Optional[dict]:
     data = client.get_bodyweight(period="7d")
-    try:
-        rec = data["weight"][0]
-    except IndexError:
+    if len(data["weight"]) == 0:
         log.info("No weight data")
         return None
-    date_obj = pendulum.parse(f"{rec['date']}T{rec['time']}")
-    rec["datetime"] = date_obj
-    log.info(f"weight data: {rec}")
-    return rec
+    entries = data["weight"]
+    for entry in entries:
+        entry["datetime"] = pendulum.parse(f"{entry['date']}T{entry['time']}")
+    entries.sort(key=itemgetter("datetime"), reverse=True)
+    most_recent = entries[0]
+    log.info(f"weight data: {most_recent}")
+    return most_recent
 
 
 def get_activity(client: Fitbit) -> str:

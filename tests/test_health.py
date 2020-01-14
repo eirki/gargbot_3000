@@ -158,6 +158,8 @@ def test_parse_report_args(users, invalid_args, topics, non_authed, conn: connec
 
 @patch.object(health, "Fitbit")
 def test_daily_report(mock_Fitbit: Mock, conn: connection):
+    test_date = pendulum.datetime(2020, 1, 2, 12)
+    pendulum.set_test_now(test_date)
     instance1 = Mock()
     instance2 = Mock()
     mock_Fitbit.side_effect = [instance1, instance2]
@@ -166,7 +168,8 @@ def test_daily_report(mock_Fitbit: Mock, conn: connection):
     }
     instance2.get_bodyweight.return_value = {
         "weight": [
-            {"date": pendulum.now().to_date_string(), "time": "10:11:12", "weight": 100}
+            {"date": "2020-01-01", "time": "10:11:12", "weight": 75},
+            {"date": "2020-01-02", "time": "10:11:12", "weight": 100},
         ]
     }
     response = health.get_daily_report(conn)
