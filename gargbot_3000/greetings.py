@@ -1,8 +1,10 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
+import itertools
 import sys
 import time
 import typing as t
+from operator import attrgetter
 
 import aiosql
 import pendulum
@@ -19,7 +21,7 @@ queries = aiosql.from_path("schema/congrats.sql", "psycopg2")
 mort_picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
 
 
-@dataclass
+@dataclass(frozen=True)
 class Recipient:
     nick: str
     slack_id: str
@@ -40,17 +42,13 @@ def todays_recipients(conn: connection) -> t.List[Recipient]:
     return recipients
 
 
-def formulate_congrats(recipient: Recipient, conn: connection, drop_pics) -> t.Dict:
+def formulate_congrat(recipient: Recipient, conn: connection, drop_pics) -> t.Dict:
     sentence = queries.random_sentence(conn)["sentence"]
     text = (
         f"Hurra! Vår felles venn <@{recipient.slack_id}> fyller {recipient.age} i dag!\n"
         f"{sentence}"
     )
-    try:
-        person_picurl, date, _ = drop_pics.get_pic(conn, [recipient.nick])
-    except psycopg2.OperationalError:
-        conn.ping(True)
-        person_picurl, date, _ = drop_pics.get_pic(conn, [recipient.nick])
+    person_picurl, date, _ = drop_pics.get_pic(conn, [recipient.nick])
     response = {
         "text": text,
         "blocks": [
@@ -63,41 +61,66 @@ def formulate_congrats(recipient: Recipient, conn: connection, drop_pics) -> t.D
     return response
 
 
-def get_period_to_morning() -> pendulum.Period:
-    morning_today = pendulum.today(config.tz).add(hours=7)
-    morning_tmrw = pendulum.tomorrow(config.tz).add(hours=7)
-    now = pendulum.now(config.tz)
-    next_greeting_time = morning_today if morning_today > now else morning_tmrw
-    until_next = next_greeting_time - now
-    return until_next
+def send_congrats(conn: connection, slack_client: SlackClient):
+    drop_pics = pictures.DropPics()
+    recipients = todays_recipients(conn)
+    log.info(f"Recipients today {recipients}")
+    for recipient in recipients:
+        greet = formulate_congrat(recipient, conn, drop_pics)
+        task.send_response(slack_client, greet, channel=config.main_channel)
+
+
+def send_report(conn: connection, slack_client: SlackClient):
+    report = health.get_daily_report(conn)
+    if report is not None:
+        task.send_response(slack_client, report, channel=config.health_channel)
+
+
+@dataclass(frozen=True)
+class Event:
+    until: pendulum.Period
+    func: t.Callable
+
+    @staticmethod
+    def possible():
+        types = [
+            (10, send_report),
+            (7, send_congrats),
+        ]
+        times = (pendulum.today, pendulum.tomorrow)
+        return itertools.product(times, types)
+
+    @staticmethod
+    def next() -> "Event":
+        events = []
+        now = pendulum.now()
+        for day, (hour, func) in Event.possible():
+            when = day(config.tz).at(hour)
+            if when.is_past():
+                continue
+            events.append(Event(until=(when - now), func=func))
+        events.sort(key=attrgetter("until"))
+        event = events[0]
+        return event
 
 
 def main() -> None:
     log.info("GargBot 3000 greeter starter")
-    drop_pics = pictures.DropPics()
     try:
         while True:
-            until_next = get_period_to_morning()
+            event = Event.next()
             log.info(
-                f"Next greeting check at: {until_next.end}, "
-                f"sleeping for {until_next.in_words()}"
+                f"Next greeting check at: {event.until.end}, "
+                f"sleeping for {event.until.in_words()}"
             )
-            time.sleep(until_next.total_seconds())
+            time.sleep(event.until.total_seconds())
             try:
                 slack_client = SlackClient(config.slack_bot_user_token)
                 conn = database.connect()
-                recipients = todays_recipients(conn)
-                log.info(f"Recipients today {recipients}")
-                for recipient in recipients:
-                    greet = formulate_congrats(recipient, conn, drop_pics)
-                    task.send_response(slack_client, greet, channel=config.main_channel)
-                report = health.get_daily_report(conn)
-                if report is not None:
-                    task.send_response(
-                        slack_client, report, channel=config.health_channel
-                    )
-                conn.close()
+                event.func(conn, slack_client)
             except Exception:
                 log.error("Error in command execution", exc_info=True)
+            finally:
+                conn.close()
     except KeyboardInterrupt:
         sys.exit()

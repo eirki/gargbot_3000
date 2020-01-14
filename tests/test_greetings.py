@@ -1,6 +1,7 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
 import pendulum
+import pytest
 from psycopg2.extensions import connection
 
 from gargbot_3000 import config, greetings
@@ -33,7 +34,7 @@ def test_congrat(conn: connection, drop_pics: DropPics) -> None:
     recipient = greetings.Recipient(
         nick=chosen_user.slack_nick, slack_id=chosen_user.slack_id, age=conftest.age
     )
-    response = greetings.formulate_congrats(recipient, conn, drop_pics)
+    response = greetings.formulate_congrat(recipient, conn, drop_pics)
     image_url = response["blocks"][1]["image_url"]
     response_pic = next(pic for pic in conftest.pics if image_url.endswith(pic.path))
     assert chosen_user.slack_id in response["text"]
@@ -42,25 +43,34 @@ def test_congrat(conn: connection, drop_pics: DropPics) -> None:
     assert chosen_user.db_id in response_pic.faces
 
 
-def test_wait_same_day():
-    night = pendulum.datetime(2020, 1, 2, hour=1, tz=config.tz)
-    morning = pendulum.datetime(2020, 1, 2, hour=7, tz=config.tz)
+def test_wait_until_morning(fixed_day):
+    night = fixed_day.at(hour=1)
     pendulum.set_test_now(night)
-    until_next = greetings.get_period_to_morning()
-    assert pendulum.now() + until_next == morning
+    morning = fixed_day.at(hour=7)
+    event = greetings.Event.next()
+    assert pendulum.now() + event.until == morning
+    assert event.func == greetings.send_congrats
 
 
-def test_wait_next_day():
-    noon = pendulum.datetime(2020, 1, 2, hour=12, tz=config.tz)
-    tomorrow_morning = pendulum.datetime(2020, 1, 3, hour=7, tz=config.tz)
-    pendulum.set_test_now(noon)
-    until_next = greetings.get_period_to_morning()
-    assert pendulum.now() + until_next == tomorrow_morning
+def test_wait_until_midday(fixed_day):
+    after_morning = fixed_day.at(hour=7, second=1)
+    pendulum.set_test_now(after_morning)
+    midday = fixed_day.at(hour=10)
+    event = greetings.Event.next()
+    assert pendulum.now() + event.until == midday
+    assert event.func == greetings.send_report
 
 
-def test_wait_next_day2():
-    late_morning = pendulum.datetime(2020, 1, 2, hour=7, second=1, tz=config.tz)
-    tomorrow_morning = pendulum.datetime(2020, 1, 3, hour=7, tz=config.tz)
-    pendulum.set_test_now(late_morning)
-    until_next = greetings.get_period_to_morning()
-    assert pendulum.now() + until_next == tomorrow_morning
+def test_wait_until_tomorrow_morning(fixed_day):
+    after_midday = fixed_day.at(hour=10, second=1)
+    pendulum.set_test_now(after_midday)
+    tomorrow_morning = fixed_day.add(days=1).at(hour=7)
+    event = greetings.Event.next()
+    assert pendulum.now() + event.until == tomorrow_morning
+    assert event.func == greetings.send_congrats
+
+
+@pytest.fixture
+def fixed_day() -> pendulum.DateTime:
+    day_of_test = pendulum.datetime(2020, 1, 2, tz=config.tz)
+    return day_of_test
