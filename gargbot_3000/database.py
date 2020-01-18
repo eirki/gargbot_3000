@@ -109,6 +109,7 @@ class JinjaSqlAdapter(PsycoPG2Adapter):
         block_end_string="%}*/",
         variable_start_string="/*{{",
         variable_end_string="}}*/",
+        undefined=jinja2.StrictUndefined,
     )
 
     @classmethod
@@ -120,12 +121,16 @@ class JinjaSqlAdapter(PsycoPG2Adapter):
     @classmethod
     def select(cls, conn, _query_name, sql, parameters: dict, record_class=None):
         sql = cls.render_template(sql, parameters)
-        return super().select(conn, _query_name, sql, parameters, record_class=None)
+        return super().select(
+            conn, _query_name, sql, parameters, record_class=record_class
+        )
 
     @classmethod
     def select_one(cls, conn, _query_name, sql, parameters: dict, record_class=None):
         sql = cls.render_template(sql, parameters)
-        return super().select_one(conn, _query_name, sql, parameters, record_class=None)
+        return super().select_one(
+            conn, _query_name, sql, parameters, record_class=record_class
+        )
 
     @classmethod
     @contextmanager
