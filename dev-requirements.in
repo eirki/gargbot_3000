@@ -5,3 +5,4 @@ pre-commit==1.14.4
 black
 mypy
 flake8
+ipykernel
