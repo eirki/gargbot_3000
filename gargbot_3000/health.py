@@ -316,28 +316,38 @@ def whoisyou(service_name: str, service_user_id: str):
 def weight_blocks(clients) -> t.List[dict]:
     now = pendulum.now()
     blocks = []
-    for nick, (client, service) in clients.items():
+    for name, (client, service) in clients.items():
         weight_data = service.value.weight(client)
         if weight_data is None:
             continue
         elapsed = (now - weight_data["datetime"]).days
         if elapsed < 2:
-            desc = f"{nick} veier nå *{weight_data['weight']}* kg!"
+            desc = f"{name} veier nå *{weight_data['weight']}* kg!"
         else:
-            desc = f"{nick} har ikke veid seg på *{elapsed}* dager. Skjerpings!"
+            desc = f"{name} har ikke veid seg på *{elapsed}* dager. Skjerpings!"
         blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": desc}})
     return blocks
 
 
 def steps_blocks(clients) -> t.List[dict]:
-    blocks = []
-    for nick, (client, service) in clients.items():
+    step_amounts = []
+    for name, (client, service) in clients.items():
         steps = service.value.steps(client)
         if steps is None:
             continue
-        desc = f"{nick} gikk *{steps}* skritt i går."
-        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": desc}})
-    return blocks
+        step_amounts.append((steps, name))
+    if not step_amounts:
+        return []
+    step_amounts.sort(reverse=True)
+    steps, name = step_amounts[0]
+    desc = f"{name} gikk *{steps}* skritt i går. "
+    if len(step_amounts) > 1:
+        desc = desc.replace("gikk", "(:star:) gikk")
+        desc += ", ".join(
+            [f"{name} gikk *{steps}* skritt" for steps, name in step_amounts[1:]]
+        )
+        desc += "."
+    return [{"type": "section", "text": {"type": "mrkdwn", "text": desc}}]
 
 
 def report(conn: db.connection) -> t.Optional[dict]:
@@ -348,7 +358,7 @@ def report(conn: db.connection) -> t.Optional[dict]:
     for token in tokens:
         service = Service[token["service"]]
         client = service.value.init_client(token)
-        clients[token["slack_nick"]] = (client, service)
+        clients[token["first_name"]] = (client, service)
     blocks = []
     blocks.extend(weight_blocks(clients))
     blocks.extend(steps_blocks(clients))

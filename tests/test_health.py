@@ -114,12 +114,14 @@ def test_who_is_you_form(
         f"/whoisyou/{service}/{health_user.service_user_id}", data=form.data
     )
     assert response.status_code == 200
-    slack_nick = next(
-        user.slack_nick for user in conftest.users if user.db_id == health_user.db_id
+    slack_nick, first_name = next(
+        (user.slack_nick, user.first_name)
+        for user in conftest.users
+        if user.db_id == health_user.db_id
     )
     tokens = health.queries.tokens(conn, slack_nicks=[slack_nick], only_report=False)
     assert len(tokens) == 1
-    assert tokens[0]["slack_nick"] == slack_nick
+    assert tokens[0]["first_name"] == first_name
     daily_tokens = health.queries.tokens(conn, only_report=True, slack_nicks=None)
     amount = {"no": 0, "yes": 1}[use_report]
     assert (
@@ -217,7 +219,7 @@ def test_daily_report(mock_Fitbit: Mock, mock_Withings: Mock, conn: connection):
     response = health.report(conn)
     assert response is not None
 
-    assert len(response["blocks"]) == 7
+    assert len(response["blocks"]) == 4
 
     assert any("*6620* skritt" in block["text"]["text"] for block in response["blocks"])
     assert any("*6619* skritt" in block["text"]["text"] for block in response["blocks"])

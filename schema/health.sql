@@ -96,7 +96,7 @@ select
   fitbit.access_token,
   fitbit.refresh_token,
   fitbit.expires_at,
-  user_ids.slack_nick,
+  user_ids.first_name,
   'fitbit' as service
 from
   fitbit_tokens as fitbit
@@ -120,7 +120,7 @@ select
   withings.access_token,
   withings.refresh_token,
   withings.expires_at :: float,
-  user_ids.slack_nick,
+  user_ids.first_name,
   'withings' as service
 from
   withings_tokens as withings
