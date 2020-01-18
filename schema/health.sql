@@ -1,30 +1,38 @@
 -- name: create_schema#
 create table fitbit_tokens (
-  fitbit_id text not null unique primary key,
+  id text not null unique primary key,
   access_token text not null,
   refresh_token text not null,
-  expires_at float8 not null
+  expires_at float not null,
+  enable_report boolean not null default false
 );
 
 
-create table health_report (fitbit_id text not null primary key);
+create table withings_tokens (
+  id int not null unique primary key,
+  access_token text not null,
+  refresh_token text not null,
+  expires_at int not null,
+  enable_report boolean not null default false
+);
 
 
 -- name: persist_token!
 insert into
-  fitbit_tokens (
-    fitbit_id,
+  /*{{ {"fitbit": "fitbit_tokens", "withings": "withings_tokens"}[service] }}*/
+  (
+    id,
     access_token,
     refresh_token,
     expires_at
   )
 values
   (
-    :user_id,
+    :id,
     :access_token,
     :refresh_token,
     :expires_at
-  ) on conflict (fitbit_id) do
+  ) on conflict (id) do
 update
 set
   (access_token, refresh_token, expires_at) = (
@@ -34,33 +42,40 @@ set
   );
 
 
---name: enable_daily_report!
-insert into
-  health_report (fitbit_id)
-values
-  (:fitbit_id);
-
-
---name: disable_daily_report!
-delete from
-  health_report
+--name: enable_report!
+update
+  /*{{ {"fitbit": "fitbit_tokens", "withings": "withings_tokens"}[service] }}*/
+set
+  enable_report = true
 where
-  fitbit_id = :fitbit_id;
+  id = :id;
+
+
+--name: disable_report!
+update
+  /*{{ {"fitbit": "fitbit_tokens", "withings": "withings_tokens"}[service] }}*/
+set
+  enable_report = false
+where
+  id = :id;
 
 
 -- name: match_ids!
 update
   user_ids
 set
-  fitbit_id = null
+  /*{{"fitbit_id" if service == "fitbit" else "withings_id" }}*/
+  = null
 where
-  fitbit_id = :fitbit_id;
+  /*{{"fitbit_id" if service == "fitbit" else "withings_id" }}*/
+  = :service_user_id;
 
 
 update
   user_ids
 set
-  fitbit_id = :fitbit_id
+  /*{{"fitbit_id" if service == "fitbit" else "withings_id" }}*/
+  = :service_user_id
 where
   db_id = :db_id;
 
@@ -71,55 +86,67 @@ select
 from
   user_ids
 where
-  fitbit_id = :fitbit_id;
+  /*{{"fitbit_id" if service == "fitbit" else "withings_id" }}*/
+  = :id;
 
 
--- name: all_fitbit_tokens
+-- name: tokens
 select
-  t.fitbit_id as fitbit_id,
-  t.access_token as access_token,
-  t.refresh_token as refresh_token,
-  t.expires_at as expires_at,
-  u.slack_nick as slack_nick
+  fitbit.id,
+  fitbit.access_token,
+  fitbit.refresh_token,
+  fitbit.expires_at,
+  user_ids.slack_nick,
+  'fitbit' as service
 from
-  fitbit_tokens t
-  inner join user_ids u on t.fitbit_id = u.fitbit_id;
-
-
--- name: fitbit_tokens_for_slack_nicks
-select
-  t.fitbit_id as fitbit_id,
-  t.access_token as access_token,
-  t.refresh_token as refresh_token,
-  t.expires_at as expires_at,
-  u.slack_nick as slack_nick
-from
-  fitbit_tokens t
-  inner join user_ids u on t.fitbit_id = u.fitbit_id
+  fitbit_tokens as fitbit
+  inner join user_ids on fitbit.id = user_ids.fitbit_id
+  /*{% if slack_nicks or only_report %}*/
 where
-  u.slack_nick = any(:slack_nicks);
-
-
--- name: daily_report_tokens
+  /*{% endif  %}*/
+  /*{% set and = joiner(" and ") %}*/
+  /*{% if slack_nicks %}*/
+  /*{{ and() }}*/
+  user_ids.slack_nick = any(:slack_nicks)
+  /*{% endif  %}*/
+  /*{% if only_report %}*/
+  /*{{ and() }}*/
+  fitbit.enable_report
+  /*{% endif  %}*/
+union
+all
 select
-  t.fitbit_id as fitbit_id,
-  t.access_token as access_token,
-  t.refresh_token as refresh_token,
-  t.expires_at as expires_at,
-  u.slack_nick as slack_nick
+  withings.id :: text,
+  withings.access_token,
+  withings.refresh_token,
+  withings.expires_at :: float,
+  user_ids.slack_nick,
+  'withings' as service
 from
-  fitbit_tokens t
-  inner join user_ids u on t.fitbit_id = u.fitbit_id
-  inner join health_report h on t.fitbit_id = h.fitbit_id;
+  withings_tokens as withings
+  inner join user_ids on withings.id = user_ids.withings_id
+  /*{% if slack_nicks or only_report %}*/
+where
+  /*{% endif  %}*/
+  /*{% set and = joiner(" and ") %}*/
+  /*{% if slack_nicks %}*/
+  /*{{ and() }}*/
+  user_ids.slack_nick = any(:slack_nicks)
+  /*{% endif  %}*/
+  /*{% if only_report %}*/
+  /*{{ and() }}*/
+  withings.enable_report
+  /*{% endif  %}*/
+;
 
 
--- name: is_fitbit_user^
+-- name: is_user^
 select
   true
 from
-  fitbit_tokens
+  /*{{"fitbit_tokens" if service == "fitbit" else "withings_tokens"}}*/
 where
-  fitbit_id = :fitbit_id;
+  id :: text = :id;
 
 
 -- name: all_ids_nicks
@@ -128,12 +155,3 @@ select
   slack_nick
 from
   user_ids;
-
-
---name: parse_nicks_from_args
-select
-  slack_nick
-from
-  user_ids
-where
-  slack_nick = any(:args);

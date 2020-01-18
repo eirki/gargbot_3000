@@ -71,7 +71,7 @@ def send_congrats(conn: connection, slack_client: SlackClient):
 
 
 def send_report(conn: connection, slack_client: SlackClient):
-    report = health.get_daily_report(conn)
+    report = health.report(conn)
     if report is not None:
         task.send_response(slack_client, report, channel=config.health_channel)
 
@@ -83,10 +83,7 @@ class Event:
 
     @staticmethod
     def possible():
-        types = [
-            (10, send_report),
-            (7, send_congrats),
-        ]
+        types = [(10, send_report), (7, send_congrats)]
         times = (pendulum.today, pendulum.tomorrow)
         return itertools.product(times, types)
 

@@ -47,6 +47,10 @@ countdown_date = dt.datetime.fromtimestamp(int(os.environ["countdown_date"]), tz
 
 countdown_args = os.environ["countdown_args"].split(", ")
 
-fitbit_client_ID = os.environ["fitbit_client_ID"]
+fitbit_client_id = os.environ["fitbit_client_id"]
 fitbit_client_secret = os.environ["fitbit_client_secret"]
 fitbit_redirect_uri = os.environ["fitbit_redirect_uri"]
+
+withings_client_id = os.environ["withings_client_id"]
+withings_consumer_secret = os.environ["withings_consumer_secret"]
+withings_redirect_uri = os.environ["withings_redirect_uri"]

@@ -262,7 +262,6 @@ class StandaloneApplication(BaseApplication):
 def main(options: t.Optional[dict], debug: bool = False):
     try:
         app.pool.setup()
-        health.setup_bluebrint()
         with app.pool.get_connection() as conn:
             pictures.queries.define_args(conn)
             conn.commit()

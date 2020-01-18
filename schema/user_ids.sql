@@ -7,7 +7,8 @@ create table user_ids (
   bday date not null,
   avatar text,
   slack_avatar text,
-  fitbit_id text unique
+  fitbit_id text unique,
+  withings_id int unique
 );
 
 

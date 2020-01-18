@@ -8,28 +8,8 @@ import pytest
 from flask import testing
 from psycopg2.extensions import connection
 
-from gargbot_3000 import config, database, server
+from gargbot_3000 import config, database
 from tests import conftest
-
-
-@pytest.fixture
-def client(conn) -> t.Generator[testing.FlaskClient, None, None]:
-    server.app.pool = MockPool(conn)
-    yield server.app.test_client()
-
-
-class MockPool(database.ConnectionPool):
-    def __init__(self, conn: connection) -> None:
-        self.conn = conn
-
-    def _getconn(self) -> connection:
-        return self.conn
-
-    def _putconn(self, conn: connection):
-        pass
-
-    def closeall(self):
-        pass
 
 
 class MockRequests:
