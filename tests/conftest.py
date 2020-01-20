@@ -30,22 +30,22 @@ byear = dt.datetime.now(config.tz).year - age
 # fmt: off
 @dataclass
 class User:
-    db_id: int
+    id: int
     first_name: str
     slack_id: str
     slack_nick: str
-    bday: dt.datetime
+    birthday: dt.datetime
     avatar: str
 
 users = [
-    User(db_id=2, first_name="name2", slack_id="s_id2", slack_nick="slack_nick2", bday=dt.datetime(byear, 2, 1), avatar="2.jpg"),
-    User(db_id=3, first_name="name3", slack_id="s_id3", slack_nick="slack_nick3", bday=dt.datetime(byear, 3, 1), avatar="3.jpg"),
-    User(db_id=5, first_name="name5", slack_id="s_id5", slack_nick="slack_nick5", bday=dt.datetime(byear, 5, 1), avatar="5.jpg"),
-    User(db_id=6, first_name="name6", slack_id="s_id6", slack_nick="slack_nick6", bday=dt.datetime(byear, 6, 1), avatar="6.jpg"),
-    User(db_id=7, first_name="name7", slack_id="s_id7", slack_nick="slack_nick7", bday=dt.datetime(byear, 7, 1), avatar="7.jpg"),
-    User(db_id=9, first_name="name9", slack_id="s_id9", slack_nick="slack_nick9", bday=dt.datetime(byear, 9, 1), avatar="9.jpg"),
-    User(db_id=10, first_name="name10", slack_id="s_id10", slack_nick="slack_nick10", bday=dt.datetime(byear, 11, 1), avatar="10.jpg"),
-    User(db_id=11, first_name="name11", slack_id="s_id11", slack_nick="slack_nick11", bday=dt.datetime(byear, 11, 1), avatar="11.jpg"),
+    User(id=2, first_name="name2", slack_id="s_id2", slack_nick="slack_nick2", birthday=dt.datetime(byear, 2, 1), avatar="2.jpg"),
+    User(id=3, first_name="name3", slack_id="s_id3", slack_nick="slack_nick3", birthday=dt.datetime(byear, 3, 1), avatar="3.jpg"),
+    User(id=5, first_name="name5", slack_id="s_id5", slack_nick="slack_nick5", birthday=dt.datetime(byear, 5, 1), avatar="5.jpg"),
+    User(id=6, first_name="name6", slack_id="s_id6", slack_nick="slack_nick6", birthday=dt.datetime(byear, 6, 1), avatar="6.jpg"),
+    User(id=7, first_name="name7", slack_id="s_id7", slack_nick="slack_nick7", birthday=dt.datetime(byear, 7, 1), avatar="7.jpg"),
+    User(id=9, first_name="name9", slack_id="s_id9", slack_nick="slack_nick9", birthday=dt.datetime(byear, 9, 1), avatar="9.jpg"),
+    User(id=10, first_name="name10", slack_id="s_id10", slack_nick="slack_nick10", birthday=dt.datetime(byear, 11, 1), avatar="10.jpg"),
+    User(id=11, first_name="name11", slack_id="s_id11", slack_nick="slack_nick11", birthday=dt.datetime(byear, 11, 1), avatar="11.jpg"),
 ]
 
 
@@ -53,7 +53,7 @@ users = [
 class Pic:
     path: str
     topic: str
-    taken: dt.datetime
+    taken_at: dt.datetime
     faces: t.List[int]
 
 pics = [
@@ -69,33 +69,33 @@ pics = [
 ]
 
 @dataclass
-class ForumPost:
-    db_id: int
-    post_text: str
-    post_timestamp: dt.datetime
-    post_id: int
+class Post:
+    id: int
+    gargling_id: int
+    posted_at: dt.datetime
+    content: str
     bbcode_uid: str
 
 
 forum_posts = [
-    ForumPost(2, "[b]text2[/b]", dt.datetime.fromtimestamp(1172690211), 3, "1dz6ywqv"),
-    ForumPost(3, "[b]text3[/b]", dt.datetime.fromtimestamp(1172690257), 4, "xw0i6wvy"),
-    ForumPost(5, "[b]text4[/b]", dt.datetime.fromtimestamp(1172690319), 5, "3ntrk0df"),
-    ForumPost(6, "[b]text5[/b]", dt.datetime.fromtimestamp(1172690396), 6, "1qmz5uwv"),
-    ForumPost(7, "[b]text6[/b]", dt.datetime.fromtimestamp(1172690466), 7, "2xuife66"),
-    ForumPost(9, "[b]text7[/b]", dt.datetime.fromtimestamp(1172690486), 8, "2wpgc113"),
-    ForumPost(10, "[b]text8[/b]", dt.datetime.fromtimestamp(1172690875), 9, "240k4drr"),
-    ForumPost(11, "[b]text9[/b]", dt.datetime.fromtimestamp(1172691974), 11, "2v1czw2o"),
+    Post(2, 2, dt.datetime.fromtimestamp(1172690211), "[b]text2[/b]", "1dz6ywqv"),
+    Post(3, 5, dt.datetime.fromtimestamp(1172690257), "[b]text3[/b]", "xw0i6wvy"),
+    Post(5, 5, dt.datetime.fromtimestamp(1172690319), "[b]text4[/b]", "3ntrk0df"),
+    Post(6, 6, dt.datetime.fromtimestamp(1172690396), "[b]text5[/b]", "1qmz5uwv"),
+    Post(7, 7, dt.datetime.fromtimestamp(1172690466), "[b]text6[/b]", "2xuife66"),
+    Post(9, 10, dt.datetime.fromtimestamp(1172690486), "[b]text7[/b]", "2wpgc113"),
+    Post(10, 9, dt.datetime.fromtimestamp(1172690875), "[b]text8[/b]", "240k4drr"),
+    Post(11, 11, dt.datetime.fromtimestamp(1172691974), "[b]text9[/b]", "2v1czw2o"),
 ]
 
 @dataclass
 class Message:
     session_id: str
-    msg_time: dt.datetime
-    msg_color: str
+    sent_at: dt.datetime
+    color: str
     from_user: str
-    msg_text: str
-    db_id: int
+    content: str
+    gargling_id: int
 
 
 messages = [
@@ -128,7 +128,7 @@ congrats = [
 class HealthUser:
     service: str
     service_user_id: t.Union[str, int]
-    db_id: t.Optional[int]
+    gargling_id: t.Optional[int]
     access_token: str
     refresh_token: str
     expires_at: t.Union[float, int]
@@ -184,9 +184,12 @@ def populate_pics_table(conn: connection) -> None:
     pictures.queries.create_schema(conn)
     for pic in pics:
         pic_id = pictures.queries.add_picture(
-            conn, path=pic.path, topic=pic.topic, taken=pic.taken
+            conn, path=pic.path, topic=pic.topic, taken_at=pic.taken_at
         )
-        faces = [{"pic_id": pic_id, "db_id": db_id} for db_id in pic.faces]
+        faces = [
+            {"picture_id": pic_id, "gargling_id": gargling_id}
+            for gargling_id in pic.faces
+        ]
         pictures.queries.add_faces(conn, faces)
     pictures.queries.define_args(conn)
 
@@ -216,20 +219,20 @@ def populate_health_table(conn: connection) -> None:
             health.queries.enable_report(
                 conn, id=health_user.service_user_id, service=service.name
             )
-        if health_user.db_id is None:
+        if health_user.gargling_id is None:
             continue
         health.queries.match_ids(
             conn,
             service_user_id=health_user.service_user_id,
-            db_id=health_user.db_id,
+            gargling_id=health_user.gargling_id,
             service=service.name,
         )
 
 
 @pytest.fixture()
 def conn(postgresql: connection):
-    populate_pics_table(postgresql)
     populate_user_table(postgresql)
+    populate_pics_table(postgresql)
     populate_quotes_table(postgresql)
     populate_congrats_table(postgresql)
     populate_health_table(postgresql)

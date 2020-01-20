@@ -13,8 +13,8 @@ from psycopg2.extensions import connection
 
 from gargbot_3000 import config
 
-forum_queries = aiosql.from_path("schema/phpbb_posts.sql", "psycopg2")
-msn_queries = aiosql.from_path("schema/msn_messages.sql", "psycopg2")
+forum_queries = aiosql.from_path("sql/post.sql", "psycopg2")
+msn_queries = aiosql.from_path("sql/message.sql", "psycopg2")
 
 
 def _sanitize_post(inp, bbcode_uid: str):
@@ -61,10 +61,10 @@ def forum(
             )
     if not post:
         post = forum_queries.random_post(conn)
-    text = _sanitize_post(post["post_text"], post["bbcode_uid"])
+    text = _sanitize_post(post["content"], post["bbcode_uid"])
     avatarurl = f"{config.forum_url}/download/file.php?avatar={post['avatar']}".strip()
-    url = f"{config.forum_url}/viewtopic.php?p={post['post_id']}#p{post['post_id']}"
-    return (text, post["slack_nick"], avatarurl, post["post_timestamp"], url, desc)
+    url = f"{config.forum_url}/viewtopic.php?p={post['id']}#p{post['id']}"
+    return (text, post["slack_nick"], avatarurl, post["posted_at"], url, desc)
 
 
 def msn(
@@ -90,16 +90,14 @@ def msn(
             first = random.randint(0, len(messages) - 10)
     conversation = messages[first : first + 10]
 
-    date = conversation[0]["msg_time"].strftime("%d.%m.%y %H:%M")
+    date = conversation[0]["sent_at"].strftime("%d.%m.%y %H:%M")
 
     squashed: t.List[t.List[str]] = []
     for message in conversation:
         if squashed:
-            prev_from_user, prev_msg_text, prev_msg_color = squashed[-1]
+            prev_from_user, prev_content, prev_color = squashed[-1]
             if message["from_user"] == prev_from_user:
-                squashed[-1][1] = "\n".join([prev_msg_text, message["msg_text"]])
+                squashed[-1][1] = "\n".join([prev_content, message["content"]])
                 continue
-        squashed.append(
-            [message["from_user"], message["msg_text"], message["msg_color"]]
-        )
+        squashed.append([message["from_user"], message["content"], message["color"]])
     return date, squashed, desc

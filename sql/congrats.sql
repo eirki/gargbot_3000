@@ -16,7 +16,7 @@ select
     extract(
         year
         from
-            bday
+            birthday
     ) :: int as year
 from
     gargling
@@ -24,12 +24,12 @@ where
     extract(
         month
         from
-            bday
+            birthday
     ) = :month
     and extract(
         day
         from
-            bday
+            birthday
     ) = :day;
 
 

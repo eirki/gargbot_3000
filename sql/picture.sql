@@ -3,7 +3,7 @@ create table picture (
     id serial primary key,
     path text,
     topic text,
-    taken timestamp
+    taken_at timestamp
 );
 
 
@@ -15,16 +15,16 @@ create table picture_gargling (
 
 --name: add_picture<!
 insert into
-    picture (path, topic, taken)
+    picture (path, topic, taken_at)
 values
-    (:path, :topic, :taken) returning picture_id;
+    (:path, :topic, :taken_at) returning id;
 
 
 --name: add_faces*!
 insert into
-    picture_gargling (gargling_id, picture_id)
+    picture_gargling (picture_id, gargling_id)
 values
-    (:gargling_id, :picture_id);
+    (:picture_id, :gargling_id);
 
 
 --name: define_args#
@@ -33,7 +33,7 @@ select
     distinct extract(
         year
         from
-            taken
+            taken_at
     ) :: text as year
 from
     picture
@@ -74,7 +74,7 @@ select
                 select
                     slack_nick
                 from
-                    gargling_ids
+                    gargling
             )
     ) as garglings;
 
@@ -103,7 +103,7 @@ select
                 select
                     array [id :: text, slack_nick]
                 from
-                    gargling_ids
+                    gargling
                 where
                     slack_nick = any(:args)
             ) as garglings
@@ -113,7 +113,7 @@ select
 -- name: random_pic^
 select
     path,
-    taken
+    taken_at
 from
     picture
 where
@@ -136,11 +136,11 @@ limit
 -- name: pic_for_topic_year_garglings^
 select
     picture.path,
-    picture.taken
+    picture.taken_at
 from
     picture
     /*{% if garglings|length == 1 %}*/
-    left join picture_gargling on picture.picture_id = picture_gargling.picture_id
+    left join picture_gargling on picture.id = picture_gargling.picture_id
     /*{% elif garglings|length > 1 %}*/
     left join (
         select
@@ -150,7 +150,7 @@ from
             picture_gargling
         group by
             picture_id
-    ) on picture.picture_id = picture_gargling.picture_id
+    ) as picture_gargling on picture.id = picture_gargling.picture_id
     /*{% endif %}*/
 where
     /*{% set and = joiner(" and ") %}*/
@@ -163,7 +163,7 @@ where
     extract(
         year
         from
-            picture.taken
+            picture.taken_at
     ) = :year
     /*{% endif %}*/
     /*{% if garglings|length == 1 %}*/

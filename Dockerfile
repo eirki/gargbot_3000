@@ -12,4 +12,4 @@ RUN venv/bin/pip install -r requirements.txt
 USER gargbotuser
 
 COPY gargbot_3000 gargbot_3000
-COPY schema schema
+COPY sql sql

@@ -11,7 +11,9 @@ from tests import conftest
 
 def test_finds_recipient(conn: connection) -> None:
     chosen_user = conftest.users[0]
-    test_now = pendulum.instance(chosen_user.bday, tz=config.tz).add(years=conftest.age)
+    test_now = pendulum.instance(chosen_user.birthday, tz=config.tz).add(
+        years=conftest.age
+    )
     pendulum.set_test_now(test_now)
     recipients = greetings.todays_recipients(conn)
     assert len(recipients) == 1
@@ -23,7 +25,9 @@ def test_finds_recipient(conn: connection) -> None:
 
 def test_finds_2_recipients(conn: connection) -> None:
     chosen_user = conftest.users[7]
-    test_now = pendulum.instance(chosen_user.bday, tz=config.tz).add(years=conftest.age)
+    test_now = pendulum.instance(chosen_user.birthday, tz=config.tz).add(
+        years=conftest.age
+    )
     pendulum.set_test_now(test_now)
     recipients = greetings.todays_recipients(conn)
     assert len(recipients) == 2
@@ -40,7 +44,7 @@ def test_congrat(conn: connection, drop_pics: DropPics) -> None:
     assert chosen_user.slack_id in response["text"]
     assert "Test sentence" in response["text"]
     assert str(conftest.age) in response["text"]
-    assert chosen_user.db_id in response_pic.faces
+    assert chosen_user.id in response_pic.faces
 
 
 def test_wait_until_morning(fixed_day):

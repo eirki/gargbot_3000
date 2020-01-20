@@ -8,7 +8,6 @@ from operator import attrgetter
 
 import aiosql
 import pendulum
-import psycopg2
 from psycopg2.extensions import connection
 from slackclient import SlackClient
 
@@ -16,7 +15,7 @@ from dataclasses import dataclass
 from gargbot_3000 import config, database, health, pictures, task
 from gargbot_3000.logger import log
 
-queries = aiosql.from_path("schema/congrats.sql", "psycopg2")
+queries = aiosql.from_path("sql/congrats.sql", "psycopg2")
 
 mort_picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
 

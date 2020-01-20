@@ -6,9 +6,7 @@ create table gargling (
   first_name text,
   birthday date not null,
   avatar text,
-  slack_avatar text,
-  fitbit_id text unique,
-  withings_id int unique
+  slack_avatar text
 );
 
 
@@ -19,7 +17,7 @@ insert into
     slack_id,
     slack_nick,
     first_name,
-    bday,
+    birthday,
     avatar
   )
 values
@@ -28,7 +26,7 @@ values
     :slack_id,
     :slack_nick,
     :first_name,
-    :bday,
+    :birthday,
     :avatar
   );
 

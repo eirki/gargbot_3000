@@ -32,7 +32,7 @@ from gargbot_3000 import config
 from gargbot_3000 import database as db
 from gargbot_3000.logger import log
 
-queries = aiosql.from_path("schema/health.sql", driver_adapter=db.JinjaSqlAdapter)
+queries = aiosql.from_path("sql/health.sql", driver_adapter=db.JinjaSqlAdapter)
 blueprint = Blueprint("health", __name__)
 withings_api.common.enforce_type = lambda value, expected: value
 
@@ -291,11 +291,11 @@ def whoisyou(service_name: str, service_user_id: str):
             elif form.report.data == "no":
                 queries.disable_report(conn, id=service_user_id, service=service.name)
             conn.commit()
-            db_id = form.name.data
-            if db_id != "":
+            gargling_id = form.name.data
+            if gargling_id != "":
                 queries.match_ids(
                     conn,
-                    db_id=db_id,
+                    gargling_id=gargling_id,
                     service_user_id=service_user_id,
                     service=service.name,
                 )
@@ -307,7 +307,7 @@ def whoisyou(service_name: str, service_user_id: str):
                 ):
                     return "Fumbs up!"
         data = queries.all_ids_nicks(conn)
-        form.name.choices.extend([(row["db_id"], row["slack_nick"]) for row in data])
+        form.name.choices.extend([(row["id"], row["slack_nick"]) for row in data])
     return render_template("whoisyou.html", form=form)
 
 

@@ -66,7 +66,7 @@ def test_handle_redirect(service: str, client: testing.FlaskClient, conn: connec
     with conn.cursor() as cursor:
         cursor.execute(
             "SELECT id, access_token, refresh_token, expires_at "
-            f"FROM {service}_tokens where id = %(fake_user_id)s",
+            f"FROM {service}_token where id = %(fake_user_id)s",
             {"fake_user_id": fake_id},
         )
         data = cursor.fetchone()
@@ -108,7 +108,7 @@ def test_who_is_you_form(
 ):
     health_user = conftest.health_users[1 if service == "fitbit" else 5]
     form = health.WhoIsForm()
-    form.name.data = health_user.db_id
+    form.name.data = health_user.gargling_id
     form.report.data = use_report
     response = client.post(
         f"/whoisyou/{service}/{health_user.service_user_id}", data=form.data
@@ -117,7 +117,7 @@ def test_who_is_you_form(
     slack_nick, first_name = next(
         (user.slack_nick, user.first_name)
         for user in conftest.users
-        if user.db_id == health_user.db_id
+        if user.id == health_user.gargling_id
     )
     tokens = health.queries.tokens(conn, slack_nicks=[slack_nick], only_report=False)
     assert len(tokens) == 1

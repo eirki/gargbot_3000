@@ -29,7 +29,6 @@ values
 
 -- name: random_post^
 select
-    post.gargling_id,
     post.content,
     post.posted_at,
     post.id,
@@ -54,7 +53,6 @@ from
 
 -- name: post_for_user^
 select
-    post.gargling_id,
     post.content,
     post.posted_at,
     post.id,
