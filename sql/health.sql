@@ -62,7 +62,7 @@ where
 
 -- name: match_ids!
 update
-  user_ids
+  gargling
 set
   /*{{"fitbit_id" if service == "fitbit" else "withings_id" }}*/
   = null
@@ -72,19 +72,19 @@ where
 
 
 update
-  user_ids
+  gargling
 set
   /*{{"fitbit_id" if service == "fitbit" else "withings_id" }}*/
   = :service_user_id
 where
-  db_id = :db_id;
+  id = :id;
 
 
 -- name: is_id_matched^
 select
   true
 from
-  user_ids
+  gargling
 where
   /*{{"fitbit_id" if service == "fitbit" else "withings_id" }}*/
   = :id;
@@ -151,7 +151,7 @@ where
 
 -- name: all_ids_nicks
 select
-  db_id,
+  id,
   slack_nick
 from
-  user_ids;
+  gargling;
