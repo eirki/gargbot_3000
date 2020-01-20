@@ -69,7 +69,6 @@ class Withings:
             client_id=config.withings_client_id,
             consumer_secret=config.withings_consumer_secret,
             callback_uri=config.withings_redirect_uri,
-            mode="demo",  # Used for testing. Remove this when getting real user data.
             scope=scope,
         )
         return client
@@ -209,7 +208,6 @@ class Fitbit:
     @staticmethod
     def weight(client: FitbitApi) -> t.Optional[dict]:
         data = client.get_bodyweight(period="7d")
-        print(client.time_series)
         if len(data["weight"]) == 0:
             log.info("No weight data")
             return None
