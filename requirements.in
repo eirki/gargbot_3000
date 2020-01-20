@@ -18,3 +18,5 @@ wtforms
 aiosql
 jinja2
 werkzeug
+migra[pg]
+sqlbag

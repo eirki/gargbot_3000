@@ -8,14 +8,17 @@ from contextlib import contextmanager
 from pathlib import Path
 from xml.dom.minidom import parseString
 
+import aiosql
 import dropbox
 import jinja2
+import migra
 import psycopg2
 from aiosql.adapters.psycopg2 import PsycoPG2Adapter
 from PIL import Image
 from psycopg2.extensions import connection
 from psycopg2.extras import DictCursor
 from psycopg2.pool import ThreadedConnectionPool
+from sqlbag import S
 
 from gargbot_3000 import config
 from gargbot_3000.logger import log
@@ -31,6 +34,15 @@ class LoggingCursor(DictCursor):
         return super().executemany(query, args)
 
 
+credentials = {
+    "user": config.db_user,
+    "password": config.db_password,
+    "host": config.db_host,
+    "port": config.db_port,
+    "cursor_factory": LoggingCursor,
+}
+
+
 class ConnectionPool:
     """https://gist.github.com/jeorgen/4eea9b9211bafeb18ada"""
 
@@ -43,14 +55,7 @@ class ConnectionPool:
 
     def _init(self):
         self._pool = ThreadedConnectionPool(
-            1,
-            10,
-            database=config.db_name,
-            user=config.db_user,
-            password=config.db_password,
-            host=config.db_host,
-            port=config.db_port,
-            cursor_factory=LoggingCursor,
+            1, 10, database=config.db_name, **credentials
         )
 
     def _getconn(self) -> connection:
@@ -92,14 +97,7 @@ class ConnectionPool:
 
 def connect() -> connection:
     log.info("Connecting to db")
-    conn = psycopg2.connect(
-        dbname=config.db_name,
-        user=config.db_user,
-        password=config.db_password,
-        host=config.db_host,
-        port=config.db_port,
-        cursor_factory=LoggingCursor,
-    )
+    conn = psycopg2.connect(database=config.db_name, **credentials)
     return conn
 
 
@@ -157,6 +155,52 @@ class JinjaSqlAdapter(PsycoPG2Adapter):
     def execute_script(cls, conn, sql):
         sql = cls.render_template(sql, parameters={})
         return super().execute_script(conn, sql)
+
+
+def connect_test() -> connection:
+    conn = psycopg2.connect(database="target_db", **credentials)
+    return conn
+
+
+def setup_test() -> None:
+    conn = psycopg2.connect(database="postgres", **credentials)
+    conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+    with conn.cursor() as cursor:
+        cursor.execute("drop database if exists target_db")
+        cursor.execute("create database target_db")
+    conn.commit()
+    conn.close()
+
+    conn = psycopg2.connect(database="target_db", **credentials)
+    for path in Path("schema/").iterdir():
+        queries = aiosql.from_path(path, "psycopg2")
+        try:
+            queries.create_schema(conn)
+            queries.define_args(conn)
+        except AttributeError:
+            pass
+    conn.commit()
+    conn.close()
+
+
+def get_migrations():
+    setup_test()
+    base = "postgresql+psycopg2://"
+    with S(base, creator=connect) as current, S(base, creator=connect_test) as target:
+        m = migra.Migration(current, target)
+    return m
+
+
+def migrate() -> None:
+    conn = connect()
+    queries = aiosql.from_path("schema/migrations.sql", "psycopg2")
+    queries.migrations(conn)
+    conn.commit()
+    remaining_diffs = get_migrations()
+    remaining_diffs.set_safety(False)
+    remaining_diffs.add_all_changes()
+    if remaining_diffs.statements:
+        log.info(remaining_diffs.sql)
 
 
 class MSN:
