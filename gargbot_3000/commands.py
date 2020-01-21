@@ -14,7 +14,7 @@ from requests.exceptions import SSLError
 from gargbot_3000 import pictures, quotes
 from gargbot_3000.logger import log
 
-queries = aiosql.from_path("schema/user_ids.sql", "psycopg2")
+queries = aiosql.from_path("sql/gargling.sql", "psycopg2")
 
 
 def prettify_date(date: dt.datetime) -> str:

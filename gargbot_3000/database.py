@@ -172,7 +172,7 @@ def setup_test() -> None:
     conn.close()
 
     conn = psycopg2.connect(database="target_db", **credentials)
-    for path in Path("schema/").iterdir():
+    for path in Path("sql/").iterdir():
         queries = aiosql.from_path(path, "psycopg2")
         try:
             queries.create_schema(conn)
@@ -193,7 +193,7 @@ def get_migrations():
 
 def migrate() -> None:
     conn = connect()
-    queries = aiosql.from_path("schema/migrations.sql", "psycopg2")
+    queries = aiosql.from_path("sql/migrations.sql", "psycopg2")
     queries.migrations(conn)
     conn.commit()
     remaining_diffs = get_migrations()

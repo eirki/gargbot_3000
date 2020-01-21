@@ -26,7 +26,7 @@ def test_forum_user(conn: connection):
     assert url.startswith(config.forum_url)
     assert "*" in text
     assert out_user == in_user.slack_nick
-    assert avatar_url.endswith(f"{in_user.db_id}.jpg")
+    assert avatar_url.endswith(f"{in_user.id}.jpg")
     assert desc == " "
 
 

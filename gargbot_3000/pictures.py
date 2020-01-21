@@ -12,7 +12,7 @@ from gargbot_3000 import config
 from gargbot_3000.database import JinjaSqlAdapter
 from gargbot_3000.logger import log
 
-queries = aiosql.from_path("schema/dbx_pictures.sql", driver_adapter=JinjaSqlAdapter)
+queries = aiosql.from_path("sql/picture.sql", driver_adapter=JinjaSqlAdapter)
 
 
 class DropPics:
@@ -28,14 +28,14 @@ class DropPics:
         args: t.Set[str],
         topic: t.Optional[str],
         year: t.Optional[str],
-        users: t.List[str],
+        garglings: t.List[str],
     ) -> t.Tuple[set, set]:
         valid_args = set()
         if topic:
             valid_args.add(topic)
         if year:
             valid_args.add(year)
-        for db_id, slack_nick in users:
+        for gargling_id, slack_nick in garglings:
             valid_args.add(slack_nick)
         invalid_args = args - valid_args
         return valid_args, invalid_args
@@ -45,17 +45,17 @@ class DropPics:
         invalid_args: t.Set[str],
         years: t.List[str],
         topics: t.List[str],
-        users: t.List[str],
+        garglings: t.List[str],
     ):
         invalid_args_fmt = ", ".join(f"`{arg}`" for arg in invalid_args)
         years_fmt = ", ".join(f"`{year}`" for year in years)
         topics_fmt = ", ".join(f"`{topic}`" for topic in topics)
-        users_fmt = ", ".join(f"`{user}`" for user in users)
+        garglings_fmt = ", ".join(f"`{gargling}`" for gargling in garglings)
         description = (
             f"Im so stoopid! Skjønte ikke {invalid_args_fmt}. =( Jeg skjønner bare "
             f"\n*år*: {years_fmt};\n"
             f"*emner*: {topics_fmt};\n"
-            f"samt *garlings* - husk å bruke slack nick: {users_fmt}\n"
+            f"samt *garlings* - husk å bruke slack nick: {garglings_fmt}\n"
         )
         return description
 
@@ -68,9 +68,9 @@ class DropPics:
 
     def get_random_pic(self, conn: connection):
         result = queries.random_pic(conn)
-        date_taken = result["taken"]
+        taken_at = result["taken_at"]
         url = self.get_url_for_dbx_path(path=result["path"])
-        return url, date_taken
+        return url, taken_at
 
     def get_pic(
         self, conn: connection, arg_list: t.Optional[t.List[str]]
@@ -78,8 +78,8 @@ class DropPics:
         description = ""
 
         if not arg_list:
-            url, date_taken = self.get_random_pic(conn)
-            return url, date_taken, description
+            url, taken_at = self.get_random_pic(conn)
+            return url, taken_at, description
 
         args = {arg.lower() for arg in arg_list}
         parsed = queries.parse_args(conn, args=list(args))
@@ -92,17 +92,17 @@ class DropPics:
             )
             if not valid_args:
                 description += "Her er et tilfeldig bilde i stedet."
-                url, date_taken = self.get_random_pic(conn)
-                return url, date_taken, description
+                url, taken_at = self.get_random_pic(conn)
+                return url, taken_at, description
 
-        data = queries.pic_for_topic_year_users(conn, **parsed)
+        data = queries.pic_for_topic_year_garglings(conn, **parsed)
         if data is not None:
             valid_args_fmt = ", ".join(f"`{arg}`" for arg in valid_args)
             description += f"Her er et bilde med {valid_args_fmt}."
             path = data["path"]
-            date_taken = data["taken"]
+            taken_at = data["taken_at"]
             url = self.get_url_for_dbx_path(path)
-            return url, date_taken, description
+            return url, taken_at, description
 
         # No pics found for arg-combination. Reduce args until pic found
         valid_args_fmt = ", ".join(f"`{arg}`" for arg in valid_args)
@@ -111,16 +111,16 @@ class DropPics:
             for arg_combination in itertools.combinations(valid_args, length):
                 log.info(f"arg_combination: {arg_combination}")
                 parsed = queries.parse_args(conn, args=list(arg_combination))
-                data = queries.pic_for_topic_year_users(conn, **parsed)
+                data = queries.pic_for_topic_year_garglings(conn, **parsed)
                 if data is None:
                     continue
 
                 arg_combination_fmt = ", ".join(f"`{arg}`" for arg in arg_combination)
                 description += f"Her er et bilde med {arg_combination_fmt} i stedet."
-                date_taken = data["taken"]
+                taken_at = data["taken_at"]
                 url = self.get_url_for_dbx_path(path=data["path"])
-                return url, date_taken, description
+                return url, taken_at, description
 
         #  No pics found for any args
-        url, date_taken = self.get_random_pic(conn)
-        return url, date_taken, description
+        url, taken_at = self.get_random_pic(conn)
+        return url, taken_at, description
