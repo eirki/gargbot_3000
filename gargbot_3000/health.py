@@ -1,9 +1,9 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-import contextlib
 import datetime as dt
 import enum
 import typing as t
+from contextlib import contextmanager
 from operator import attrgetter, itemgetter
 
 import aiosql
@@ -37,16 +37,29 @@ blueprint = Blueprint("health", __name__)
 withings_api.common.enforce_type = lambda value, expected: value
 
 
+@contextmanager
+def connection_context(
+    conn=t.Optional[db.connection],
+) -> t.Generator[db.connection, None, None]:
+    if conn is not None:
+        yield conn
+    elif current_app:
+        with current_app.pool.get_connection() as conn:
+            yield conn
+    else:
+        conn = db.connect()
+        try:
+            yield conn
+        finally:
+            conn.close()
+
+
 class Withings:
     @staticmethod
     def persist_token(
         credentials: Credentials, conn: t.Optional[db.connection] = None
     ) -> None:
-        db_func = (
-            current_app.pool.get_connection if conn is None else contextlib.nullcontext
-        )
-        with db_func() as app_conn:
-            conn = app_conn if conn is None else conn
+        with connection_context(conn) as conn:
             queries.persist_token(
                 conn,
                 id=credentials.userid,
@@ -152,11 +165,7 @@ class Withings:
 class Fitbit:
     @staticmethod
     def persist_token(token: dict, conn: t.Optional[db.connection] = None) -> None:
-        db_func = (
-            current_app.pool.get_connection if conn is None else contextlib.nullcontext
-        )
-        with db_func() as app_conn:
-            conn = app_conn if conn is None else conn
+        with connection_context(conn) as conn:
             queries.persist_token(
                 conn,
                 id=token["user_id"],
