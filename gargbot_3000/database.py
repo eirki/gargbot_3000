@@ -172,7 +172,11 @@ def setup_test() -> None:
     conn.close()
 
     conn = psycopg2.connect(database="target_db", **credentials)
+    queries = aiosql.from_path("sql/gargling.sql", "psycopg2")
+    queries.create_schema(conn)
     for path in Path("sql/").iterdir():
+        if path.stem == "gargling":
+            continue
         queries = aiosql.from_path(path, "psycopg2")
         try:
             queries.create_schema(conn)

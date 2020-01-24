@@ -41,8 +41,6 @@ from
             *
         from
             post
-        where
-            gargling_id in (2, 3, 5, 6, 7, 9, 10, 11)
         order by
             random()
         limit

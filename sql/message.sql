@@ -7,7 +7,7 @@ create table message (
     from_user text,
     to_users text,
     content text,
-    gargling_id smallint not null references gargling(id)
+    gargling_id smallint references gargling(id)
 );
 
 
