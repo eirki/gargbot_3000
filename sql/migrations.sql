@@ -112,7 +112,7 @@ alter table
 
 
 create table withings_token_gargling (
-    withings_id smallint not null references withings_token(id),
+    withings_id int not null references withings_token(id),
     gargling_id smallint not null references gargling(id)
 );
 
