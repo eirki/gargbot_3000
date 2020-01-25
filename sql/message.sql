@@ -11,6 +11,9 @@ create table message (
 );
 
 
+create index message_ix_gargling_id on message (gargling_id);
+
+
 --name: add_messages*!
 insert into
     message (

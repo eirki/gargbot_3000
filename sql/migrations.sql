@@ -224,3 +224,30 @@ alter sequence phpbb_posts_post_id_seq rename to post_id_seq;
 
 
 drop index if exists db_idx;
+
+
+create index picture_gargling_ix_picture_id on picture_gargling (picture_id);
+
+
+create index picture_gargling_ix_gargling_id on picture_gargling (gargling_id);
+
+
+create index picture_ix_path on picture (path);
+
+
+create index picture_ix_topic on picture (topic);
+
+
+create index picture_ix_year on picture (
+    extract(
+        year
+        from
+            taken_at
+    )
+);
+
+
+create index post_ix_gargling_id on post (gargling_id);
+
+
+create index message_ix_gargling_id on message (gargling_id);

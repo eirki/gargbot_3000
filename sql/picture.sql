@@ -7,10 +7,31 @@ create table picture (
 );
 
 
+create index picture_ix_path on picture (path);
+
+
+create index picture_ix_topic on picture (topic);
+
+
+create index picture_ix_year on picture (
+    extract(
+        year
+        from
+            taken_at
+    )
+);
+
+
 create table picture_gargling (
     picture_id smallint not null references picture(id),
     gargling_id smallint not null references gargling(id)
 );
+
+
+create index picture_gargling_ix_picture_id on picture_gargling (picture_id);
+
+
+create index picture_gargling_ix_gargling_id on picture_gargling (gargling_id);
 
 
 --name: add_picture<!

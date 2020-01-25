@@ -8,6 +8,9 @@ create table post (
 );
 
 
+create index post_ix_gargling_id on post (gargling_id);
+
+
 -- name: add_posts*!
 insert into
     post (
