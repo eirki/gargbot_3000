@@ -87,10 +87,28 @@ alter table
     withings_tokens rename to withings_token;
 
 
+drop table faces;
+
+
 create table fitbit_token_gargling (
     fitbit_id text not null references fitbit_token(id),
     gargling_id smallint not null references gargling(id)
 );
+
+
+insert into
+    fitbit_token_gargling (gargling_id, fitbit_id)
+select
+    id,
+    fitbit_id
+from
+    gargling
+where
+    fitbit_id is not null;
+
+
+alter table
+    gargling drop column fitbit_id;
 
 
 create table withings_token_gargling (
@@ -99,11 +117,15 @@ create table withings_token_gargling (
 );
 
 
-drop table faces;
-
-
-alter table
-    gargling drop column fitbit_id;
+insert into
+    withings_token_gargling (gargling_id, withings_id)
+select
+    id,
+    withings_id
+from
+    gargling
+where
+    withings_id is not null;
 
 
 alter table
