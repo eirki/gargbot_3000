@@ -4,7 +4,8 @@ import datetime as dt
 
 from psycopg2.extensions import connection
 
-from gargbot_3000.droppics import DropPics
+from gargbot_3000 import pictures
+from tests import conftest
 
 
 def assert_valid_returns(url: str, timestamp: dt.datetime, description: str) -> None:
@@ -14,53 +15,53 @@ def assert_valid_returns(url: str, timestamp: dt.datetime, description: str) -> 
     assert not description.startswith("Im so stoopid")
 
 
-def test_random(db_connection: connection, drop_pics: DropPics) -> None:
-    url, timestamp, description = drop_pics.get_pic(db=db_connection, arg_list=None)
+def test_random(conn: connection, dbx: conftest.MockDropbox) -> None:
+    url, timestamp, description = pictures.get_pic(conn, dbx, arg_list=None)
     assert_valid_returns(url, timestamp, description)
 
 
-def test_topic(db_connection: connection, drop_pics: DropPics) -> None:
+def test_topic(conn: connection, dbx: conftest.MockDropbox) -> None:
     topic = "topic1"
-    url, timestamp, description = drop_pics.get_pic(db_connection, arg_list=[topic])
+    url, timestamp, description = pictures.get_pic(conn, dbx, arg_list=[topic])
     assert_valid_returns(url, timestamp, description)
 
 
-def test_year(db_connection: connection, drop_pics: DropPics) -> None:
+def test_year(conn: connection, dbx: conftest.MockDropbox) -> None:
     year = "2002"
-    url, timestamp, description = drop_pics.get_pic(db_connection, arg_list=[year])
+    url, timestamp, description = pictures.get_pic(conn, dbx, arg_list=[year])
     assert_valid_returns(url, timestamp, description)
 
 
-def test_user(db_connection: connection, drop_pics: DropPics) -> None:
+def test_user(conn: connection, dbx: conftest.MockDropbox) -> None:
     user = "slack_nick3"
-    url, timestamp, description = drop_pics.get_pic(db_connection, arg_list=[user])
+    url, timestamp, description = pictures.get_pic(conn, dbx, arg_list=[user])
     assert_valid_returns(url, timestamp, description)
 
 
-def test_multiple_users(db_connection: connection, drop_pics: DropPics) -> None:
+def test_multiple_users(conn: connection, dbx: conftest.MockDropbox) -> None:
     users = ["slack_nick11", "slack_nick3"]
-    url, timestamp, description = drop_pics.get_pic(db_connection, arg_list=users)
+    url, timestamp, description = pictures.get_pic(conn, dbx, arg_list=users)
     assert_valid_returns(url, timestamp, description)
 
 
-def test_multiple_args(db_connection: connection, drop_pics: DropPics) -> None:
+def test_multiple_args(conn: connection, dbx: conftest.MockDropbox) -> None:
     arg_list = ["slack_nick2", "topic1", "2001"]
-    url, timestamp, description = drop_pics.get_pic(db_connection, arg_list=arg_list)
+    url, timestamp, description = pictures.get_pic(conn, dbx, arg_list=arg_list)
     assert_valid_returns(url, timestamp, description)
 
 
 # Errors:
-def test_error_txt(db_connection: connection, drop_pics: DropPics) -> None:
-    url, timestamp, description = drop_pics.get_pic(db_connection, arg_list=["2000"])
+def test_error_txt(conn: connection, dbx: conftest.MockDropbox) -> None:
+    url, timestamp, description = pictures.get_pic(conn, dbx, arg_list=["2000"])
     assert url.startswith("https")
     assert type(timestamp) == dt.datetime
     assert description.startswith("Im so stoopid")
     assert description.endswith("Her er et tilfeldig bilde i stedet.")
 
 
-def test_error_txt_with_valid(db_connection: connection, drop_pics: DropPics) -> None:
-    url, timestamp, description = drop_pics.get_pic(
-        db_connection, arg_list=["1999", "slack_nick5"]
+def test_error_txt_with_valid(conn: connection, dbx: conftest.MockDropbox) -> None:
+    url, timestamp, description = pictures.get_pic(
+        conn, dbx, arg_list=["1999", "slack_nick5"]
     )
     assert url.startswith("https")
     assert type(timestamp) == dt.datetime
@@ -69,10 +70,10 @@ def test_error_txt_with_valid(db_connection: connection, drop_pics: DropPics) ->
 
 
 def test_error_txt_with_impossible_combination(
-    db_connection: connection, drop_pics: DropPics
+    conn: connection, dbx: conftest.MockDropbox
 ) -> None:
-    url, timestamp, description = drop_pics.get_pic(
-        db_connection, arg_list=["2001", "topic3"]
+    url, timestamp, description = pictures.get_pic(
+        conn, dbx, arg_list=["2001", "topic3"]
     )
     assert url.startswith("https")
     assert type(timestamp) == dt.datetime

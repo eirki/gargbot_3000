@@ -6,17 +6,20 @@ import os
 import typing as t
 
 import requests
+from dropbox import Dropbox
 from flask import Flask, Response, jsonify, request
 from flask_cors import cross_origin
 from gunicorn.app.base import BaseApplication
+from werkzeug.middleware.proxy_fix import ProxyFix
 
-from gargbot_3000 import commands, config, database_manager, droppics, quotes
+from gargbot_3000 import commands, config, database, health, pictures
 from gargbot_3000.logger import log
 
 app = Flask(__name__)
-app.pool = database_manager.ConnectionPool()
-app.drop_pics = None
-app.quotes_db = None
+app.wsgi_app = ProxyFix(app.wsgi_app)  # type: ignore
+app.register_blueprint(health.blueprint)
+app.pool = database.ConnectionPool()
+app.dbx = Dropbox
 
 
 def attach_share_buttons(result: dict, func: str, args: list) -> dict:
@@ -62,11 +65,9 @@ def attach_share_buttons(result: dict, func: str, args: list) -> dict:
 def attach_original_request(
     result: dict, user_id: str, user_name: str, func: str, args: t.List[str]
 ) -> dict:
-    with app.pool.get_db_cursor() as cursor:
-        cursor.execute(
-            "SELECT slack_avatar FROM user_ids WHERE slack_id = %s", (user_id,)
-        )
-        avatar_url = cursor.fetchone()["slack_avatar"]
+    with app.pool.get_connection() as conn:
+        data = commands.queries.avatar_for_slack_id(conn, slack_id=user_id)
+        avatar_url = data["slack_avatar"]
     context_blocks = [
         {
             "type": "context",
@@ -209,17 +210,13 @@ def slash_cmds() -> Response:
 
 def handle_command(command_str: str, args: list) -> dict:
     db_func = (
-        app.pool.get_db_connection
+        app.pool.get_connection
         if command_str in {"hvem", "pic", "forum", "msn"}
         else contextlib.nullcontext
     )
-    with db_func() as db:
+    with db_func() as conn:
         result = commands.execute(
-            command_str=command_str,
-            args=args,
-            db_connection=db,
-            drop_pics=app.drop_pics,
-            quotes_db=app.quotes_db,
+            command_str=command_str, args=args, conn=conn, dbx=app.dbx
         )
 
     error = result.get("text", "").startswith("Error")
@@ -239,8 +236,8 @@ def handle_command(command_str: str, args: list) -> dict:
 @cross_origin()
 def pic(args: t.Optional[str] = None):
     arg_list = args.split(",") if args is not None else []
-    with app.pool.get_db_connection() as db:
-        pic_url, *_ = app.drop_pics.get_pic(db, arg_list=arg_list)
+    with app.pool.get_connection() as conn:
+        pic_url, *_ = pictures.get_pic(conn, app.dbx, arg_list=arg_list)
     return jsonify({"url": pic_url})
 
 
@@ -262,9 +259,10 @@ class StandaloneApplication(BaseApplication):
 def main(options: t.Optional[dict], debug: bool = False):
     try:
         app.pool.setup()
-        with app.pool.get_db_connection() as db:
-            app.drop_pics = droppics.DropPics(db=db)
-            app.quotes_db = quotes.Quotes(db=db)
+        with app.pool.get_connection() as conn:
+            pictures.queries.define_args(conn)
+            conn.commit()
+        app.dbx = pictures.connect_dbx()
         if debug is False:
             gunicorn_app = StandaloneApplication(app, options)
             gunicorn_app.run()

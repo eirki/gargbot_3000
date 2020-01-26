@@ -1,39 +1,36 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
+import itertools
 import sys
 import time
 import typing as t
+from operator import attrgetter
 
+import aiosql
 import pendulum
-import psycopg2
+from dropbox import Dropbox
 from psycopg2.extensions import connection
 from slackclient import SlackClient
 
 from dataclasses import dataclass
-from gargbot_3000 import config, database_manager, droppics, task
+from gargbot_3000 import config, database, health, pictures, task
 from gargbot_3000.logger import log
+
+queries = aiosql.from_path("sql/congrats.sql", "psycopg2")
 
 mort_picurl = "https://pbs.twimg.com/media/DAgm_X3WsAAQRGo.jpg"
 
 
-@dataclass
+@dataclass(frozen=True)
 class Recipient:
     nick: str
     slack_id: str
     age: int
 
 
-def get_recipients(db: connection) -> t.List[Recipient]:
+def todays_recipients(conn: connection) -> t.List[Recipient]:
     now_tz = pendulum.now(config.tz)
-    with db.cursor() as cursor:
-        sql_command = (
-            "SELECT slack_nick, slack_id, EXTRACT(YEAR FROM bday)::int as year "
-            "FROM user_ids "
-            "WHERE EXTRACT(MONTH FROM bday) = %(month)s "
-            "AND EXTRACT(DAY FROM bday) = %(day)s"
-        )
-        cursor.execute(sql_command, {"month": now_tz.month, "day": now_tz.day})
-        data = cursor.fetchall()
+    data = queries.congrats_for_date(conn, month=now_tz.month, day=now_tz.day)
     recipients = [
         Recipient(
             nick=row["slack_nick"],
@@ -45,26 +42,13 @@ def get_recipients(db: connection) -> t.List[Recipient]:
     return recipients
 
 
-def get_sentence(db: connection) -> str:
-    with db.cursor() as cursor:
-        sql_command = "SELECT sentence FROM congrats ORDER BY RANDOM() LIMIT 1"
-        cursor.execute(sql_command)
-        result = cursor.fetchone()
-    sentence = result["sentence"]
-    return sentence
-
-
-def get_greeting(person: Recipient, db: connection, drop_pics) -> t.Dict:
-    sentence = get_sentence(db)
+def formulate_congrat(recipient: Recipient, conn: connection, dbx: Dropbox) -> t.Dict:
+    sentence = queries.random_sentence(conn)["sentence"]
     text = (
-        f"Hurra! Vår felles venn <@{person.slack_id}> fyller {person.age} i dag!\n"
+        f"Hurra! Vår felles venn <@{recipient.slack_id}> fyller {recipient.age} i dag!\n"
         f"{sentence}"
     )
-    try:
-        person_picurl, date, _ = drop_pics.get_pic(db, [person.nick])
-    except psycopg2.OperationalError:
-        db.ping(True)
-        person_picurl, date, _ = drop_pics.get_pic(db, [person.nick])
+    person_picurl, date, _ = pictures.get_pic(conn, dbx, [recipient.nick])
     response = {
         "text": text,
         "blocks": [
@@ -77,40 +61,63 @@ def get_greeting(person: Recipient, db: connection, drop_pics) -> t.Dict:
     return response
 
 
-def handle_greet() -> None:
-    db_connection = database_manager.connect_to_database()
-    recipients = get_recipients(db_connection)
+def send_congrats(conn: connection, slack_client: SlackClient):
+    dbx = pictures.connect_dbx()
+    recipients = todays_recipients(conn)
     log.info(f"Recipients today {recipients}")
     for recipient in recipients:
-        drop_pics = droppics.DropPics(db=db_connection)
-        slack_client = SlackClient(config.slack_bot_user_token)
-        response = get_greeting(recipient, db_connection, drop_pics)
-        task.send_response(slack_client, response=response, channel=config.main_channel)
-    db_connection.close()
+        greet = formulate_congrat(recipient, conn, dbx)
+        task.send_response(slack_client, greet, channel=config.main_channel)
 
 
-def get_period_to_morning() -> pendulum.Period:
-    morning_today = pendulum.today(config.tz).add(hours=7)
-    morning_tmrw = pendulum.tomorrow(config.tz).add(hours=7)
-    now = pendulum.now(config.tz)
-    next_greeting_time = morning_today if morning_today > now else morning_tmrw
-    until_next = next_greeting_time - now
-    return until_next
+def send_report(conn: connection, slack_client: SlackClient):
+    report = health.report(conn)
+    if report is not None:
+        task.send_response(slack_client, report, channel=config.health_channel)
+
+
+@dataclass(frozen=True)
+class Event:
+    until: pendulum.Period
+    func: t.Callable
+
+    @staticmethod
+    def possible():
+        types = [(10, send_report), (7, send_congrats)]
+        times = (pendulum.today, pendulum.tomorrow)
+        return itertools.product(times, types)
+
+    @staticmethod
+    def next() -> "Event":
+        events = []
+        now = pendulum.now()
+        for day, (hour, func) in Event.possible():
+            when = day(config.tz).at(hour)
+            if when.is_past():
+                continue
+            events.append(Event(until=(when - now), func=func))
+        events.sort(key=attrgetter("until"))
+        event = events[0]
+        return event
 
 
 def main() -> None:
     log.info("GargBot 3000 greeter starter")
     try:
         while True:
-            until_next = get_period_to_morning()
+            event = Event.next()
             log.info(
-                f"Next greeting check at: {until_next.end}, "
-                f"sleeping for {until_next.in_words()}"
+                f"Next greeting check at: {event.until.end}, "
+                f"sleeping for {event.until.in_words()}"
             )
-            time.sleep(until_next.total_seconds())
+            time.sleep(event.until.total_seconds())
             try:
-                handle_greet()
+                slack_client = SlackClient(config.slack_bot_user_token)
+                conn = database.connect()
+                event.func(conn, slack_client)
             except Exception:
                 log.error("Error in command execution", exc_info=True)
+            finally:
+                conn.close()
     except KeyboardInterrupt:
         sys.exit()

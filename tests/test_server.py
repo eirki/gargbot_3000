@@ -8,29 +8,8 @@ import pytest
 from flask import testing
 from psycopg2.extensions import connection
 
-from gargbot_3000 import config, database_manager, server
-from gargbot_3000.droppics import DropPics
+from gargbot_3000 import config
 from tests import conftest
-
-
-@pytest.fixture
-def client(db_connection) -> t.Generator[testing.FlaskClient, None, None]:
-    server.app.pool = MockPool(db_connection)
-    yield server.app.test_client()
-
-
-class MockPool(database_manager.ConnectionPool):
-    def __init__(self, db_connection: connection) -> None:
-        self.db_connection = db_connection
-
-    def getconn(self) -> connection:
-        return self.db_connection
-
-    def putconn(self, conn: connection):
-        pass
-
-    def closeall(self):
-        pass
 
 
 class MockRequests:
@@ -50,14 +29,11 @@ class MockRequests:
 
 
 class MockCommands:
-    def execute(
-        self, command_str, args, db_connection, drop_pics, quotes_db
-    ) -> t.Dict[str, t.Any]:
+    def execute(self, command_str, args, conn, dbx) -> t.Dict[str, t.Any]:
         self.command_str = command_str
         self.args = args
-        self.db_connection = db_connection
-        self.drop_pics = drop_pics
-        self.quotes_db = quotes_db
+        self.conn = conn
+        self.dbx = dbx
         response = (
             {"text": command_str, "blocks": []}
             if command_str != "msn"
@@ -110,9 +86,7 @@ def test_slash_cmd_gargbot(client: testing.FlaskClient, monkeypatch):
 
 @pytest.mark.parametrize("cmd", ["pic", "forum", "msn"])
 @pytest.mark.parametrize("args", ["", "arg1", "arg1 arg2"])
-def test_slash(
-    client: testing.FlaskClient, db_connection: connection, monkeypatch, cmd, args
-):
+def test_slash(client: testing.FlaskClient, conn: connection, monkeypatch, cmd, args):
     mock_commands = MockCommands()
     monkeypatch.setattr("gargbot_3000.server.commands", mock_commands)
     mock_requests = MockRequests()
@@ -129,7 +103,7 @@ def test_slash(
     assert response.status_code == 200
     assert mock_commands.command_str == cmd
     assert mock_commands.args == args.split()
-    assert mock_commands.db_connection == db_connection
+    assert mock_commands.conn == conn
 
     assert mock_requests.url == "response_url"
     assert mock_requests.json["text"] == cmd
@@ -213,7 +187,7 @@ def test_interactive_cancel(client: testing.FlaskClient, monkeypatch):
 @pytest.mark.parametrize("cmd", ["pic", "forum", "msn"])
 @pytest.mark.parametrize("args", [[], ["arg1"], ["arg1", "arg2"]])
 def test_interactive_shuffle(
-    client: testing.FlaskClient, db_connection: connection, monkeypatch, cmd, args
+    client: testing.FlaskClient, conn: connection, monkeypatch, cmd, args
 ):
     mock_commands = MockCommands()
     monkeypatch.setattr("gargbot_3000.server.commands", mock_commands)
@@ -247,12 +221,12 @@ def test_interactive_shuffle(
 
     assert mock_commands.command_str == cmd
     assert mock_commands.args == args
-    assert mock_commands.db_connection == db_connection
+    assert mock_commands.conn == conn
 
 
 @pytest.mark.parametrize("cmd", ["pic", "forum", "msn"])
 def test_interactive_gargbot_commands(
-    client: testing.FlaskClient, db_connection: connection, monkeypatch, cmd
+    client: testing.FlaskClient, conn: connection, monkeypatch, cmd
 ):
     mock_commands = MockCommands()
     monkeypatch.setattr("gargbot_3000.server.commands", mock_commands)
@@ -271,7 +245,7 @@ def test_interactive_gargbot_commands(
     assert response.status_code == 200
 
     assert mock_commands.command_str == cmd
-    assert mock_commands.db_connection == db_connection
+    assert mock_commands.conn == conn
 
     assert mock_requests.url == "response_url"
     assert mock_requests.url == "response_url"
@@ -283,10 +257,8 @@ def test_interactive_gargbot_commands(
 
 
 @pytest.mark.parametrize("args", [[], ["arg1"], ["arg1", "arg2"]])
-def test_pic_api(
-    client: testing.FlaskClient, args: list, monkeypatch, drop_pics: DropPics
-):
-    monkeypatch.setattr("gargbot_3000.server.app.drop_pics", drop_pics)
+def test_pic_api(client: testing.FlaskClient, args: list, monkeypatch, dbx):
+    monkeypatch.setattr("gargbot_3000.server.app.dbx", dbx)
     args_fmt = ",".join(args)
     response = client.get(f"/pic/{args_fmt}")
     assert response.status_code == 200

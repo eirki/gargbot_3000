@@ -8,11 +8,12 @@ from functools import partial
 
 import psycopg2
 import websocket
+from dropbox import Dropbox
 from psycopg2.extensions import connection
 from slackclient import SlackClient
 from slackclient.server import SlackConnectionError
 
-from gargbot_3000 import commands, config, database_manager, droppics, quotes
+from gargbot_3000 import commands, config, database, pictures
 from gargbot_3000.logger import log
 
 
@@ -71,23 +72,21 @@ def send_response(
     )
 
 
-def setup() -> t.Tuple[SlackClient, droppics.DropPics, quotes.Quotes, connection]:
-    db_connection = database_manager.connect_to_database()
+def setup() -> t.Tuple[SlackClient, Dropbox, connection]:
+    conn = database.connect()
 
-    drop_pics = droppics.DropPics(db=db_connection)
-
-    quotes_db = quotes.Quotes(db=db_connection)
+    dbx = pictures.connect_dbx()
 
     slack_client = SlackClient(config.slack_bot_user_token)
     connected = slack_client.rtm_connect()
     if not connected:
         raise Exception("Connection failed. Invalid Slack token or bot ID?")
 
-    return slack_client, drop_pics, quotes_db, db_connection
+    return slack_client, dbx, conn
 
 
 def main():
-    slack_client, drop_pics, quotes_db, db_connection = setup()
+    slack_client, dbx, conn = setup()
 
     log.info("GargBot 3000 task operational!")
     try:
@@ -102,17 +101,12 @@ def main():
                 args = []
             command_str = command_str.lower()
             command_func = partial(
-                commands.execute,
-                command_str=command_str,
-                args=args,
-                db_connection=db_connection,
-                drop_pics=drop_pics,
-                quotes_db=quotes_db,
+                commands.execute, command_str=command_str, args=args, conn=conn, dbx=dbx
             )
             try:
                 response = command_func()
             except psycopg2.OperationalError:
-                db_connection = database_manager.connect_to_database()
+                conn = database.connect()
                 try:
                     response = command_func()
                 except Exception as exc:
@@ -125,4 +119,4 @@ def main():
     except KeyboardInterrupt:
         sys.exit()
     finally:
-        database_manager.close_database_connection(db_connection)
+        conn.close()

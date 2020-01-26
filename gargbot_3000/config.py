@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 env_path = Path(".") / ".env"
 load_dotenv(dotenv_path=env_path)
 
+server_name = os.environ.get("SERVER_NAME")
+
 slack_verification_token = os.environ["slack_verification_token"]
 slack_bot_user_token = os.environ["slack_bot_user_token"]
 bot_id = os.environ["bot_id"]
@@ -31,7 +33,7 @@ dbx_pic_folder = os.environ["dbx_pic_folder"]
 tz = pytz.timezone(os.environ["tz"])
 
 test_channel = os.environ["test_channel"]
-
+health_channel = os.environ["health_channel"]
 main_channel = os.environ["main_channel"]
 
 countdown_message = os.environ["countdown_message"]
@@ -39,3 +41,11 @@ ongoing_message = os.environ["ongoing_message"]
 finished_message = os.environ["finished_message"]
 
 forum_url = os.environ["forum_url"]
+
+fitbit_client_id = os.environ["fitbit_client_id"]
+fitbit_client_secret = os.environ["fitbit_client_secret"]
+fitbit_redirect_uri = os.environ["fitbit_redirect_uri"]
+
+withings_client_id = os.environ["withings_client_id"]
+withings_consumer_secret = os.environ["withings_consumer_secret"]
+withings_redirect_uri = os.environ["withings_redirect_uri"]

@@ -2,7 +2,7 @@
 # coding: utf-8
 import argparse
 
-from gargbot_3000 import greetings, server, task
+from gargbot_3000 import database, greetings, server, task
 from gargbot_3000.logger import log
 
 
@@ -24,6 +24,8 @@ def main():
             server.main(options=options, debug=args.debug)
         elif args.mode == "greeter":
             greetings.main()
+        elif args.mode == "migrate":
+            database.migrate()
         else:
             raise Exception(f"Incorrect mode, {args.mode}")
 

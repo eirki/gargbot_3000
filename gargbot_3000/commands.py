@@ -5,13 +5,16 @@ import time
 import typing as t
 from functools import partial
 
+import aiosql
 import dropbox
 import psycopg2
 from psycopg2.extensions import connection
 from requests.exceptions import SSLError
 
-from gargbot_3000 import droppics, quotes
+from gargbot_3000 import pictures, quotes
 from gargbot_3000.logger import log
+
+queries = aiosql.from_path("sql/gargling.sql", "psycopg2")
 
 
 def prettify_date(date: dt.datetime) -> str:
@@ -57,13 +60,10 @@ def cmd_server_explanation() -> t.Dict:
     return response
 
 
-def cmd_hvem(args: t.List[str], db: connection) -> t.Dict:
+def cmd_hvem(args: t.List[str], conn: connection) -> t.Dict:
     """if command.lower().startswith("hvem")"""
-    with db.cursor() as cursor:
-        sql = "SELECT first_name FROM user_ids ORDER BY RANDOM() LIMIT 1"
-        cursor.execute(sql)
-        data = cursor.fetchone()
-        user = data["first_name"]
+    data = queries.random_first_name(conn)
+    user = data["first_name"]
     answ = " ".join(args).replace("?", "!")
     text = f"{user} {answ}"
     response: t.Dict[str, t.Any] = {"text": text}
@@ -71,10 +71,10 @@ def cmd_hvem(args: t.List[str], db: connection) -> t.Dict:
 
 
 def cmd_pic(
-    args: t.Optional[t.List[str]], db: connection, drop_pics: droppics.DropPics
+    args: t.Optional[t.List[str]], conn: connection, dbx: dropbox.Dropbox
 ) -> t.Dict:
     """if command is 'pic'"""
-    picurl, date, description = drop_pics.get_pic(db, args)
+    picurl, date, description = pictures.get_pic(conn, dbx, args)
     pretty_date = prettify_date(date)
     blocks = []
     image_block = {"type": "image", "image_url": picurl, "alt_text": picurl}
@@ -95,11 +95,9 @@ def cmd_pic(
     return response
 
 
-def cmd_forum(
-    args: t.Optional[t.List[str]], db: connection, quotes_db: quotes.Quotes
-) -> t.Dict:
+def cmd_forum(args: t.Optional[t.List[str]], conn: connection) -> t.Dict:
     """if command is 'forum'"""
-    text, user, avatar_url, date, url, description = quotes_db.forum(db, args)
+    text, user, avatar_url, date, url, description = quotes.forum(conn, args)
     pretty_date = prettify_date(date)
     text_block = {"type": "section", "text": {"type": "mrkdwn", "text": text}}
 
@@ -118,11 +116,9 @@ def cmd_forum(
     return response
 
 
-def cmd_msn(
-    args: t.Optional[t.List[str]], db: connection, quotes_db: quotes.Quotes
-) -> t.Dict:
+def cmd_msn(args: t.Optional[t.List[str]], conn: connection) -> t.Dict:
     """if command is 'msn'"""
-    date, text = quotes_db.msn(db, args)
+    date, text, description = quotes.msn(conn, args)
 
     response: t.Dict[str, t.Any] = {
         "text": date,
@@ -140,6 +136,8 @@ def cmd_msn(
             for msg_user, msg_text, msg_color in text
         ],
     }
+    if description:
+        response["attachments"].append({"type": "mrkdwn", "text": description})
     return response
 
 
@@ -163,11 +161,7 @@ def cmd_panic(exc: Exception) -> t.Dict:
 
 
 def execute(
-    command_str: str,
-    args: t.List,
-    db_connection: connection,
-    drop_pics: droppics.DropPics,
-    quotes_db: quotes.Quotes,
+    command_str: str, args: t.List, conn: connection, dbx: dropbox.Dropbox
 ) -> t.Dict:
     log.info(f"command: {command_str}")
     log.info(f"args: {args}")
@@ -176,10 +170,10 @@ def execute(
         "ping": cmd_ping,
         "new_channel": cmd_welcome,
         "gargbot": cmd_server_explanation,
-        "hvem": partial(cmd_hvem, args, db=db_connection),
-        "pic": partial(cmd_pic, args, db=db_connection, drop_pics=drop_pics),
-        "forum": partial(cmd_forum, args, db=db_connection, quotes_db=quotes_db),
-        "msn": partial(cmd_msn, args, db=db_connection, quotes_db=quotes_db),
+        "hvem": partial(cmd_hvem, args, conn=conn),
+        "pic": partial(cmd_pic, args, conn=conn, dbx=dbx),
+        "forum": partial(cmd_forum, args, conn=conn),
+        "msn": partial(cmd_msn, args, conn=conn),
     }
     try:
         command_func = switch[command_str]
