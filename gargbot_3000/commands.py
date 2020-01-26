@@ -71,10 +71,10 @@ def cmd_hvem(args: t.List[str], conn: connection) -> t.Dict:
 
 
 def cmd_pic(
-    args: t.Optional[t.List[str]], conn: connection, drop_pics: pictures.DropPics
+    args: t.Optional[t.List[str]], conn: connection, dbx: dropbox.Dropbox
 ) -> t.Dict:
     """if command is 'pic'"""
-    picurl, date, description = drop_pics.get_pic(conn, args)
+    picurl, date, description = pictures.get_pic(conn, dbx, args)
     pretty_date = prettify_date(date)
     blocks = []
     image_block = {"type": "image", "image_url": picurl, "alt_text": picurl}
@@ -161,7 +161,7 @@ def cmd_panic(exc: Exception) -> t.Dict:
 
 
 def execute(
-    command_str: str, args: t.List, conn: connection, drop_pics: pictures.DropPics
+    command_str: str, args: t.List, conn: connection, dbx: dropbox.Dropbox
 ) -> t.Dict:
     log.info(f"command: {command_str}")
     log.info(f"args: {args}")
@@ -171,7 +171,7 @@ def execute(
         "new_channel": cmd_welcome,
         "gargbot": cmd_server_explanation,
         "hvem": partial(cmd_hvem, args, conn=conn),
-        "pic": partial(cmd_pic, args, conn=conn, drop_pics=drop_pics),
+        "pic": partial(cmd_pic, args, conn=conn, dbx=dbx),
         "forum": partial(cmd_forum, args, conn=conn),
         "msn": partial(cmd_msn, args, conn=conn),
     }

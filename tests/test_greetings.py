@@ -5,7 +5,6 @@ import pytest
 from psycopg2.extensions import connection
 
 from gargbot_3000 import config, greetings
-from gargbot_3000.pictures import DropPics
 from tests import conftest
 
 
@@ -33,12 +32,12 @@ def test_finds_2_recipients(conn: connection) -> None:
     assert len(recipients) == 2
 
 
-def test_congrat(conn: connection, drop_pics: DropPics) -> None:
+def test_congrat(conn: connection, dbx: conftest.MockDropbox) -> None:
     chosen_user = conftest.users[0]
     recipient = greetings.Recipient(
         nick=chosen_user.slack_nick, slack_id=chosen_user.slack_id, age=conftest.age
     )
-    response = greetings.formulate_congrat(recipient, conn, drop_pics)
+    response = greetings.formulate_congrat(recipient, conn, dbx)
     image_url = response["blocks"][1]["image_url"]
     response_pic = next(pic for pic in conftest.pics if image_url.endswith(pic.path))
     assert chosen_user.slack_id in response["text"]

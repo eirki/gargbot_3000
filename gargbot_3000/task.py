@@ -8,6 +8,7 @@ from functools import partial
 
 import psycopg2
 import websocket
+from dropbox import Dropbox
 from psycopg2.extensions import connection
 from slackclient import SlackClient
 from slackclient.server import SlackConnectionError
@@ -71,21 +72,21 @@ def send_response(
     )
 
 
-def setup() -> t.Tuple[SlackClient, pictures.DropPics, connection]:
+def setup() -> t.Tuple[SlackClient, Dropbox, connection]:
     conn = database.connect()
 
-    drop_pics = pictures.DropPics()
+    dbx = pictures.connect_dbx()
 
     slack_client = SlackClient(config.slack_bot_user_token)
     connected = slack_client.rtm_connect()
     if not connected:
         raise Exception("Connection failed. Invalid Slack token or bot ID?")
 
-    return slack_client, drop_pics, conn
+    return slack_client, dbx, conn
 
 
 def main():
-    slack_client, drop_pics, conn = setup()
+    slack_client, dbx, conn = setup()
 
     log.info("GargBot 3000 task operational!")
     try:
@@ -100,11 +101,7 @@ def main():
                 args = []
             command_str = command_str.lower()
             command_func = partial(
-                commands.execute,
-                command_str=command_str,
-                args=args,
-                conn=conn,
-                drop_pics=drop_pics,
+                commands.execute, command_str=command_str, args=args, conn=conn, dbx=dbx
             )
             try:
                 response = command_func()

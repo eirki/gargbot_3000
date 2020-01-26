@@ -8,6 +8,7 @@ from operator import attrgetter
 
 import aiosql
 import pendulum
+from dropbox import Dropbox
 from psycopg2.extensions import connection
 from slackclient import SlackClient
 
@@ -41,13 +42,13 @@ def todays_recipients(conn: connection) -> t.List[Recipient]:
     return recipients
 
 
-def formulate_congrat(recipient: Recipient, conn: connection, drop_pics) -> t.Dict:
+def formulate_congrat(recipient: Recipient, conn: connection, dbx: Dropbox) -> t.Dict:
     sentence = queries.random_sentence(conn)["sentence"]
     text = (
         f"Hurra! Vår felles venn <@{recipient.slack_id}> fyller {recipient.age} i dag!\n"
         f"{sentence}"
     )
-    person_picurl, date, _ = drop_pics.get_pic(conn, [recipient.nick])
+    person_picurl, date, _ = pictures.get_pic(conn, dbx, [recipient.nick])
     response = {
         "text": text,
         "blocks": [
@@ -61,11 +62,11 @@ def formulate_congrat(recipient: Recipient, conn: connection, drop_pics) -> t.Di
 
 
 def send_congrats(conn: connection, slack_client: SlackClient):
-    drop_pics = pictures.DropPics()
+    dbx = pictures.connect_dbx()
     recipients = todays_recipients(conn)
     log.info(f"Recipients today {recipients}")
     for recipient in recipients:
-        greet = formulate_congrat(recipient, conn, drop_pics)
+        greet = formulate_congrat(recipient, conn, dbx)
         task.send_response(slack_client, greet, channel=config.main_channel)
 
 

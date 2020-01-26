@@ -6,6 +6,7 @@ import os
 import typing as t
 
 import requests
+from dropbox import Dropbox
 from flask import Flask, Response, render_template, request
 from gunicorn.app.base import BaseApplication
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -15,9 +16,9 @@ from gargbot_3000.logger import log
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)  # type: ignore
-app.pool = database.ConnectionPool()
-app.drop_pics = None
 app.register_blueprint(health.blueprint)
+app.pool = database.ConnectionPool()
+app.dbx = Dropbox
 
 
 def attach_share_buttons(result: dict, func: str, args: list) -> dict:
@@ -214,7 +215,7 @@ def handle_command(command_str: str, args: list) -> dict:
     )
     with db_func() as conn:
         result = commands.execute(
-            command_str=command_str, args=args, conn=conn, drop_pics=app.drop_pics
+            command_str=command_str, args=args, conn=conn, dbx=app.dbx
         )
 
     error = result.get("text", "").startswith("Error")
@@ -233,7 +234,7 @@ def handle_command(command_str: str, args: list) -> dict:
 def countdown():
     milli_timestamp = config.countdown_date.timestamp() * 1000
     with app.pool.get_connection() as conn:
-        pic_url, *_ = app.drop_pics.get_pic(conn, arg_list=config.countdown_args)
+        pic_url, *_ = pictures.get_pic(conn, app.dbx, arg_list=config.countdown_args)
     return render_template(
         "countdown.html",
         date=milli_timestamp,
@@ -265,7 +266,7 @@ def main(options: t.Optional[dict], debug: bool = False):
         with app.pool.get_connection() as conn:
             pictures.queries.define_args(conn)
             conn.commit()
-        app.drop_pics = pictures.DropPics()
+        app.dbx = pictures.connect_dbx()
         if debug is False:
             gunicorn_app = StandaloneApplication(app, options)
             gunicorn_app.run()

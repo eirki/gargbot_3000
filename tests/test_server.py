@@ -8,7 +8,7 @@ import pytest
 from flask import testing
 from psycopg2.extensions import connection
 
-from gargbot_3000 import config, database
+from gargbot_3000 import config
 from tests import conftest
 
 
@@ -29,11 +29,11 @@ class MockRequests:
 
 
 class MockCommands:
-    def execute(self, command_str, args, conn, drop_pics) -> t.Dict[str, t.Any]:
+    def execute(self, command_str, args, conn, dbx) -> t.Dict[str, t.Any]:
         self.command_str = command_str
         self.args = args
         self.conn = conn
-        self.drop_pics = drop_pics
+        self.dbx = dbx
         response = (
             {"text": command_str, "blocks": []}
             if command_str != "msn"

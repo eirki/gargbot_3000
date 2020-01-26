@@ -25,7 +25,7 @@ def test_cmd_hvem(conn: connection):
 
 
 def test_cmd_not_found():
-    response = commands.execute(command_str="blarg", args=[], conn=None, drop_pics=None)
+    response = commands.execute(command_str="blarg", args=[], conn=None, dbx=None)
     assert response["text"].startswith("Beep boop beep!")
     assert "blarg" in response["text"]
 
@@ -35,6 +35,6 @@ def test_cmd_panic(monkeypatch):
         1 / 0
 
     monkeypatch.setattr("gargbot_3000.commands.cmd_ping", blowup)
-    response = commands.execute(command_str="ping", args=[], conn=None, drop_pics=None)
+    response = commands.execute(command_str="ping", args=[], conn=None, dbx=None)
     assert response["text"].startswith("Error, error!")
     assert "division by zero" in response["text"]

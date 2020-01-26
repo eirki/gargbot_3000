@@ -242,14 +242,9 @@ def conn(postgresql: connection):
 
 
 @pytest.fixture
-def drop_pics(conn):
-    def nothing(*args, **kwargs):
-        pass
-
-    pictures.DropPics._connect_dbx = nothing
-    inited_drop_pics = pictures.DropPics()
-    inited_drop_pics.dbx = MockDropbox()
-    yield inited_drop_pics
+def dbx(conn):
+    mock_dbx = MockDropbox()
+    yield mock_dbx
 
 
 class MockPool(database.ConnectionPool):
