@@ -1,5 +1,7 @@
 .env
 
+.cache
+
 postgres-data
 .isort.cfg
 .mypy_cache/

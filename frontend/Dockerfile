@@ -1,14 +1,22 @@
 # build environment
-FROM node:12.10.0-alpine as build
+FROM node:12.10.0-slim as build
 
-WORKDIR /app
-ENV PATH /app/node_modules/.bin:$PATH
-COPY package.json /app/package.json
-RUN npm install --silent
-COPY . /app
-RUN ls /app/node_modules/
-RUN webpack
+RUN adduser --disabled-login --gecos '' gargbotuser
+RUN mkdir -p /home/gargbotuser/app
+WORKDIR /home/gargbotuser/app
+
+RUN npm install -g parcel-bundler
+
+COPY package*.json ./
+RUN npm install --production
+
+COPY ./src ./src
+COPY ./.env ./.env
+RUN parcel build --no-minify ./src/*.html
 
 # production environment
-FROM nginx:stable-alpine
-COPY --from=build /app/dist /usr/share/nginx/html
+FROM nginx:1.17
+
+RUN adduser --disabled-login --gecos '' gargbotuser
+
+COPY --from=build /home/gargbotuser/app/dist /usr/share/nginx/html
