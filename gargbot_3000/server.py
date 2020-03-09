@@ -8,8 +8,15 @@ import typing as t
 import requests
 from dropbox import Dropbox
 from flask import Flask, Response, jsonify, request
-from flask_cors import cross_origin
+from flask_cors import CORS
+from flask_jwt_extended import (
+    JWTManager,
+    create_access_token,
+    get_jwt_identity,
+    jwt_required,
+)
 from gunicorn.app.base import BaseApplication
+from slackclient import SlackClient
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from gargbot_3000 import commands, config, database, health, pictures
@@ -20,6 +27,99 @@ app.wsgi_app = ProxyFix(app.wsgi_app)  # type: ignore
 app.register_blueprint(health.blueprint)
 app.pool = database.ConnectionPool()
 app.dbx = Dropbox
+app.config["JWT_SECRET_KEY"] = config.app_secret
+jwt = JWTManager(app)
+CORS(app)
+
+
+@app.route("/")
+def home_page() -> str:
+    return "home"
+
+
+@app.route("/version")
+def version_page() -> str:
+    return config.app_version
+
+
+@app.route("/auth", methods=["GET"])
+def auth():
+    log.info(request)
+    code = request.args["code"]
+    log.info(request.args)
+    log.info(code)
+    client = SlackClient("")
+    response = client.api_call(
+        "oauth.access",
+        client_id=config.slack_client_id,
+        client_secret=config.slack_client_secret,
+        code=code,
+    )
+    log.info(response)
+    if not response["ok"]:
+        raise Exception(f"Slack auth error: {response['error']}")
+    if response["team_id"] != config.slack_team_id:
+        return Response(status=403)
+    access_token = create_access_token(identity=response["user_id"])
+    return jsonify(access_token=access_token), 200
+
+
+def authorize_request():
+    token = request.args["token"]
+    assert token["proper"]
+    return token["user"]["id"]
+
+
+@app.route("/pic", methods=["GET"])
+@app.route("/pic/<args>", methods=["GET"])
+@jwt_required
+def pic(args: t.Optional[str] = None):
+    user_id = get_jwt_identity()
+    log.info(user_id)
+    arg_list = args.split(",") if args is not None else []
+    with app.pool.get_connection() as conn:
+        pic_url, *_ = pictures.get_pic(conn, app.dbx, arg_list=arg_list)
+    return jsonify({"url": pic_url})
+
+
+@app.route("/interactive", methods=["POST"])
+def interactive() -> Response:
+    log.info("incoming interactive request:")
+    data = json.loads(request.form["payload"])
+    log.info(data)
+    if not data.get("token") == config.slack_verification_token:
+        return Response(status=403)
+    action_id = data["actions"][0]["action_id"]
+    block_id = data["actions"][0]["block_id"]
+    log.info(f"Interactive: {block_id}, {action_id}")
+    if block_id == "share_buttons":
+        result = handle_share_interaction(action_id, data)
+    elif block_id == "commands_buttons":
+        result = handle_command(command_str=action_id, args=[])
+    response_url = data["response_url"]
+    r = requests.post(response_url, json=result)
+    r.raise_for_status()
+    return Response(status=200)
+
+
+@app.route("/slash", methods=["POST"])
+def slash_cmds() -> Response:
+    log.info("incoming slash request:")
+    data = request.form
+    log.info(data)
+
+    if not data.get("token") == config.slack_verification_token:
+        return Response(status=403)
+
+    command_str = data["command"].replace("/", "")
+    args = data["text"].replace("@", "").split()
+
+    result = handle_command(command_str, args)
+    log.info(f"result: {result}")
+    response_url = data["response_url"]
+    r = requests.post(response_url, json=result)
+    r.raise_for_status()
+    return Response(status=200)
 
 
 def attach_share_buttons(result: dict, func: str, args: list) -> dict:
@@ -111,16 +211,6 @@ def attach_commands_buttons(result: dict) -> dict:
     return result
 
 
-@app.route("/")
-def home_page() -> str:
-    return "home"
-
-
-@app.route("/version")
-def version_page() -> str:
-    return config.app_version
-
-
 def delete_ephemeral(response_url: str) -> None:
     delete_original = {
         "response_type": "ephemeral",
@@ -168,46 +258,6 @@ def handle_share_interaction(action: str, data: dict) -> dict:
     return result
 
 
-@app.route("/interactive", methods=["POST"])
-def interactive() -> Response:
-    log.info("incoming interactive request:")
-    data = json.loads(request.form["payload"])
-    log.info(data)
-    if not data.get("token") == config.slack_verification_token:
-        return Response(status=403)
-    action_id = data["actions"][0]["action_id"]
-    block_id = data["actions"][0]["block_id"]
-    log.info(f"Interactive: {block_id}, {action_id}")
-    if block_id == "share_buttons":
-        result = handle_share_interaction(action_id, data)
-    elif block_id == "commands_buttons":
-        result = handle_command(command_str=action_id, args=[])
-    response_url = data["response_url"]
-    r = requests.post(response_url, json=result)
-    r.raise_for_status()
-    return Response(status=200)
-
-
-@app.route("/slash", methods=["POST"])
-def slash_cmds() -> Response:
-    log.info("incoming slash request:")
-    data = request.form
-    log.info(data)
-
-    if not data.get("token") == config.slack_verification_token:
-        return Response(status=403)
-
-    command_str = data["command"].replace("/", "")
-    args = data["text"].replace("@", "").split()
-
-    result = handle_command(command_str, args)
-    log.info(f"result: {result}")
-    response_url = data["response_url"]
-    r = requests.post(response_url, json=result)
-    r.raise_for_status()
-    return Response(status=200)
-
-
 def handle_command(command_str: str, args: list) -> dict:
     db_func = (
         app.pool.get_connection
@@ -229,16 +279,6 @@ def handle_command(command_str: str, args: list) -> dict:
     elif command_str == "gargbot":
         result = attach_commands_buttons(result=result)
     return result
-
-
-@app.route("/pic/", methods=["GET"])
-@app.route("/pic/<args>", methods=["GET"])
-@cross_origin()
-def pic(args: t.Optional[str] = None):
-    arg_list = args.split(",") if args is not None else []
-    with app.pool.get_connection() as conn:
-        pic_url, *_ = pictures.get_pic(conn, app.dbx, arg_list=arg_list)
-    return jsonify({"url": pic_url})
 
 
 class StandaloneApplication(BaseApplication):

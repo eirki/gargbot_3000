@@ -11,10 +11,18 @@ function center_elem(elem) {
 
 
 function main() {
-    var link = document.createElement("a");
-    link.href = `https://slack.com/oauth/authorize?scope=identity.basic&client_id=${process.env.client_id}`
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString)
+    const state = urlParams.get("state")
+    let url = new URL("https://slack.com/oauth/authorize")
+    url.searchParams.set("scope", "identity.basic")
+    url.searchParams.set("client_id", process.env.slack_client_id)
+    url.searchParams.set("user_scope", "identify")
+    url.searchParams.set("state", state)
+    let link = document.createElement("a");
+    link.href = url
 
-    var img = document.createElement("img");
+    let img = document.createElement("img");
     img.src = "https://api.slack.com/img/sign_in_with_slack.png";
     img.alt = "Sign in with Slack";
     img.srcset = "https://platform.slack-edge.com/img/sign_in_with_slack.png 1x, https://platform.slack-edge.com/img/sign_in_with_slack@2x.png 2x"
@@ -24,7 +32,7 @@ function main() {
     img.onload = function () {
         center_elem(this);
     }
-
 }
 
-main();
+
+main()

@@ -2,28 +2,39 @@
 
 import countdown from "countdown";
 
-console.log(countdown);
 
-function setBackground() {
-    const base_url = process.env.api_url
+function redirectLogin() {
+    let url = new URL("/login.html", location.href)
+    url.searchParams.set("state", "lark")
+    location.href = url;
+}
+
+function getToken() {
+    const token = localStorage.getItem('garglingtoken');
+    console.log(`token: ${token}`)
+    return token
+}
+
+
+function setBackground(token) {
     let args = process.env.countdown_args;
-    args = args.split(" ")
-    args = args.join(",")
-    let url = base_url + "/" + args
+    args = args.split(" ");
+    args = args.join(",");
+    const url = new URL(`/pic/${args}`, process.env.backend_url)
+    console.log(`Fetching ${url}`)
     fetch(url, {
         method: 'GET',
         headers: {
-            'Content-Type': 'application/json'
-        },
+            'Authorization': 'Bearer ' + token
+        }
     })
         .then(response => {
             if (response.status !== 200) {
-                console.log("Fetch problem. Status Code:", response.status);
+                redirectLogin();
             }
             return response.json();
         })
         .then(data => {
-            console.log(data)
             let image_url = data["url"];
             document.body.style.background = `url(${image_url}) no-repeat center center`;
         })
@@ -61,6 +72,14 @@ function startTimer() {
     }, 1000);
 }
 
+function main() {
+    let token = getToken();
+    if (!token) {
+        redirectLogin()
+    }
+    setBackground(token)
+    startTimer()
+}
 
-// setBackground()
-startTimer();
+
+main()

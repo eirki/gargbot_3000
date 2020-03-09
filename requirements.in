@@ -21,3 +21,4 @@ jinja2
 werkzeug
 migra[pg]
 sqlbag
+flask-jwt-extended
