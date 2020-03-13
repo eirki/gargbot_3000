@@ -19,9 +19,15 @@ function main() {
             let token = data["access_token"]
             console.log(token)
             window.localStorage.setItem('garglingtoken', token)
-            location.href = state + '.html'
+            location.href = state
+        })
+        .catch(error => {
+            let elem = document.getElementById("msg");
+            elem.innerHTML = "Could not authenticate";
+
         })
 
 }
+
 
 main()

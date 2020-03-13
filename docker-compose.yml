@@ -4,8 +4,7 @@ services:
     container_name: gargbot_frontend
     build: frontend/.
     ports:
-      - 80:80
-      - 443:443
+      - 8081:8081
     networks:
       - nginx_network
     restart: always

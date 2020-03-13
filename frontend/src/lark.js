@@ -4,7 +4,7 @@ import countdown from "countdown";
 
 
 function redirectLogin() {
-    let url = new URL("/login.html", location.href)
+    let url = new URL("/login", location.href)
     url.searchParams.set("state", "lark")
     location.href = url;
 }
