@@ -61,7 +61,9 @@ def auth():
         return Response(status=403)
     if response["team_id"] != config.slack_team_id:
         return Response(status=403)
-    access_token = create_access_token(identity=response["user_id"])
+    access_token = create_access_token(
+        identity=response["user_id"], expires_delta=False
+    )
     return jsonify(access_token=access_token), 200
 
 
