@@ -1,5 +1,7 @@
 "use strict";
 
+import * as config from "./config.js"
+
 // https://hibbard.eu/how-to-center-an-html-element-using-javascript/
 function center_elem(elem) {
     var w = document.documentElement.clientWidth,
@@ -16,7 +18,7 @@ function main() {
     const state = urlParams.get("state")
     let url = new URL("https://slack.com/oauth/authorize")
     url.searchParams.set("scope", "identity.basic")
-    url.searchParams.set("client_id", process.env.slack_client_id)
+    url.searchParams.set("client_id", config.slack_client_id)
     url.searchParams.set("user_scope", "identify")
     url.searchParams.set("state", state)
     let link = document.createElement("a");

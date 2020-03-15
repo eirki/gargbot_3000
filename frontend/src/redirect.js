@@ -1,11 +1,13 @@
 "use strict";
 
+import * as config from "./config.js"
+
 function main() {
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString)
     const code = urlParams.get("code")
     const state = urlParams.get("state")
-    const url = new URL("/auth", process.env.backend_url)
+    const url = new URL("/auth" + config.ext, config.backend_url)
     console.log(url)
     url.searchParams.set('code', code);
     fetch(url, {

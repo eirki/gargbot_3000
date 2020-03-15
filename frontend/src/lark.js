@@ -1,9 +1,11 @@
 "use strict";
 
 import countdown from "countdown";
+import * as config from "./config.js"
+
 
 function redirectLogin() {
-    let url = new URL("/login", location.href)
+    let url = new URL("/login" + config.ext, location.href)
     url.searchParams.set("state", "lark")
     location.href = url;
 }
@@ -16,10 +18,10 @@ function getToken() {
 
 
 function setBackground(token) {
-    let args = process.env.countdown_args;
+    let args = config.countdown_args;
     args = args.split(" ");
     args = args.join(",");
-    const url = new URL(`/pic/${args}`, process.env.backend_url)
+    const url = new URL(`/pic/${args}`, config.backend_url)
     console.log(`Fetching ${url}`)
     fetch(url, {
         method: 'GET',
@@ -44,11 +46,11 @@ function setBackground(token) {
 function startTimer() {
     const message = document.getElementById("message");
     const display = document.getElementById("time");
-    const until_date = Date.parse(process.env.countdown_date);
+    const until_date = config.countdown_date;
     console.log(until_date)
-    const countdown_message = process.env.countdown_message;
-    const ongoing_message = process.env.ongoing_message;
-    const finished_message = process.env.finished_message;
+    const countdown_message = config.countdown_message;
+    const ongoing_message = config.ongoing_message;
+    const finished_message = config.finished_message;
 
     var refresh = setInterval(function () {
         var timespan_obj = countdown(until_date);
