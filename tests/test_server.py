@@ -3,6 +3,7 @@
 import json
 import typing as t
 from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 import pytest
 from flask import testing
@@ -256,10 +257,64 @@ def test_interactive_gargbot_commands(
     assert all(action_id in action_ids for action_id in ["share", "shuffle", "cancel"])
 
 
+@patch("gargbot_3000.server.SlackClient")
+def test_auth(mock_SlackClient, client: testing.FlaskClient):
+    user = conftest.users[0]
+    mock_instance = Mock()
+    mock_SlackClient.return_value = mock_instance
+    mock_instance.api_call.return_value = {
+        "ok": True,
+        "team_id": config.slack_team_id,
+        "user_id": user.id,
+    }
+    response = client.get("/auth", query_string={"code": "code123"})
+    assert response.status_code == 200
+    assert "access_token" in response.json
+    access_token = response.json["access_token"]
+    response2 = client.get(
+        "/is_authed", headers={"Authorization": f"Bearer {access_token}"}
+    )
+    assert response2.status_code == 200
+
+
+@patch("gargbot_3000.server.SlackClient")
+def test_auth_wrong_team(mock_SlackClient, client: testing.FlaskClient):
+    mock_instance = Mock()
+    mock_SlackClient.return_value = mock_instance
+    mock_instance.api_call.return_value = {
+        "ok": True,
+        "team_id": "wrong team_id",
+        "user_id": "user.id",
+    }
+    response = client.get("/auth", query_string={"code": "code123"})
+    assert response.status_code == 403
+
+
+@patch("gargbot_3000.server.SlackClient")
+def test_auth_error(mock_SlackClient, client: testing.FlaskClient):
+    mock_instance = Mock()
+    mock_SlackClient.return_value = mock_instance
+    mock_instance.api_call.return_value = {
+        "ok": False,
+        "error": "Something went wrong",
+        "team_id": "wrong team_id",
+        "user_id": "user.id",
+    }
+    response = client.get("/auth", query_string={"code": "code123"})
+    assert response.status_code == 403
+
+
+def test_not_authed(client: testing.FlaskClient):
+    response = client.get("/is_authed")
+    assert response.status_code == 200
+
+
 @pytest.mark.parametrize("args", [[], ["arg1"], ["arg1", "arg2"]])
-def test_pic_api(client: testing.FlaskClient, args: list, monkeypatch, dbx):
+@patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
+def test_pic_api(mock_jwt, client: testing.FlaskClient, args: list, monkeypatch, dbx):
     monkeypatch.setattr("gargbot_3000.server.app.dbx", dbx)
     args_fmt = ",".join(args)
-    response = client.get(f"/pic/{args_fmt}")
+    url = f"/pic/{args_fmt}" if args else "/pic"
+    response = client.get(url)
     assert response.status_code == 200
     assert response.json["url"].startswith("https://")

@@ -57,17 +57,18 @@ def auth():
     )
     log.info(response)
     if not response["ok"]:
-        raise Exception(f"Slack auth error: {response['error']}")
+        log.info(f"Slack auth error: {response['error']}")
+        return Response(status=403)
     if response["team_id"] != config.slack_team_id:
         return Response(status=403)
     access_token = create_access_token(identity=response["user_id"])
     return jsonify(access_token=access_token), 200
 
 
-def authorize_request():
-    token = request.args["token"]
-    assert token["proper"]
-    return token["user"]["id"]
+@jwt_required
+@app.route("/is_authed", methods=["GET"])
+def is_authed():
+    return "You are authenticated"
 
 
 @app.route("/pic", methods=["GET"])
