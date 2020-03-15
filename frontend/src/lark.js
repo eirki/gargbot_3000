@@ -2,7 +2,6 @@
 
 import countdown from "countdown";
 
-
 function redirectLogin() {
     let url = new URL("/login", location.href)
     url.searchParams.set("state", "lark")
@@ -45,7 +44,7 @@ function setBackground(token) {
 function startTimer() {
     const message = document.getElementById("message");
     const display = document.getElementById("time");
-    const until_date = new Date(Number(process.env.countdown_date));
+    const until_date = Date.parse(process.env.countdown_date);
     console.log(until_date)
     const countdown_message = process.env.countdown_message;
     const ongoing_message = process.env.ongoing_message;
