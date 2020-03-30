@@ -1,4 +1,5 @@
 export const backend_url = process.env.backend_url;
+export const redirect_url = process.env.redirect_url;
 export const ext = process.env.ext;
 
 export const slack_client_id = process.env.slack_client_id;

@@ -6,8 +6,8 @@ from pathlib import Path
 import pytz
 from dotenv import load_dotenv
 
-env_path = Path(".") / ".env"
-load_dotenv(dotenv_path=env_path)
+load_dotenv(dotenv_path=Path(".") / ".env.local")
+load_dotenv(dotenv_path=Path(".") / ".env")
 
 server_name = os.environ.get("SERVER_NAME")
 
@@ -16,6 +16,7 @@ slack_bot_user_token = os.environ["slack_bot_user_token"]
 slack_client_id = os.environ["slack_client_id"]
 slack_client_secret = os.environ["slack_client_secret"]
 slack_team_id = os.environ["slack_team_id"]
+slack_redirect_url = os.environ["slack_redirect_url"]
 
 app_secret = os.environ["app_secret"]
 

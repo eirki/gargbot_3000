@@ -54,30 +54,26 @@ set
   );
 
 
---name: enable_report!
+--name: toggle_report!
 update
   /*{{ {"fitbit": "fitbit_token", "withings": "withings_token"}[service] }}*/
+  as service_token
 set
-  enable_report = true
+  enable_report = :enable_
+from
+  /*{{ {"fitbit": "fitbit_token_gargling", "withings": "withings_token_gargling"}[service] }}*/
+  as service_token_gargling
 where
-  id = :id;
-
-
---name: disable_report!
-update
-  /*{{ {"fitbit": "fitbit_token", "withings": "withings_token"}[service] }}*/
-set
-  enable_report = false
-where
-  id = :id;
+  service_token.id = service_token_gargling.
+  /*{{ {"fitbit": "fitbit_id", "withings": "withings_id"}[service] }}*/
+  and service_token_gargling.gargling_id = :gargling_id;
 
 
 -- name: match_ids!
 delete from
   /*{{ {"fitbit": "fitbit_token_gargling", "withings": "withings_token_gargling"}[service] }}*/
 where
-  /*{{"fitbit_id" if service == "fitbit" else "withings_id" }}*/
-  = :service_user_id;
+  gargling_id = :gargling_id;
 
 
 insert into
@@ -91,23 +87,18 @@ values
   (:service_user_id, :gargling_id);
 
 
--- name: is_user^
+-- name: is_registered^
 select
-  true
+  service_token.enable_report
 from
-  /*{{"fitbit_token" if service == "fitbit" else "withings_token"}}*/
-where
-  id :: text = :id;
-
-
--- name: is_id_matched^
-select
-  true
-from
+  /*{{ {"fitbit": "fitbit_token", "withings": "withings_token"}[service] }}*/
+  as service_token
+  inner join
   /*{{ {"fitbit": "fitbit_token_gargling", "withings": "withings_token_gargling"}[service] }}*/
+  as service_token_gargling on service_token.id = service_token_gargling.
+  /*{{ {"fitbit": "fitbit_id", "withings": "withings_id"}[service] }}*/
 where
-  /*{{ {"fitbit": "fitbit_id", "withings ": "withings_id"}[service] }}*/
-  = :id;
+  service_token_gargling.gargling_id = :gargling_id;
 
 
 -- name: tokens

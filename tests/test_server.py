@@ -265,7 +265,7 @@ def test_auth(mock_SlackClient, client: testing.FlaskClient):
     mock_instance.api_call.return_value = {
         "ok": True,
         "team_id": config.slack_team_id,
-        "user_id": user.id,
+        "user_id": user.slack_id,
     }
     response = client.get("/auth", query_string={"code": "code123"})
     assert response.status_code == 200
@@ -306,7 +306,15 @@ def test_auth_error(mock_SlackClient, client: testing.FlaskClient):
 
 def test_not_authed(client: testing.FlaskClient):
     response = client.get("/is_authed")
-    assert response.status_code == 200
+    assert response.status_code == 401
+
+
+def test_wrong_token(client: testing.FlaskClient):
+    access_token = 12321
+    response = client.get(
+        "/is_authed", headers={"Authorization": f"Bearer {access_token}"}
+    )
+    assert response.status_code == 422
 
 
 @pytest.mark.parametrize("args", [[], ["arg1"], ["arg1", "arg2"]])

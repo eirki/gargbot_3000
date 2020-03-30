@@ -157,11 +157,11 @@ class HealthUser:
 health_users = [
     HealthUser("fitbit", "fitbit_id2", 2, "access_token2", "refresh_token2", 1573921366.6757, True),
     HealthUser("fitbit", "fitbit_id3", 3, "access_token3", "refresh_token3", 1573921366.6757),
-    HealthUser("fitbit", "fitbit_id4", None, "access_token4", "refresh_token4", 1573921366.6757),
+    HealthUser("fitbit", "fitbit_id11", 11, "access_token11", "refresh_token11", 1573921366.6757),
     HealthUser("fitbit", "fitbit_id5", 5, "access_token5", "refresh_token5", 1573921366.6757, True),
     HealthUser("withings", 106, 6, "access_token6", "refresh_token6", 1579111429, True),
     HealthUser("withings", 107, 7, "access_token7", "refresh_token7", 1579111429),
-    HealthUser("withings", 109, None, "access_token9", "refresh_token9", 1579111429),
+    HealthUser("withings", 109, 9, "access_token9", "refresh_token9", 1579111429),
     HealthUser("withings", 1010, 10, "access_token10", "refresh_token10", 1579111429, True),
 ]
 # fmt: on
@@ -215,18 +215,20 @@ def populate_health_table(conn: connection) -> None:
     for health_user in health_users:
         service = health.Service[health_user.service]
         service.value.persist_token(health_user.token(), conn)
-        if health_user.enable_report:
-            health.queries.enable_report(
-                conn, id=health_user.service_user_id, service=service.name
-            )
-        if health_user.gargling_id is None:
-            continue
+
         health.queries.match_ids(
             conn,
             service_user_id=health_user.service_user_id,
             gargling_id=health_user.gargling_id,
             service=service.name,
         )
+        if health_user.enable_report:
+            health.queries.toggle_report(
+                conn,
+                enable_=True,
+                gargling_id=health_user.gargling_id,
+                service=service.name,
+            )
 
 
 @pytest.fixture()

@@ -51,6 +51,7 @@ def auth():
     client = SlackClient("")
     response = client.api_call(
         "oauth.access",
+        redirect_uri=config.slack_redirect_url,
         client_id=config.slack_client_id,
         client_secret=config.slack_client_secret,
         code=code,
@@ -61,24 +62,29 @@ def auth():
         return Response(status=403)
     if response["team_id"] != config.slack_team_id:
         return Response(status=403)
-    access_token = create_access_token(
-        identity=response["user_id"], expires_delta=False
-    )
+    slack_id = response["user_id"]
+    with app.pool.get_connection() as conn:
+        data = commands.queries.gargling_id_for_slack_id(conn, slack_id=slack_id)
+        gargling_id = data["id"]
+    access_token = create_access_token(identity=gargling_id, expires_delta=False)
+    log.info(f"New token minted, for gargling {gargling_id}")
     return jsonify(access_token=access_token), 200
 
 
-@jwt_required
 @app.route("/is_authed", methods=["GET"])
+@jwt_required
 def is_authed():
-    return "You are authenticated"
+    gargling_id = get_jwt_identity()
+    log.debug(gargling_id)
+    return f"You are authenticated, {gargling_id}"
 
 
 @app.route("/pic", methods=["GET"])
 @app.route("/pic/<args>", methods=["GET"])
 @jwt_required
 def pic(args: t.Optional[str] = None):
-    user_id = get_jwt_identity()
-    log.info(user_id)
+    gargling_id = get_jwt_identity()
+    log.info(gargling_id)
     arg_list = args.split(",") if args is not None else []
     with app.pool.get_connection() as conn:
         pic_url, *_ = pictures.get_pic(conn, app.dbx, arg_list=arg_list)
@@ -166,10 +172,10 @@ def attach_share_buttons(result: dict, func: str, args: list) -> dict:
 
 
 def attach_original_request(
-    result: dict, user_id: str, user_name: str, func: str, args: t.List[str]
+    result: dict, slack_id: str, user_name: str, func: str, args: t.List[str]
 ) -> dict:
     with app.pool.get_connection() as conn:
-        data = commands.queries.avatar_for_slack_id(conn, slack_id=user_id)
+        data = commands.queries.avatar_for_slack_id(conn, slack_id=slack_id)
         avatar_url = data["slack_avatar"]
     context_blocks = [
         {
@@ -237,7 +243,7 @@ def handle_share_interaction(action: str, data: dict) -> dict:
         result["response_type"] = "in_channel"
         result = attach_original_request(
             result=result,
-            user_id=data["user"]["id"],
+            slack_id=data["user"]["id"],
             user_name=data["user"]["name"],
             func=original_func,
             args=original_args,

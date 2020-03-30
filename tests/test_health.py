@@ -20,6 +20,7 @@ services = ("service", ["withings", "fitbit"])
 
 fake_tokens = {
     "fitbit": (
+        conftest.users[3],
         "1FDG",
         {
             "user_id": "1FDG",
@@ -29,6 +30,7 @@ fake_tokens = {
         },
     ),
     "withings": (
+        conftest.users[7],
         1234,
         Credentials(
             userid=1234,
@@ -44,25 +46,55 @@ fake_tokens = {
 
 
 @pytest.mark.parametrize(*services)
-def test_authorize_user(service: str, client: testing.FlaskClient):
+@patch("gargbot_3000.health.get_jwt_identity")
+@patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
+def test_auth_not_registered(
+    mock_jwt_required, mock_jwt_identity, service: str, client: testing.FlaskClient
+):
+    user = {"fitbit": conftest.users[3], "withings": conftest.users[7]}[service]
+    mock_jwt_identity.return_value = user.id
     response = client.get(f"{service}/auth")
-    assert response.status_code == 302
+    assert response.status_code == 200
     urls = {
         "withings": "https://account.withings.com/oauth2_user/authorize2",
         "fitbit": "https://www.fitbit.com/oauth2/authorize",
     }
-    assert response.location.startswith(urls[service])
+    assert response.json["auth_url"].startswith(urls[service])
 
 
 @pytest.mark.parametrize(*services)
-def test_handle_redirect(service: str, client: testing.FlaskClient, conn: connection):
-    fake_id, fake_token = fake_tokens[service]
+@patch("gargbot_3000.health.get_jwt_identity")
+@patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
+def test_auth_is_registered(
+    mock_jwt_required, mock_jwt_identity, service: str, client: testing.FlaskClient
+):
+    user = {"fitbit": conftest.health_users[0], "withings": conftest.health_users[4]}[
+        service
+    ]
+    mock_jwt_identity.return_value = user.gargling_id
+    response = client.get(f"{service}/auth")
+    assert response.status_code == 200
+    assert "report_enabled" in response.json
+
+
+@pytest.mark.parametrize(*services)
+@patch("gargbot_3000.health.get_jwt_identity")
+@patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
+def test_handle_redirect(
+    mock_jwt_required,
+    mock_jwt_identity,
+    service: str,
+    client: testing.FlaskClient,
+    conn: connection,
+):
+    user, fake_id, fake_token = fake_tokens[service]
+    mock_jwt_identity.return_value = user.id
     with patch(
         f"gargbot_3000.health.{service.capitalize()}.handle_redirect"
     ) as mock_handler:
         mock_handler.return_value = fake_id, fake_token
         response = client.get(f"/{service}/redirect", query_string={"code": "123"})
-    assert response.status_code == 302
+    assert response.status_code == 200
     with conn.cursor() as cursor:
         cursor.execute(
             "SELECT id, access_token, refresh_token, expires_at "
@@ -71,7 +103,7 @@ def test_handle_redirect(service: str, client: testing.FlaskClient, conn: connec
         )
         data = cursor.fetchone()
     if service == "fitbit":
-        assert data["id"] == fake_token["user_id"]
+        assert data["id"] == fake_id
         assert data["access_token"] == fake_token["access_token"]
         assert data["refresh_token"] == fake_token["refresh_token"]
         assert data["expires_at"] == fake_token["expires_at"]
@@ -80,70 +112,49 @@ def test_handle_redirect(service: str, client: testing.FlaskClient, conn: connec
         assert data["access_token"] == fake_token.access_token
         assert data["refresh_token"] == fake_token.refresh_token
         assert data["expires_at"] == fake_token.token_expiry
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT gargling_id "
+            f"FROM {service}_token_gargling where {service}_id = %(fake_user_id)s",
+            {"fake_user_id": fake_id},
+        )
+        data = cursor.fetchone()
+    assert data["gargling_id"] == user.id
 
 
 @pytest.mark.parametrize(*services)
-def test_who_is_you_bare(service: str, client: testing.FlaskClient):
-    response = client.get(f"whoisyou/{service}")
-    assert response.status_code == 404
-
-
-@pytest.mark.parametrize(*services)
-def test_who_is_you_incorrect(service: str, client: testing.FlaskClient):
-    response = client.get(f"whoisyou/{service}/incorrect")
-    assert response.status_code == 403
-
-
-@pytest.mark.parametrize(*services)
-def test_who_is_you_correct(service: str, client: testing.FlaskClient):
-    service_user_id = 106 if service == "withings" else "fitbit_id2"
-    response = client.get(f"whoisyou/{service}/{service_user_id}")
-    assert response.status_code == 200
-
-
-@pytest.mark.parametrize("use_report", ["no", "yes"])
-@pytest.mark.parametrize(*services)
-def test_who_is_you_form(
-    client: testing.FlaskClient, conn: connection, use_report: str, service: str
+@pytest.mark.parametrize("enable", [True, False])
+@patch("gargbot_3000.health.get_jwt_identity")
+@patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
+def test_toggle_report(
+    mock_jwt_required,
+    mock_jwt_identity,
+    service: str,
+    enable: bool,
+    client: testing.FlaskClient,
+    conn: connection,
 ):
-    health_user = conftest.health_users[1 if service == "fitbit" else 5]
-    form = health.WhoIsForm()
-    form.name.data = health_user.gargling_id
-    form.report.data = use_report
+    offset = 0 if not enable else 1
+    user = {
+        "fitbit": conftest.health_users[0 + offset],
+        "withings": conftest.health_users[4 + offset],
+    }[service]
+    data = health.queries.is_registered(
+        conn, gargling_id=user.gargling_id, service=service
+    )
+    assert user.enable_report is not enable
+    assert data["enable_report"] is not enable
+
+    mock_jwt_identity.return_value = user.gargling_id
     response = client.post(
-        f"/whoisyou/{service}/{health_user.service_user_id}", data=form.data
+        "/toggle_report", json={"service": service, "enable": enable}
     )
     assert response.status_code == 200
-    slack_nick, first_name = next(
-        (user.slack_nick, user.first_name)
-        for user in conftest.users
-        if user.id == health_user.gargling_id
-    )
-    tokens = health.queries.tokens(conn, slack_nicks=[slack_nick], only_report=False)
-    assert len(tokens) == 1
-    assert tokens[0]["first_name"] == first_name
-    daily_tokens = health.queries.tokens(conn, only_report=True, slack_nicks=None)
-    amount = {"no": 0, "yes": 1}[use_report]
-    assert (
-        sum(token["id"] == str(health_user.service_user_id) for token in daily_tokens)
-        == amount
-    )
-    assert response.data == b"Fumbs up!"
 
-
-def test_who_is_you_reask(client: testing.FlaskClient, conn: connection):
-    user = conftest.health_users[2]
-    print(user)
-    form = health.WhoIsForm()
-    form.name.data = ""
-    response = client.post(
-        f"/whoisyou/fitbit/{user.service_user_id}",
-        data=form.data,
-        follow_redirects=True,
+    data = health.queries.is_registered(
+        conn, gargling_id=user.gargling_id, service=service
     )
-    assert response.status_code == 200
-    assert response.data != b"Fumbs up!"
-    assert b"<form " in response.data
+    assert data["enable_report"] is enable
 
 
 @patch.object(health, "WithingsApi")

@@ -49,3 +49,12 @@ from
   gargling
 where
   slack_id = :slack_id;
+
+
+-- name: gargling_id_for_slack_id^
+select
+  id
+from
+  gargling
+where
+  slack_id = :slack_id;

@@ -21,6 +21,7 @@ function main() {
     url.searchParams.set("client_id", config.slack_client_id)
     url.searchParams.set("user_scope", "identify")
     url.searchParams.set("state", state)
+    url.searchParams.set("redirect_uri", config.redirect_url)
     let link = document.createElement("a");
     link.href = url
 

@@ -10,15 +10,8 @@ import aiosql
 import pendulum
 import withings_api
 from fitbit import Fitbit as FitbitApi
-from flask import (
-    Blueprint,
-    abort,
-    current_app,
-    redirect,
-    render_template,
-    request,
-    url_for,
-)
+from flask import Blueprint, Response, current_app, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from withings_api import AuthScope, WithingsApi, WithingsAuth
 from withings_api.common import (
     Credentials,
@@ -26,7 +19,6 @@ from withings_api.common import (
     GetSleepSummaryField,
     MeasureType,
 )
-from wtforms import Form, RadioField, SelectField, SubmitField
 
 from gargbot_3000 import config
 from gargbot_3000 import database as db
@@ -254,70 +246,63 @@ class Service(enum.Enum):
     fitbit = Fitbit
 
 
-class WhoIsForm(Form):
-    name = SelectField("who the hell is you", choices=[("", "select")])
-    report = RadioField(
-        "Enable daglig rapportering?",
-        choices=[("yes", "Hell yes!"), ("no", "Nai")],
-        default=True,
-    )
-    ok = SubmitField(label="OK")
-
-
 @blueprint.route("/<service_name>/auth", methods=["GET"])
-def authorize_user(service_name: str):
-    url = Service[service_name].value.authorize_user()
-    return redirect(url)
+@jwt_required
+def authorize(service_name: str):
+    gargling_id = get_jwt_identity()
+    if gargling_id is None:
+        raise Exception("JWT token issued to None")
+    with current_app.pool.get_connection() as conn:
+        data = queries.is_registered(
+            conn, gargling_id=gargling_id, service=service_name
+        )
+    if data is None:
+        log.info("not registered")
+        url = Service[service_name].value.authorize_user()
+        log.info(url)
+        response = jsonify(auth_url=url)
+    else:
+        report_enabled = data["enable_report"]
+        log.info(f"registered, report enabled: {report_enabled}")
+        response = jsonify(report_enabled=report_enabled)
+    log.info(response)
+    return response
 
 
 @blueprint.route("/<service_name>/redirect", methods=["GET"])
+@jwt_required
 def handle_redirect(service_name: str):
+    gargling_id = get_jwt_identity()
+    if gargling_id is None:
+        raise Exception("JWT token issued to None")
+    log.info(f"gargling_id: {gargling_id}")
     service = Service[service_name]
     service_user_id, token = service.value.handle_redirect(request)
-    service.value.persist_token(token)
-    url = url_for(
-        "health.whoisyou",
-        service_name=service.name,
-        service_user_id=service_user_id,
-        _external=True,
-    )
-    return redirect(url)
-
-
-@blueprint.route("/whoisyou/<service_name>/<service_user_id>", methods=("GET", "POST"))
-def whoisyou(service_name: str, service_user_id: str):
-    try:
-        service = Service[service_name]
-    except KeyError:
-        return abort(403)
     with current_app.pool.get_connection() as conn:
-        if queries.is_user(conn, id=service_user_id, service=service.name) is None:
-            return abort(403)
-        form = WhoIsForm(request.form)
-        if request.method == "POST":
-            if form.report.data == "yes":
-                queries.enable_report(conn, id=service_user_id, service=service.name)
-            elif form.report.data == "no":
-                queries.disable_report(conn, id=service_user_id, service=service.name)
-            conn.commit()
-            gargling_id = form.name.data
-            if gargling_id != "":
-                queries.match_ids(
-                    conn,
-                    gargling_id=gargling_id,
-                    service_user_id=service_user_id,
-                    service=service.name,
-                )
-                conn.commit()
-                return "Fumbs up!"
-            else:
-                if queries.is_id_matched(
-                    conn, id=service_user_id, service=service.name
-                ):
-                    return "Fumbs up!"
-        data = queries.all_ids_nicks(conn)
-        form.name.choices.extend([(row["id"], row["slack_nick"]) for row in data])
-    return render_template("whoisyou.html", form=form)
+        service.value.persist_token(token, conn)
+        queries.match_ids(
+            conn,
+            gargling_id=gargling_id,
+            service_user_id=service_user_id,
+            service=service.name,
+        )
+        conn.commit()
+    return Response(status=200)
+
+
+@blueprint.route("/toggle_report", methods=["POST"])
+@jwt_required
+def toggle_report():
+    gargling_id = get_jwt_identity()
+    content = request.json
+    service = Service[content["service"]]
+    enable = content["enable"]
+    with current_app.pool.get_connection() as conn:
+        queries.toggle_report(
+            conn, enable_=enable, gargling_id=gargling_id, service=service.name
+        )
+        conn.commit()
+    return Response(status=200)
 
 
 def weight_blocks(clients) -> t.List[dict]:

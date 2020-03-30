@@ -15,7 +15,6 @@ pyopenssl
 pendulum
 fitbit
 withings-api
-wtforms
 aiosql
 jinja2
 werkzeug

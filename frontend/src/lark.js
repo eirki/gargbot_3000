@@ -2,19 +2,7 @@
 
 import countdown from "countdown";
 import * as config from "./config.js"
-
-
-function redirectLogin() {
-    let url = new URL("/login" + config.ext, location.href)
-    url.searchParams.set("state", "lark")
-    location.href = url;
-}
-
-function getToken() {
-    const token = localStorage.getItem('garglingtoken');
-    console.log(`token: ${token}`)
-    return token
-}
+import { getToken, redirectLogin } from "./common.js"
 
 
 function setBackground(token) {
@@ -76,7 +64,7 @@ function startTimer() {
 function main() {
     let token = getToken();
     if (!token) {
-        redirectLogin()
+        redirectLogin("lark")
     }
     setBackground(token)
     startTimer()
