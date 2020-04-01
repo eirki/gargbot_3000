@@ -84,7 +84,7 @@ def is_authed():
 @jwt_required
 def pic(args: t.Optional[str] = None):
     gargling_id = get_jwt_identity()
-    log.info(f"gargling_id: {gargling_id}")
+    log.info(gargling_id)
     arg_list = args.split(",") if args is not None else []
     with app.pool.get_connection() as conn:
         pic_url, *_ = pictures.get_pic(conn, app.dbx, arg_list=arg_list)
