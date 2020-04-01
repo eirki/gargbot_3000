@@ -252,6 +252,7 @@ def authorize(service_name: str):
     gargling_id = get_jwt_identity()
     if gargling_id is None:
         raise Exception("JWT token issued to None")
+    log.info(f"gargling_id: {gargling_id}")
     with current_app.pool.get_connection() as conn:
         data = queries.is_registered(
             conn, gargling_id=gargling_id, service=service_name
