@@ -3,7 +3,6 @@
 .cache
 *,cover
 postgres-data
-.isort.cfg
 .mypy_cache/
 data/*
 venv/*
