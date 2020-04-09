@@ -1,17 +1,17 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
+from contextlib import contextmanager
 import datetime as dt
 import enum
-import typing as t
-from contextlib import contextmanager
 from operator import attrgetter, itemgetter
+import typing as t
 
 import aiosql
-import pendulum
-import withings_api
 from fitbit import Fitbit as FitbitApi
 from flask import Blueprint, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
+import pendulum
+import withings_api
 from withings_api import AuthScope, WithingsApi, WithingsAuth
 from withings_api.common import (
     Credentials,
@@ -310,7 +310,11 @@ def weight_blocks(clients) -> t.List[dict]:
     now = pendulum.now()
     blocks = []
     for name, (client, service) in clients.items():
-        weight_data = service.value.weight(client)
+        try:
+            weight_data = service.value.weight(client)
+        except Exception:
+            log.error(f"Error getting {service} weight data for {name}", exc_info=True)
+            continue
         if weight_data is None:
             continue
         elapsed = (now - weight_data["datetime"]).days
@@ -325,7 +329,11 @@ def weight_blocks(clients) -> t.List[dict]:
 def steps_blocks(clients) -> t.List[dict]:
     step_amounts = []
     for name, (client, service) in clients.items():
-        steps = service.value.steps(client)
+        try:
+            steps = service.value.steps(client)
+        except Exception:
+            log.error(f"Error getting {service} steps data for {name}", exc_info=True)
+            continue
         if steps is None:
             continue
         step_amounts.append((steps, name))
