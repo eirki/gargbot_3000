@@ -26,16 +26,29 @@ def sortout_args(
     topic: t.Optional[str],
     year: t.Optional[str],
     garglings: t.List[str],
-) -> t.Tuple[set, set]:
-    valid_args = set()
+    exclusive: bool,
+) -> t.Tuple[list, set]:
+    valid_args = []
     if topic:
-        valid_args.add(topic)
+        valid_args.append(topic)
     if year:
-        valid_args.add(year)
-    for gargling_id, slack_nick in garglings:
-        valid_args.add(slack_nick)
-    invalid_args = args - valid_args
+        valid_args.append(year)
+    if exclusive:
+        valid_args.append("kun")
+    valid_args.extend(garglings)
+    invalid_args = args - set(valid_args)
     return valid_args, invalid_args
+
+
+def reduce_arg_combinations(args: t.List[str]) -> t.Iterator[t.Sequence[str]]:
+    try:
+        args.remove("kun")
+        yield args
+    except ValueError:
+        pass
+    for length in reversed(range(1, len(args))):
+        for arg_combination in itertools.combinations(args, length):
+            yield arg_combination
 
 
 def get_description_for_invalid_args(
@@ -105,19 +118,18 @@ def get_pic(
     # No pics found for arg-combination. Reduce args until pic found
     valid_args_fmt = ", ".join(f"`{arg}`" for arg in valid_args)
     description += f"Fant ikke bilde med {valid_args_fmt}. "
-    for length in reversed(range(1, len(valid_args))):
-        for arg_combination in itertools.combinations(valid_args, length):
-            log.info(f"arg_combination: {arg_combination}")
-            parsed = queries.parse_args(conn, args=list(arg_combination))
-            data = queries.pic_for_topic_year_garglings(conn, **parsed)
-            if data is None:
-                continue
+    for arg_combination in reduce_arg_combinations(valid_args):
+        log.info(f"arg_combination: {arg_combination}")
+        parsed = queries.parse_args(conn, args=list(arg_combination))
+        data = queries.pic_for_topic_year_garglings(conn, **parsed)
+        if data is None:
+            continue
 
-            arg_combination_fmt = ", ".join(f"`{arg}`" for arg in arg_combination)
-            description += f"Her er et bilde med {arg_combination_fmt} i stedet."
-            taken_at = data["taken_at"]
-            url = get_url_for_dbx_path(dbx, path=data["path"])
-            return url, taken_at, description
+        arg_combination_fmt = ", ".join(f"`{arg}`" for arg in arg_combination)
+        description += f"Her er et bilde med {arg_combination_fmt} i stedet."
+        taken_at = data["taken_at"]
+        url = get_url_for_dbx_path(dbx, path=data["path"])
+        return url, taken_at, description
 
     #  No pics found for any args
     url, taken_at = get_random_pic(conn, dbx)

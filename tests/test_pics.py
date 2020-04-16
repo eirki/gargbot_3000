@@ -38,16 +38,67 @@ def test_user(conn: connection, dbx: conftest.MockDropbox) -> None:
     assert_valid_returns(url, timestamp, description)
 
 
+def test_user_exclusive(conn: connection, dbx: conftest.MockDropbox) -> None:
+    user = "slack_nick3"
+    exclusive_pic = "test_pic7"
+    # get seed that returns nonexclusive
+    for seed in range(1, 10):
+        with conn.cursor() as cursor:
+            cursor.execute(f"select setseed(0.{seed})")
+        url1, timestamp, description = pictures.get_pic(conn, dbx, arg_list=[user])
+        assert_valid_returns(url1, timestamp, description)
+        if not url1.endswith(exclusive_pic):
+            break
+    else:
+        raise Exception("could not find good seed")
+
+    with conn.cursor() as cursor:
+        cursor.execute(f"select setseed(0.{seed})")
+    url2, timestamp, description = pictures.get_pic(conn, dbx, arg_list=["kun", user])
+    assert_valid_returns(url2, timestamp, description)
+    assert url2.endswith(exclusive_pic)
+
+
 def test_multiple_users(conn: connection, dbx: conftest.MockDropbox) -> None:
     users = ["slack_nick11", "slack_nick3"]
     url, timestamp, description = pictures.get_pic(conn, dbx, arg_list=users)
     assert_valid_returns(url, timestamp, description)
 
 
+def test_multiple_users_exclusive(conn: connection, dbx: conftest.MockDropbox) -> None:
+    users = ["slack_nick2", "slack_nick3"]
+    exclusive_pic = "test_pic4"
+    # get seed that returns nonexclusive
+    for seed in range(1, 10):
+        with conn.cursor() as cursor:
+            cursor.execute(f"select setseed(0.{seed})")
+        url1, timestamp, description = pictures.get_pic(conn, dbx, arg_list=users)
+        assert_valid_returns(url1, timestamp, description)
+        if not url1.endswith(exclusive_pic):
+            break
+    else:
+        raise Exception("could not find good seed")
+
+    with conn.cursor() as cursor:
+        cursor.execute(f"select setseed(0.{seed})")
+    url2, timestamp, description = pictures.get_pic(conn, dbx, arg_list=["kun"] + users)
+    assert_valid_returns(url2, timestamp, description)
+    assert url2.endswith(exclusive_pic)
+
+
 def test_multiple_args(conn: connection, dbx: conftest.MockDropbox) -> None:
     arg_list = ["slack_nick2", "topic1", "2001"]
     url, timestamp, description = pictures.get_pic(conn, dbx, arg_list=arg_list)
     assert_valid_returns(url, timestamp, description)
+
+
+def test_reduce_args(conn: connection, dbx: conftest.MockDropbox) -> None:
+    arg_list = ["kun", "slack_nick11"]
+    url, timestamp, description = pictures.get_pic(conn, dbx, arg_list=arg_list)
+    assert description == (
+        "Fant ikke bilde med `kun`, `slack_nick11`. "
+        "Her er et bilde med `slack_nick11` i stedet."
+    )
 
 
 # Errors:

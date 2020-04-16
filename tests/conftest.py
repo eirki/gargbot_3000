@@ -1,17 +1,17 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-import datetime as dt
-import typing as t
 from collections import namedtuple
+from dataclasses import asdict, dataclass
+import datetime as dt
 from pathlib import Path
+import typing as t
 
-import pytest
 from flask import testing
 from psycopg2.extensions import connection
 from psycopg2.extras import RealDictCursor
+import pytest
 from withings_api.common import Credentials
 
-from dataclasses import asdict, dataclass
 from gargbot_3000 import (
     commands,
     config,
@@ -63,7 +63,7 @@ pics = [
     Pic("path/test_pic4", "topic2", dt.datetime(2004, 4, 4), [2, 3]),
     Pic("path/test_pic5", "topic2", dt.datetime(2005, 5, 5), [7]),
     Pic("path/test_pic6", "topic2", dt.datetime(2006, 6, 6), [5]),
-    Pic("path/test_pic7", "topic3", dt.datetime(2007, 7, 7), [2]),
+    Pic("path/test_pic7", "topic3", dt.datetime(2007, 7, 7), [3]),
     Pic("path/test_pic8", "topic3", dt.datetime(2008, 8, 8), [2]),
     Pic("path/test_pic9", "topic3", dt.datetime(2009, 9, 9), [2]),
 ]

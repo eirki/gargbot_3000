@@ -1,9 +1,9 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
 import datetime as dt
+from functools import partial
 import time
 import typing as t
-from functools import partial
 
 import aiosql
 import dropbox
@@ -29,7 +29,7 @@ def prettify_date(date: dt.datetime) -> str:
 def command_explanation(server: bool = False):
     commands = (
         "`@gargbot_3000 hvem [spørsmål]`: svarer på spørsmål om garglings \n"
-        "`@gargbot_3000 pic [lark/fe/skating/henging] [gargling] [år]`: random bilde\n"
+        "`@gargbot_3000 pic [lark/fe/skating/henging] [kun] [gargling] [år]`: random bilde\n"
         "`@gargbot_3000 forum [garling]`: henter tilfeldig sitat fra ye olde forumet\n"
         "`@gargbot_3000 msn [garling]`: utfrag fra tilfeldig msn samtale\n"
     )

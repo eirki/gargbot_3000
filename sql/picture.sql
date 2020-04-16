@@ -122,12 +122,19 @@ select
         select
             array(
                 select
-                    array [id :: text, slack_nick]
+                    slack_nick
                 from
                     gargling
                 where
                     slack_nick = any(:args)
             ) as garglings
+    ),
+    (
+        select
+            case
+                when 'kun' = any(:args) then true
+                else false
+            end as exclusive
     );
 
 
@@ -155,24 +162,45 @@ limit
 
 
 -- name: pic_for_topic_year_garglings^
+with garglings_arg as (
+    select
+        id
+    from
+        gargling
+    where
+        slack_nick = any(:garglings)
+)
 select
     picture.path,
     picture.taken_at
 from
     picture
-    /*{% if garglings|length == 1 %}*/
-    left join picture_gargling on picture.id = picture_gargling.picture_id
-    /*{% elif garglings|length > 1 %}*/
-    left join (
+    /*{% if garglings %}*/
+    inner join (
         select
-            array_agg(gargling_id) as gargling_ids,
             picture_id
         from
             picture_gargling
+            /*{% if exclusive %}*/
+            left join garglings_arg on picture_gargling.gargling_id = garglings_arg.id
+            /*{% else %}*/
+            inner join garglings_arg on picture_gargling.gargling_id = garglings_arg.id
+            /*{% endif %}*/
+            /*{% if exclusive %}*/
         group by
             picture_id
+        having
+            array_agg(picture_gargling.gargling_id) <@ array_agg(garglings_arg.id)
+            and array_agg(garglings_arg.id) <@ array_agg(picture_gargling.gargling_id)
+            /*{% elif garglings | length > 0 %}*/
+        group by
+            picture_id
+        having
+            array_agg(picture_gargling.gargling_id) <@ array_agg(garglings_arg.id)
+            /*{% endif %}*/
     ) as picture_gargling on picture.id = picture_gargling.picture_id
     /*{% endif %}*/
+    /*{% if topic or year %}*/
 where
     /*{% set and = joiner(" and ") %}*/
     /*{% if topic %}*/
@@ -187,15 +215,6 @@ where
             picture.taken_at
     ) = :year
     /*{% endif %}*/
-    /*{% if garglings|length == 1 %}*/
-    /*{{ and() }}*/
-    picture_gargling.gargling_id = (:garglings) [1] [1] :: smallint
-    /*{% elif garglings|length > 1 %}*/
-    /*{% for id, slack_nick in garglings %}*/
-    /*{{ and() }}*/
-    /*{{ id }}*/
-    :: smallint = any(picture_gargling.gargling_ids)
-    /*{% endfor %}*/
     /*{% endif %}*/
 order by
     random()
