@@ -24,18 +24,24 @@ def test_topic(conn: connection, dbx: conftest.MockDropbox) -> None:
     topic = "topic1"
     url, timestamp, description = pictures.get_pic(conn, dbx, arg_list=[topic])
     assert_valid_returns(url, timestamp, description)
+    pic = next(pic for pic in conftest.pics if url.endswith(pic.path))
+    assert pic.topic == topic
 
 
 def test_year(conn: connection, dbx: conftest.MockDropbox) -> None:
     year = "2002"
     url, timestamp, description = pictures.get_pic(conn, dbx, arg_list=[year])
     assert_valid_returns(url, timestamp, description)
+    pic = next(pic for pic in conftest.pics if url.endswith(pic.path))
+    assert pic.taken_at.year == int(year)
 
 
 def test_user(conn: connection, dbx: conftest.MockDropbox) -> None:
     user = "slack_nick3"
     url, timestamp, description = pictures.get_pic(conn, dbx, arg_list=[user])
     assert_valid_returns(url, timestamp, description)
+    pic = next(pic for pic in conftest.pics if url.endswith(pic.path))
+    assert 3 in pic.faces
 
 
 def test_user_exclusive(conn: connection, dbx: conftest.MockDropbox) -> None:
@@ -63,13 +69,15 @@ def test_multiple_users(conn: connection, dbx: conftest.MockDropbox) -> None:
     users = ["slack_nick11", "slack_nick3"]
     url, timestamp, description = pictures.get_pic(conn, dbx, arg_list=users)
     assert_valid_returns(url, timestamp, description)
+    pic = next(pic for pic in conftest.pics if url.endswith(pic.path))
+    assert {11, 3}.issubset(pic.faces), f"Wrong picture {pic}"
 
 
 def test_multiple_users_exclusive(conn: connection, dbx: conftest.MockDropbox) -> None:
     users = ["slack_nick2", "slack_nick3"]
     exclusive_pic = "test_pic4"
     # get seed that returns nonexclusive
-    for seed in range(1, 10):
+    for seed in range(0, 20):
         with conn.cursor() as cursor:
             cursor.execute(f"select setseed(0.{seed})")
         url1, timestamp, description = pictures.get_pic(conn, dbx, arg_list=users)
@@ -97,6 +105,10 @@ def test_multiple_args(conn: connection, dbx: conftest.MockDropbox) -> None:
     arg_list = ["slack_nick2", "topic1", "2001"]
     url, timestamp, description = pictures.get_pic(conn, dbx, arg_list=arg_list)
     assert_valid_returns(url, timestamp, description)
+    pic = next(pic for pic in conftest.pics if url.endswith(pic.path))
+    assert pic.topic == "topic1"
+    assert pic.taken_at.year == 2001
+    assert 2 in pic.faces
 
 
 def test_reduce_args(conn: connection, dbx: conftest.MockDropbox) -> None:
@@ -125,6 +137,8 @@ def test_error_txt_with_valid(conn: connection, dbx: conftest.MockDropbox) -> No
     assert type(timestamp) == dt.datetime
     assert description.startswith("Im so stoopid")
     assert "Her er et bilde med" in description
+    pic = next(pic for pic in conftest.pics if url.endswith(pic.path))
+    assert 5 in pic.faces
 
 
 def test_error_txt_with_impossible_combination(

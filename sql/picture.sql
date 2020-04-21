@@ -235,7 +235,7 @@ where
     /*{% endif %}*/
     /*{% if garglings | length > 1 and not exclusive %}*/
     /*{{ and() }}*/
-    picture_gargling.gargling_ids <@ garglings_arg.ids
+    garglings_arg.ids <@ picture_gargling.gargling_ids
     /*{% endif %}*/
     /*{% endif %}*/
 order by
