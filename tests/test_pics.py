@@ -84,6 +84,13 @@ def test_multiple_users_exclusive(conn: connection, dbx: conftest.MockDropbox) -
     url2, timestamp, description = pictures.get_pic(conn, dbx, arg_list=["kun"] + users)
     assert_valid_returns(url2, timestamp, description)
     assert url2.endswith(exclusive_pic)
+    for _ in range(10):
+        url3, timestamp, description = pictures.get_pic(
+            conn, dbx, arg_list=["kun"] + users
+        )
+        assert_valid_returns(url3, timestamp, description)
+        pic = next(pic for pic in conftest.pics if url3.endswith(pic.path))
+        assert pic.faces == [2, 3], f"Wrong picture {pic}"
 
 
 def test_multiple_args(conn: connection, dbx: conftest.MockDropbox) -> None:

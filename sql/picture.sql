@@ -162,45 +162,63 @@ limit
 
 
 -- name: pic_for_topic_year_garglings^
+/*{% if garglings | length > 1 or exclusive %}*/
 with garglings_arg as (
     select
-        id
-    from
-        gargling
-    where
-        slack_nick = any(:garglings)
+        array(
+            select
+                id
+            from
+                gargling
+            where
+                slack_nick = any(:garglings)
+            order by
+                id
+        ) as ids
 )
+/*{% endif %}*/
 select
     picture.path,
     picture.taken_at
 from
     picture
-    /*{% if garglings %}*/
+    /*{% if garglings | length == 1 and not exclusive %}*/
     inner join (
         select
             picture_id
         from
             picture_gargling
-            /*{% if exclusive %}*/
-            left join garglings_arg on picture_gargling.gargling_id = garglings_arg.id
-            /*{% else %}*/
-            inner join garglings_arg on picture_gargling.gargling_id = garglings_arg.id
-            /*{% endif %}*/
-            /*{% if exclusive %}*/
-        group by
-            picture_id
-        having
-            array_agg(picture_gargling.gargling_id) <@ array_agg(garglings_arg.id)
-            and array_agg(garglings_arg.id) <@ array_agg(picture_gargling.gargling_id)
-            /*{% elif garglings | length > 0 %}*/
-        group by
-            picture_id
-        having
-            array_agg(picture_gargling.gargling_id) <@ array_agg(garglings_arg.id)
-            /*{% endif %}*/
+        where
+            gargling_id = (
+                select
+                    id
+                from
+                    gargling
+                where
+                    slack_nick = any(:garglings)
+            )
     ) as picture_gargling on picture.id = picture_gargling.picture_id
+    /*{% elif garglings %}*/
+    inner join (
+        select
+            picture_id,
+            array_agg(
+                picture_gargling.gargling_id
+                order by
+                    picture_gargling.gargling_id
+            ) as gargling_ids
+        from
+            picture_gargling
+        group by
+            picture_id
+    ) as picture_gargling on picture.id = picture_gargling.picture_id
+    /*{% if exclusive %}*/
+    inner join garglings_arg on picture_gargling.gargling_ids = garglings_arg.ids
+    /*{% else %}*/
+    cross join garglings_arg
     /*{% endif %}*/
-    /*{% if topic or year %}*/
+    /*{% endif %}*/
+    /*{% if topic or year or (garglings | length > 1 and not exclusive) %}*/
 where
     /*{% set and = joiner(" and ") %}*/
     /*{% if topic %}*/
@@ -215,8 +233,12 @@ where
             picture.taken_at
     ) = :year
     /*{% endif %}*/
+    /*{% if garglings | length > 1 and not exclusive %}*/
+    /*{{ and() }}*/
+    picture_gargling.gargling_ids <@ garglings_arg.ids
+    /*{% endif %}*/
     /*{% endif %}*/
 order by
     random()
 limit
-    1
+    1;
