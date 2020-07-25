@@ -8,7 +8,7 @@ import typing as t
 
 from flask import testing
 from psycopg2.extensions import connection
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import DictCursor, RealDictCursor
 import pytest
 from withings_api.common import Credentials
 
@@ -18,6 +18,7 @@ from gargbot_3000 import (
     database,
     greetings,
     health,
+    journey,
     pictures,
     quotes,
     server,
@@ -231,6 +232,10 @@ def populate_health_table(conn: connection) -> None:
             )
 
 
+def populate_journey_table(conn: connection) -> None:
+    journey.queries.create_schema(conn)
+
+
 @pytest.fixture()
 def conn(postgresql: connection):
     populate_user_table(postgresql)
@@ -238,7 +243,8 @@ def conn(postgresql: connection):
     populate_quotes_table(postgresql)
     populate_congrats_table(postgresql)
     populate_health_table(postgresql)
-    postgresql.cursor_factory = RealDictCursor
+    populate_journey_table(postgresql)
+    postgresql.cursor_factory = DictCursor
     postgresql.commit()
     yield postgresql
 

@@ -11,36 +11,20 @@ import typing as t
 import urllib
 import urllib.parse as urlparse
 
+import aiosql
 from dotenv import load_dotenv
 import geopy
 from geopy.geocoders import Nominatim
 import googlemaps
 import gpxpy
-import numpy as np
-import pandas as pd
 import pendulum
+from psycopg2.extensions import connection
 import requests
 
 from gargbot_3000.logger import log
 
 stride = 0.75
-# poi_types = (
-#     "accounting, airport, amusement_park, aquarium, art_gallery, atm, bakery, bank, "
-#     "bar, beauty_salon, bicycle_store, book_store, bowling_alley, bus_station, "
-#     "cafe, campground, car_dealer, car_rental, car_repair, car_wash, casino, cemetery, "
-#     "church, city_hall, clothing_store, convenience_store, courthouse, dentist, "
-#     "department_store, doctor, drugstore, electrician, electronics_store, embassy, "
-#     "fire_station, florist, funeral_home, furniture_store, gas_station, gym, hair_care, "
-#     "hardware_store, hindu_temple, home_goods_store, hospital, insurance_agency, "
-#     "jewelry_store, laundry, lawyer, library, light_rail_station, liquor_store, "
-#     "local_government_office, locksmith, lodging, meal_delivery, meal_takeaway, "
-#     "mosque, movie_rental, movie_theater, moving_company, museum, night_club, painter, "
-#     "park, parking, pet_store, pharmacy, physiotherapist, plumber, police, post_office, "
-#     "primary_school, real_estate_agency, restaurant, roofing_contractor, rv_park, "
-#     "school, secondary_school, shoe_store, shopping_mall, spa, stadium, storage, "
-#     "store, subway_station, supermarket, synagogue, taxi_stand, tourist_attraction, "
-#     "train_station, transit_station, travel_agency, university, veterinary_care, zoo"
-# )
+queries = aiosql.from_path("sql/journey.sql", "psycopg2")
 
 poi_types = {
     "amusement_park",
@@ -76,123 +60,8 @@ poi_types = {
 }
 
 
-class MockHealth:
-    def steps_today(self, date):
-        return [
-            {"gargling_id": 0, "amount": random.randrange(20_000)},
-            {"gargling_id": 1, "amount": random.randrange(20_000)},
-            {"gargling_id": 2, "amount": random.randrange(20_000)},
-            {"gargling_id": 3, "amount": random.randrange(20_000)},
-        ]
-
-
-class MockSQL:
-    def __init__(self):
-        self._journey = pd.DataFrame(
-            columns=["origin", "destination", "started_at", "finished_at"]
-        )
-        self._point = pd.DataFrame(columns=["journey_id", "lat", "lon", "cum_dist"])
-        self._step = pd.DataFrame(
-            columns=["gargling_id", "journey_id", "taken_at", "amount"]
-        )
-        self._location = pd.DataFrame(
-            columns=[
-                "journey_id",
-                "lat",
-                "lon",
-                "distance",
-                "date",
-                "address",
-                "img_url",
-                "map_url",
-                "poi",
-                "latest_point",
-            ]
-        )
-
-    def add_journey(self, journey: dict) -> int:
-        self._journey = self._journey.append(journey, ignore_index=True,)
-        journey_id = self._journey.iloc[-1].name
-        return journey_id
-
-    def start_journey(self, journey_id, date) -> None:
-        self._journey.loc[journey_id, "started_at"] = date
-
-    def finish_journey(self, journey_id, date) -> None:
-        self._journey.loc[journey_id, "finished_at"] = date
-
-    def get_ongoing_journey(self) -> dict:
-        return (
-            self._journey[
-                self._journey["started_at"].notna()
-                & self._journey["finished_at"].isna()
-            ]
-            .iloc[0]
-            .to_dict()
-        )
-
-    def get_journey(self, journey_id):
-        return self._journey.iloc[journey_id]
-
-    def add_points(self, points) -> None:
-        self._point = self._point.append(points, sort=False)
-
-    def get_points(self, journey_id) -> pd.DataFrame:
-        return self._point[self._point["journey_id"] == journey_id]
-
-    def get_point_for_distance(self, journey_id, distance) -> dict:
-        points = self.get_points(journey_id)
-        point = points[distance > points["cum_dist"]].iloc[-1]
-        point_dict = point.to_dict()
-        point_dict["index"] = point.name
-        return point_dict
-
-    def get_next_point_for_point(self, journey_id, point_in: dict) -> t.Optional[dict]:
-        points = self.get_points(journey_id)
-        try:
-            point = points.iloc[point_in["index"] + 1]
-            point_dict = point.to_dict()
-            point_dict["index"] = point.name
-            return point_dict
-        except IndexError:
-            return None
-
-    def add_steps(self, steps) -> None:
-        self._step = self._step.append(steps, sort=False)
-
-    def get_steps(self, journey_id):
-        return self._step[self._step["journey_id"] == journey_id]
-
-    def add_location(self, location: dict) -> None:
-        self._location = self._location.append(location, ignore_index=True)
-
-    def most_recent_location(self, journey_id) -> t.Optional[dict]:
-        try:
-            loc = (
-                self._location[self._location["journey_id"] == journey_id]
-                .iloc[-1]
-                .to_dict()
-            )
-            ts = loc["date"]
-            loc["date"] = pendulum.DateTime(
-                year=ts.year,
-                month=ts.month,
-                day=ts.day,
-                tzinfo=pendulum.tz.timezone("UTC"),
-            )
-            return loc
-        except IndexError:
-            return None
-
-
 def define_journey(conn, origin, destination) -> int:
-    journey = {
-        "origin": origin,
-        "destination": destination,
-        "started_at": None,
-        "finished_at": None,
-    }
-    journey_id = conn.add_journey(journey)
+    journey_id = queries.add_journey(conn, origin=origin, destination=destination)
     return journey_id
 
 
@@ -214,18 +83,18 @@ def parse_gpx(conn, journey_id, xml_data) -> None:
         }
         points.append(data)
         prev_point = point
-    conn.add_points(points)
+    queries.add_points(conn, points)
 
 
-def start_journey(conn, journey_id, date) -> None:
-    conn.start_journey(journey_id, date)
+def start_journey(conn: connection, journey_id: int, date: pendulum.DateTime) -> None:
+    queries.start_journey(conn, journey_id=journey_id, date=date)
 
 
-def store_steps(conn, steps: pd.Series, journey_id, date) -> None:
-    df = pd.DataFrame(steps)
-    df["taken_at"] = date
-    df["journey_id"] = journey_id
-    conn.add_steps(df)
+def store_steps(conn, steps, journey_id, date) -> None:
+    for step in steps:
+        step["taken_at"] = date
+        step["journey_id"] = journey_id
+    queries.add_steps(conn, steps)
 
 
 def address_for_location(lat, lon) -> t.Optional[str]:
@@ -233,8 +102,8 @@ def address_for_location(lat, lon) -> t.Optional[str]:
     try:
         location = geolocator.reverse(f"{lat}, {lon}")
         return location.address
-    except Exception as e:
-        print(e)
+    except Exception as exc:
+        log.exception(exc)
         return None
 
 
@@ -266,8 +135,12 @@ def map_url_for_location(lat, lon) -> str:
 
 
 def poi_for_location(lat, lon) -> t.Optional[str]:
-    google = googlemaps.Client(key=os.environ["google_api_key"],)
-    details = google.places_nearby(location=(lat, lon), radius=1000)["results"]
+    try:
+        google = googlemaps.Client(key=os.environ["google_api_key"])
+        details = google.places_nearby(location=(lat, lon), radius=1000)["results"]
+    except Exception as exc:
+        log.exception(exc)
+        return None
     pois = [d for d in details if "point_of_interest" in d.get("types", [])]
     if not pois:
         return None
@@ -276,13 +149,15 @@ def poi_for_location(lat, lon) -> t.Optional[str]:
         return poi["name"]
     except StopIteration:
         return None
-    print(poi.get("types"))
-    print(poi_types.isdisjoint(poi.get("types", [])))
 
 
 def get_location(conn, journey_id, distance) -> dict:
-    latest_point = conn.get_point_for_distance(journey_id, distance)
-    next_point = conn.get_next_point_for_point(journey_id, latest_point)
+    latest_point = queries.get_point_for_distance(
+        conn, journey_id=journey_id, distance=distance
+    )
+    next_point = queries.get_next_point_for_point(
+        conn, journey_id=journey_id, point_id=latest_point["id"]
+    )
     if next_point is None:
         finished = True
         current_lat = latest_point["lat"]
@@ -311,20 +186,45 @@ def get_location(conn, journey_id, distance) -> dict:
         "img_url": img_url,  # how to store image?
         "map_url": map_url,
         "poi": poi,
-        "latest_point": latest_point["index"],
+        "latest_point": latest_point["id"],
         "finished": finished,
     }
     return location
 
 
-def store_location(conn, journey_id, date, location: dict) -> None:
-    location["journey_id"] = journey_id
-    location["date"] = date
-    conn.add_location(location)
+def store_location(conn, journey_id, date, loc: dict) -> None:
+    queries.add_location(
+        conn,
+        journey_id=journey_id,
+        latest_point=loc["latest_point"],
+        lat=loc["lat"],
+        lon=loc["lon"],
+        distance=loc["distance"],
+        date=date,
+        address=loc["address"],
+        img_url=loc["img_url"],
+        map_url=loc["map_url"],
+        poi=loc["poi"],
+    )
 
 
 def most_recent_location(conn, journey_id) -> t.Optional[dict]:
-    return conn.most_recent_location(journey_id)
+    loc = queries.most_recent_location(conn, journey_id=journey_id)
+    if loc is None:
+        return None
+    as_dict = {
+        "journey_id": loc["journey_id"],
+        "latest_point": loc["latest_point"],
+        "lat": loc["lat"],
+        "lon": loc["lon"],
+        "distance": loc["distance"],
+        "date": pendulum.instance(loc["date"]),
+        "address": loc["address"],
+        "img_url": loc["img_url"],
+        "map_url": loc["map_url"],
+        "poi": loc["poi"],
+    }
+    return as_dict
 
 
 def completion_celebration(date, steps, journey_id) -> str:
@@ -333,9 +233,9 @@ def completion_celebration(date, steps, journey_id) -> str:
 
 
 def perform_daily_update(
-    conn, client, journey_id, date
+    conn: connection, client, journey_id: int, date: pendulum.DateTime
 ) -> t.Optional[t.Tuple[str, t.Optional[str], t.Optional[str]]]:
-    journey = conn.get_journey(journey_id)
+    journey = queries.get_journey(conn, journey_id=journey_id)
     if journey["finished_at"] is not None or journey["started_at"] is None:
         return None
     steps_data = client.steps_today(date)
@@ -357,7 +257,7 @@ def perform_daily_update(
         ]
     )
     if loc.pop("finished"):
-        conn.finish_journey(journey_id, date)
+        queries.finish_journey(conn, journey_id=journey_id, date=date)
         return (
             completion_celebration(date, steps_summary, journey_id),
             loc["img_url"],
@@ -372,12 +272,11 @@ def perform_daily_update(
         f"Address: {loc['address']}\n"
         f"{poi}"
     )
-
     return report, loc["img_url"], loc["map_url"]
 
 
 def days_to_update(conn, journey_id, date) -> t.Iterable[dt.datetime]:
-    journey = conn.get_journey(journey_id)
+    journey = queries.get_journey(conn, journey_id=journey_id)
     start_loc = most_recent_location(conn, journey_id)
     if start_loc is None:
         last_updated_at = journey["started_at"]
@@ -407,29 +306,3 @@ def main(
         except Exception as exc:
             log.exception(exc)
     return data
-
-
-"""load_dotenv(dotenv_path="/home/ebs/Dropbox/Programmering/bot/gargbot_3000/.env")
-conn = MockSQL()
-
-filename = "/home/ebs/Dropbox/Programmering/bot/gargen-does-japan/denne.gpx"
-origin = "Larkollen"
-destination = "Yamanakako"
-
-# setup
-journey_id = define_journey(conn, origin, destination)
-with open(filename) as file_obj:
-    data = file_obj.read()
-parse_gpx(conn, journey_id, data)
-start_at = pendulum.today("UTC")
-start_journey(conn, journey_id, start_at)
-
-# update
-update_at = start_at.add(days=3)
-print(f"Update perfomed at {update_at}")
-client = MockHealth()
-for day in days_to_update(conn, journey_id, update_at):
-    upd, _, _ = perform_daily_update(conn, client, journey_id, update_at)
-    print(upd)
-
-"""

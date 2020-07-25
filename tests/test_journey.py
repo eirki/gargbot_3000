@@ -4,6 +4,8 @@ import random
 from unittest.mock import Mock, patch
 
 import pendulum
+import psycopg2
+from psycopg2.extensions import connection
 import pytest
 
 from gargbot_3000 import journey
@@ -43,13 +45,9 @@ class MockHealth:
     def steps_today(self, date):
         steps = self.steps[self.called]
         self.called += 1
-        return [{"gargling_id": i, "amount": step} for i, step in enumerate(steps)]
-        # return [
-        #     {"gargling_id": 0, "amount": random.randrange(20_000)},
-        #     {"gargling_id": 1, "amount": random.randrange(20_000)},
-        #     {"gargling_id": 2, "amount": random.randrange(20_000)},
-        #     {"gargling_id": 3, "amount": random.randrange(20_000)},
-        # ]
+        return [
+            {"gargling_id": i, "amount": step} for i, step in zip([2, 3, 5, 6], steps)
+        ]
 
 
 def insert_journey_data(conn) -> int:
@@ -82,7 +80,7 @@ def insert_journey_data(conn) -> int:
         }
         for i, (lat, lon, cum_dist) in enumerate(data)
     ]
-    conn.add_points(points=data_as_dict)
+    journey.queries.add_points(conn, data_as_dict)
     return journey_id
 
 
@@ -100,20 +98,18 @@ def insert_journey_data(conn) -> int:
 #     mock_address_func.return_value = "Adress"
 
 
-def test_define_journey():
-    conn = journey.MockSQL()
-    journey_id = journey.define_journey(conn, "origin", "destination")
-    j = conn.get_journey(journey_id)
+def test_define_journey(conn):
+    journey_id = journey.define_journey(conn, "Origin", "Destination")
+    j = journey.queries.get_journey(conn, journey_id=journey_id)
     j["origin"] == "origin"
     j["destination"] == "destination"
 
 
-def test_parse_xml():
-    conn = journey.MockSQL()
-    journey_id = 1
+def test_parse_xml(conn):
+    journey_id = journey.define_journey(conn, "Origin", "Destination")
     journey.parse_gpx(conn=conn, journey_id=journey_id, xml_data=xml)
-    data = conn.get_points(journey_id)
-    assert len(data) == 10
+    data = journey.queries.points_for_journey(conn, journey_id=journey_id)
+    assert len(data) == 14
 
 
 @patch("gargbot_3000.journey.address_for_location")
@@ -122,37 +118,35 @@ def test_parse_xml():
 @patch("gargbot_3000.journey.poi_for_location")
 # @pytest.mark.usefixtures("mock_geo_services")
 def test_get_location(
-    mock_poi_func, mock_map_url_func, mock_image_func, mock_address_func
+    mock_poi_func, mock_map_url_func, mock_image_func, mock_address_func, conn
 ):
     mock_poi_func.return_value = None
     mock_map_url_func.return_value = None
     mock_image_func.return_value = None
     mock_address_func.return_value = None
-    conn = journey.MockSQL()
     journey_id = insert_journey_data(conn)
     location = journey.get_location(conn, journey_id, distance=300)
     assert location == {
-        "lat": 47.58633461507472,
-        "lon": 40.69297732817553,
+        "lat": pytest.approx(47.58633461507472),
+        "lon": pytest.approx(40.69297732817553),
         "distance": 300,
-        "latest_point": 2,
+        "latest_point": 3,
         "address": None,
         "img_url": None,
         "map_url": None,
         "poi": None,
+        "finished": False,
     }
 
 
-def test_store_get_most_recent_location():
-    conn = journey.MockSQL()
-    journey_id = 1
+def test_store_get_most_recent_location(conn):
+    journey_id = insert_journey_data(conn)
     date1 = pendulum.datetime(2013, 3, 31, tz="UTC")
     location1 = {
         "lat": 47.58633461507472,
         "lon": 40.69297732817553,
         "distance": 300,
         "latest_point": 2,
-        "next_point": 3,
         "address": "address1",
         "img_url": "image1",
         "map_url": "map_url1",
@@ -165,7 +159,6 @@ def test_store_get_most_recent_location():
         "lon": 40.69297732817553,
         "distance": 301,
         "latest_point": 3,
-        "next_point": 4,
         "address": "address2",
         "img_url": "image2",
         "map_url": "map_url2",
@@ -175,21 +168,35 @@ def test_store_get_most_recent_location():
     journey.store_location(conn, journey_id, date1, location1)
     journey.store_location(conn, journey_id, date2, location2)
     j = journey.most_recent_location(conn, journey_id)
+    location2["lat"] = pytest.approx(location2["lat"])
+    location2["lon"] = pytest.approx(location2["lon"])
+    location2["journey_id"] = journey_id
+    location2["date"] = date2
     assert j == location2
 
 
-def test_start_journey():
-    conn = journey.MockSQL()
+def test_start_journey(conn):
     journey_id = insert_journey_data(conn)
     date = pendulum.datetime(2013, 3, 31, tz="UTC")
     journey.start_journey(conn, journey_id, date)
-    ongoing = conn.get_ongoing_journey()
-    assert ongoing == {
+    ongoing = journey.queries.get_ongoing_journey(conn)
+    assert dict(ongoing) == {
+        "id": journey_id,
         "destination": "Destination",
         "finished_at": None,
+        "ongoing": True,
         "origin": "Origin",
         "started_at": date,
     }
+
+
+def test_start_two_journeys_fails(conn):
+    journey_id1 = insert_journey_data(conn)
+    journey_id2 = insert_journey_data(conn)
+    date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    journey.start_journey(conn, journey_id1, date)
+    with pytest.raises(psycopg2.errors.UniqueViolation):
+        journey.start_journey(conn, journey_id2, date)
 
 
 @patch("gargbot_3000.journey.address_for_location")
@@ -197,13 +204,16 @@ def test_start_journey():
 @patch("gargbot_3000.journey.map_url_for_location")
 @patch("gargbot_3000.journey.poi_for_location")
 def test_daily_update(
-    mock_poi_func, mock_map_url_func, mock_image_func, mock_address_func
+    mock_poi_func,
+    mock_map_url_func,
+    mock_image_func,
+    mock_address_func,
+    conn: connection,
 ):
     mock_poi_func.return_value = "Poi"
     mock_map_url_func.return_value = "www.mapurl"
     mock_image_func.return_value = "www.image"
     mock_address_func.return_value = "Adress"
-    conn = journey.MockSQL()
     client = MockHealth()
     journey_id = insert_journey_data(conn)
     date = pendulum.datetime(2013, 3, 31, tz="UTC")
@@ -213,7 +223,7 @@ def test_daily_update(
     report, img_url, map_url = data
     assert report == (
         "Daily report for 31.3.2013:\n"
-        "Steps taken: 3: 17782, 0: 11521, 1: 6380, 2: 111\n"
+        "Steps taken: 6: 17782, 2: 11521, 3: 6380, 5: 111\n"
         "Distance travelled: 26.8 km\n"
         "Distance travelled totalt: 26.8 km\n"
         "Address: Adress\n"
@@ -223,8 +233,7 @@ def test_daily_update(
     assert img_url == "www.image"
 
 
-def test_days_to_update_unstarted():
-    conn = journey.MockSQL()
+def test_days_to_update_unstarted(conn):
     journey_id = insert_journey_data(conn)
     date = pendulum.datetime(2013, 3, 31, tz="UTC")
     journey.start_journey(conn, journey_id, date)
@@ -234,8 +243,7 @@ def test_days_to_update_unstarted():
     assert days == [date]
 
 
-def test_days_to_update_unstarted_two_days():
-    conn = journey.MockSQL()
+def test_days_to_update_unstarted_two_days(conn):
     journey_id = insert_journey_data(conn)
     date = pendulum.datetime(2013, 3, 31, tz="UTC")
     journey.start_journey(conn, journey_id, date)
@@ -250,13 +258,16 @@ def test_days_to_update_unstarted_two_days():
 @patch("gargbot_3000.journey.map_url_for_location")
 @patch("gargbot_3000.journey.poi_for_location")
 def test_days_to_update(
-    mock_poi_func, mock_map_url_func, mock_image_func, mock_address_func
+    mock_poi_func,
+    mock_map_url_func,
+    mock_image_func,
+    mock_address_func,
+    conn: connection,
 ):
     mock_poi_func.return_value = "Poi"
     mock_map_url_func.return_value = "www.mapurl"
     mock_image_func.return_value = "www.image"
     mock_address_func.return_value = "Adress"
-    conn = journey.MockSQL()
     client = MockHealth()
     journey_id = insert_journey_data(conn)
     start_date = pendulum.datetime(2013, 3, 31, tz="UTC")
@@ -274,13 +285,16 @@ def test_days_to_update(
 @patch("gargbot_3000.journey.map_url_for_location")
 @patch("gargbot_3000.journey.poi_for_location")
 def test_journey_finished(
-    mock_poi_func, mock_map_url_func, mock_image_func, mock_address_func
+    mock_poi_func,
+    mock_map_url_func,
+    mock_image_func,
+    mock_address_func,
+    conn: connection,
 ):
     mock_poi_func.return_value = "Poi"
     mock_map_url_func.return_value = "www.mapurl"
     mock_image_func.return_value = "www.image"
     mock_address_func.return_value = "Adress"
-    conn = journey.MockSQL()
     client = MockHealth()
     journey_id = insert_journey_data(conn)
     start_date = pendulum.datetime(2013, 3, 31, tz="UTC")
