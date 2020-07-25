@@ -21,3 +21,7 @@ werkzeug
 migra[pg]
 sqlbag
 flask-jwt-extended
+gpxpy
+pandas #FIXME
+geopy
+googlemaps

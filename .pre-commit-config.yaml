@@ -35,5 +35,10 @@ repos:
       - id: pip-compile
         name: pip-compile
         entry: pip-compile
-        files: ^requirements\.(in|txt)$
+        files: ^requirements.in$
+        language: system
+      - id: pip-compile dev
+        name: pip-compile dev
+        entry: pip-compile dev
+        files: ^dev-requirements.in$
         language: system
