@@ -13,6 +13,7 @@ import urllib.parse as urlparse
 
 import aiosql
 from dotenv import load_dotenv
+from dropbox import Dropbox
 import geopy
 from geopy.geocoders import Nominatim
 import googlemaps
@@ -108,36 +109,54 @@ def address_for_location(lat, lon) -> t.Optional[str]:
         return None
 
 
-def image_for_location(lat, lon) -> t.Optional[str]:
+def image_for_location(lat, lon, journey_id: int, point_id: int) -> t.Optional[str]:
     domain = "https://maps.googleapis.com"
     endpoint = "/maps/api/streetview?"
     params = {
         "size": "400x400",
         "location": f"{lat}, {lon}",
         "fov": 80,
-        "heading": 70,
+        "heading": 251.74,
         "pitch": 0,
-        "key": os.environ["google_api_key"],
+        "key": config.google_api_key,
     }
     url_to_sign = endpoint + urllib.parse.urlencode(params)
-    secret = os.environ["google_api_secret"]
+    secret = config.google_api_secret
     decoded_key = base64.urlsafe_b64decode(secret)
     signature = hmac.new(decoded_key, url_to_sign.encode(), hashlib.sha1)
     encoded_signature = base64.urlsafe_b64encode(signature.digest())
     params["signature"] = encoded_signature.decode()
     encoded_url = domain + endpoint + urllib.parse.urlencode(params)
-    # response = requests.get(encoded_url)
-    return encoded_url
+    try:
+        response = requests.get(encoded_url)
+        data = response.content
+    except Exception:
+        log.error("Error downloading streetview image", exc_info=True)
+        return None
+
+    dbx = Dropbox(config.dropbox_token)
+    upload_path = config.dbx_journey_folder / f"{journey_id}_{point_id}.jpg"
+    try:
+        uploaded = dbx.files_upload(
+            f=data, path=upload_path.as_posix(), autorename=True
+        )
+    except Exception:
+        log.error("Error uploading streetview image", exc_info=True)
+        return None
+    shared = dbx.sharing_create_shared_link(uploaded.path_display)
+    url = shared.url.replace("?dl=0", "?raw=1")
+    return url
 
 
 def map_url_for_location(lat, lon) -> str:
-    return f"http://maps.google.com/maps?q=&layer=c&cbll={lat}, {lon}"
+    return f"https://www.google.com/maps/@?api=1&map_action=pano&fov=80&heading=251.74&pitch=0&viewpoint={lat}, {lon}"
+    # return f"http://maps.google.com/maps?q=&layer=c&cbll={lat}, {lon}"
     # return f"https://www.google.com/maps/search/?api=1&query={lat}, {lon}"
 
 
 def poi_for_location(lat, lon) -> t.Optional[str]:
     try:
-        google = googlemaps.Client(key=os.environ["google_api_key"])
+        google = googlemaps.Client(key=config.google_api_key)
         details = google.places_nearby(location=(lat, lon), radius=1000)["results"]
     except Exception as exc:
         log.exception(exc)
@@ -176,13 +195,16 @@ def get_location(conn, journey_id, distance) -> dict:
         latest_point_obj = gpxpy.geo.Location(latest_point["lat"], latest_point["lon"])
         current_lat, current_lon = delta.move(latest_point_obj)
     address = address_for_location(current_lat, current_lon)
-    img_url = image_for_location(current_lat, current_lon)
+    img_url = image_for_location(
+        current_lat, current_lon, journey_id=journey_id, point_id=latest_point["id"]
+    )
     map_url = map_url_for_location(current_lat, current_lon)
     poi = poi_for_location(current_lat, current_lon)
     location = {
         "lat": current_lat,
         "lon": current_lon,
         "distance": distance,
+        "journey_distance": latest_point["journey_distance"],
         "address": address,  # need to inspect data type
         "img_url": img_url,  # how to store image?
         "map_url": map_url,

@@ -3,8 +3,8 @@
 import os
 from pathlib import Path
 
-import pytz
 from dotenv import load_dotenv
+import pytz
 
 load_dotenv(dotenv_path=Path(".") / ".env.local")
 load_dotenv(dotenv_path=Path(".") / ".env")
@@ -36,7 +36,7 @@ db_port = os.environ["POSTGRES_PORT"]
 dropbox_token = os.environ["dropbox_token"]
 
 dbx_pic_folder = os.environ["dbx_pic_folder"]
-
+dbx_journey_folder = Path(os.environ["dbx_journey_folder"])
 tz = pytz.timezone(os.environ["tz"])
 
 test_channel = os.environ["test_channel"]
@@ -56,3 +56,6 @@ fitbit_redirect_uri = os.environ["fitbit_redirect_uri"]
 withings_client_id = os.environ["withings_client_id"]
 withings_consumer_secret = os.environ["withings_consumer_secret"]
 withings_redirect_uri = os.environ["withings_redirect_uri"]
+
+google_api_key = os.environ["google_api_key"]
+google_api_secret = os.environ["google_api_secret"]
