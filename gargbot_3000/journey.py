@@ -70,22 +70,22 @@ def define_journey(conn, origin, destination) -> int:
 def parse_gpx(conn, journey_id, xml_data) -> None:
     gpx = gpxpy.parse(xml_data)
     plist = gpx.tracks[0].segments[0].points
-    points: t.List[dict] = []
-    prev_point = None
+    waypoints: t.List[dict] = []
+    prev_waypoint = None
     cumulative_distance = 0
-    for point in plist:
-        if prev_point is not None:
-            distance = point.distance_2d(prev_point)
+    for waypoint in plist:
+        if prev_waypoint is not None:
+            distance = waypoint.distance_2d(prev_waypoint)
             cumulative_distance += distance
         data = {
             "journey_id": journey_id,
-            "lat": point.latitude,
-            "lon": point.longitude,
+            "lat": waypoint.latitude,
+            "lon": waypoint.longitude,
             "cum_dist": cumulative_distance,
         }
-        points.append(data)
-        prev_point = point
-    queries.add_points(conn, points)
+        waypoints.append(data)
+        prev_waypoint = waypoint
+    queries.add_waypoints(conn, waypoints)
 
 
 def start_journey(conn: connection, journey_id: int, date: pendulum.DateTime) -> None:
@@ -109,7 +109,7 @@ def address_for_location(lat, lon) -> t.Optional[str]:
         return None
 
 
-def image_for_location(lat, lon, journey_id: int, point_id: int) -> t.Optional[str]:
+def image_for_location(lat, lon, journey_id: int, waypoint_id: int) -> t.Optional[str]:
     domain = "https://maps.googleapis.com"
     endpoint = "/maps/api/streetview?"
     params = {
@@ -135,7 +135,7 @@ def image_for_location(lat, lon, journey_id: int, point_id: int) -> t.Optional[s
         return None
 
     dbx = Dropbox(config.dropbox_token)
-    upload_path = config.dbx_journey_folder / f"{journey_id}_{point_id}.jpg"
+    upload_path = config.dbx_journey_folder / f"{journey_id}_{waypoint_id}.jpg"
     try:
         uploaded = dbx.files_upload(
             f=data, path=upload_path.as_posix(), autorename=True
@@ -172,31 +172,36 @@ def poi_for_location(lat, lon) -> t.Optional[str]:
 
 
 def get_location(conn, journey_id, distance) -> dict:
-    latest_point = queries.get_point_for_distance(
+    latest_waypoint = queries.get_waypoint_for_distance(
         conn, journey_id=journey_id, distance=distance
     )
-    next_point = queries.get_next_point_for_point(
-        conn, journey_id=journey_id, point_id=latest_point["id"]
+    next_waypoint = queries.get_next_waypoint_for_waypoint(
+        conn, journey_id=journey_id, waypoint_id=latest_waypoint["id"]
     )
-    if next_point is None:
+    if next_waypoint is None:
         finished = True
-        current_lat = latest_point["lat"]
-        current_lon = latest_point["lon"]
+        current_lat = latest_waypoint["lat"]
+        current_lon = latest_waypoint["lon"]
     else:
         finished = False
-        remaining_dist = distance - latest_point["cum_dist"]
+        remaining_dist = distance - latest_waypoint["cum_dist"]
         angle = gpxpy.geo.get_course(
-            latest_point["lat"],
-            latest_point["lon"],
-            next_point["lat"],
-            next_point["lon"],
+            latest_waypoint["lat"],
+            latest_waypoint["lon"],
+            next_waypoint["lat"],
+            next_waypoint["lon"],
         )
         delta = gpxpy.geo.LocationDelta(distance=remaining_dist, angle=angle)
-        latest_point_obj = gpxpy.geo.Location(latest_point["lat"], latest_point["lon"])
-        current_lat, current_lon = delta.move(latest_point_obj)
+        latest_waypoint_obj = gpxpy.geo.Location(
+            latest_waypoint["lat"], latest_waypoint["lon"]
+        )
+        current_lat, current_lon = delta.move(latest_waypoint_obj)
     address = address_for_location(current_lat, current_lon)
     img_url = image_for_location(
-        current_lat, current_lon, journey_id=journey_id, point_id=latest_point["id"]
+        current_lat,
+        current_lon,
+        journey_id=journey_id,
+        waypoint_id=latest_waypoint["id"],
     )
     map_url = map_url_for_location(current_lat, current_lon)
     poi = poi_for_location(current_lat, current_lon)
@@ -204,12 +209,12 @@ def get_location(conn, journey_id, distance) -> dict:
         "lat": current_lat,
         "lon": current_lon,
         "distance": distance,
-        "journey_distance": latest_point["journey_distance"],
+        "journey_distance": latest_waypoint["journey_distance"],
         "address": address,  # need to inspect data type
         "img_url": img_url,  # how to store image?
         "map_url": map_url,
         "poi": poi,
-        "latest_point": latest_point["id"],
+        "latest_waypoint": latest_waypoint["id"],
         "finished": finished,
     }
     return location
@@ -219,7 +224,7 @@ def store_location(conn, journey_id, date, loc: dict) -> None:
     queries.add_location(
         conn,
         journey_id=journey_id,
-        latest_point=loc["latest_point"],
+        latest_waypoint=loc["latest_waypoint"],
         lat=loc["lat"],
         lon=loc["lon"],
         distance=loc["distance"],
@@ -237,7 +242,7 @@ def most_recent_location(conn, journey_id) -> t.Optional[dict]:
         return None
     as_dict = {
         "journey_id": loc["journey_id"],
-        "latest_point": loc["latest_point"],
+        "latest_waypoint": loc["latest_waypoint"],
         "lat": loc["lat"],
         "lon": loc["lon"],
         "distance": loc["distance"],

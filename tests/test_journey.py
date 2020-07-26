@@ -83,7 +83,7 @@ def insert_journey_data(conn) -> int:
         }
         for i, (lat, lon, cum_dist) in enumerate(data)
     ]
-    journey.queries.add_points(conn, data_as_dict)
+    journey.queries.add_waypoints(conn, data_as_dict)
     return journey_id
 
 
@@ -137,7 +137,7 @@ def test_define_journey(conn):
 def test_parse_xml(conn):
     journey_id = journey.define_journey(conn, "Origin", "Destination")
     journey.parse_gpx(conn=conn, journey_id=journey_id, xml_data=xml)
-    data = journey.queries.points_for_journey(conn, journey_id=journey_id)
+    data = journey.queries.waypoints_for_journey(conn, journey_id=journey_id)
     assert len(data) == 14
 
 
@@ -159,7 +159,7 @@ def test_get_location(
         "lat": pytest.approx(47.58633461507472),
         "lon": pytest.approx(40.69297732817553),
         "distance": 300,
-        "latest_point": 3,
+        "latest_waypoint": 3,
         "address": None,
         "img_url": None,
         "map_url": None,
@@ -176,7 +176,7 @@ def test_store_get_most_recent_location(conn):
         "lat": 47.58633461507472,
         "lon": 40.69297732817553,
         "distance": 300,
-        "latest_point": 2,
+        "latest_waypoint": 2,
         "address": "address1",
         "img_url": "image1",
         "map_url": "map_url1",
@@ -188,7 +188,7 @@ def test_store_get_most_recent_location(conn):
         "lat": 47.58633461507472,
         "lon": 40.69297732817553,
         "distance": 301,
-        "latest_point": 3,
+        "latest_waypoint": 3,
         "address": "address2",
         "img_url": "image2",
         "map_url": "map_url2",

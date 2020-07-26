@@ -14,8 +14,7 @@ where
     ongoing = true;
 
 
--- TODO: rename to waypoint
-create table point (
+create table waypoint (
     id serial primary key,
     journey_id smallint not null references journey(id),
     lat double precision not null,
@@ -34,7 +33,7 @@ create table step (
 
 create table location (
     journey_id smallint not null references journey(id),
-    latest_point smallint not null references point(id),
+    latest_waypoint smallint not null references waypoint(id),
     lat double precision not null,
     lon double precision not null,
     distance int not null,
@@ -91,30 +90,30 @@ where
     id = :journey_id;
 
 
--- name: add_points*!
+-- name: add_waypoints*!
 insert into
-    point (journey_id, lat, lon, cum_dist)
+    waypoint (journey_id, lat, lon, cum_dist)
 values
     (:journey_id, :lat, :lon, :cum_dist);
 
 
--- name: points_for_journey
+-- name: waypoints_for_journey
 select
     *
 from
-    point
+    waypoint
 where
     journey_id = :journey_id;
 
 
--- name: get_point_for_distance^
+-- name: get_waypoint_for_distance^
 select
     *,
     (
         select
             cum_dist
         from
-            point
+            waypoint
         where
             journey_id = :journey_id
         order by
@@ -123,7 +122,7 @@ select
             row only
     ) as journey_distance
 from
-    point
+    waypoint
 where
     journey_id = :journey_id
     and :distance > cum_dist
@@ -133,21 +132,21 @@ fetch first
     row only;
 
 
--- name: get_next_point_for_point^
+-- name: get_next_waypoint_for_waypoint^
 select
     *
 from
-    point
+    waypoint
 where
     journey_id = :journey_id
-    and id = :point_id + 1;
+    and id = :waypoint_id + 1;
 
 
 -- name: add_location!
 insert into
     location (
         journey_id,
-        latest_point,
+        latest_waypoint,
         lat,
         lon,
         distance,
@@ -160,7 +159,7 @@ insert into
 values
     (
         :journey_id,
-        :latest_point,
+        :latest_waypoint,
         :lat,
         :lon,
         :distance,
