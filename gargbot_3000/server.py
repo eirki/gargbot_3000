@@ -5,7 +5,6 @@ import json
 import os
 import typing as t
 
-import requests
 from dropbox import Dropbox
 from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
@@ -16,15 +15,17 @@ from flask_jwt_extended import (
     jwt_required,
 )
 from gunicorn.app.base import BaseApplication
+import requests
 from slackclient import SlackClient
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from gargbot_3000 import commands, config, database, health, pictures
+from gargbot_3000 import commands, config, database, health, journey, pictures
 from gargbot_3000.logger import log
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)  # type: ignore
 app.register_blueprint(health.blueprint)
+app.register_blueprint(journey.blueprint)
 app.pool = database.ConnectionPool()
 app.dbx = Dropbox
 app.config["JWT_SECRET_KEY"] = config.app_secret

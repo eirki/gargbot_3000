@@ -62,6 +62,34 @@ where
     id = :journey_id;
 
 
+-- name: stop_journey!
+update
+    journey
+set
+    ongoing = false
+where
+    id = :journey_id;
+
+
+-- name: delete_journey!
+delete from
+    location
+where
+    journey_id = :journey_id;
+
+
+delete from
+    waypoint
+where
+    journey_id = :journey_id;
+
+
+delete from
+    journey
+where
+    id = :journey_id;
+
+
 -- name: finish_journey!
 update
     journey
@@ -79,6 +107,13 @@ from
 where
     ongoing = true
     and finished_at is null;
+
+
+-- name: all_journeys
+select
+    *
+from
+    journey;
 
 
 -- name: get_journey^

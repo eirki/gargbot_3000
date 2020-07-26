@@ -14,6 +14,8 @@ import urllib.parse as urlparse
 import aiosql
 from dotenv import load_dotenv
 from dropbox import Dropbox
+from flask import Blueprint, Response, current_app, jsonify, request
+from flask_jwt_extended import jwt_required
 import geopy
 from geopy.geocoders import Nominatim
 import googlemaps
@@ -27,6 +29,7 @@ from gargbot_3000.logger import log
 
 stride = 0.75
 queries = aiosql.from_path("sql/journey.sql", "psycopg2")
+blueprint = Blueprint("journey", __name__)
 
 poi_types = {
     "amusement_park",
@@ -60,6 +63,59 @@ poi_types = {
     "tourist_attraction",
     "zoo",
 }
+
+
+@blueprint.route("/list_journeys")
+@jwt_required
+def list_journeys():
+    with current_app.pool.get_connection() as conn:
+        journeys = queries.all_journeys(conn)
+        journeys = [dict(journey) for journey in journeys]
+    return jsonify(journeys=journeys)
+
+
+@blueprint.route("/upload_journey", methods=["POST"])
+@jwt_required
+def handle_journey_upload():
+    origin = request.form["origin"]
+    dest = request.form["dest"]
+    xmlfile = request.files["file"]
+    with current_app.pool.get_connection() as conn:
+        journey_id = define_journey(conn, origin, dest)
+        parse_gpx(conn, journey_id, xmlfile)
+        conn.commit()
+    return Response(status=200)
+
+
+@blueprint.route("/start_journey")
+@jwt_required
+def handle_start_journey():
+    journey_id = request.args["journey_id"]
+    with current_app.pool.get_connection() as conn:
+        date = pendulum.now()
+        start_journey(conn, journey_id, date)
+        conn.commit()
+    return Response(status=200)
+
+
+@blueprint.route("/stop_journey")
+@jwt_required
+def stop_journey():
+    journey_id = request.args["journey_id"]
+    with current_app.pool.get_connection() as conn:
+        queries.stop_journey(conn, journey_id=journey_id)
+        conn.commit()
+    return Response(status=200)
+
+
+@blueprint.route("/delete_journey")
+@jwt_required
+def delete_journey():
+    journey_id = request.args["journey_id"]
+    with current_app.pool.get_connection() as conn:
+        queries.delete_journey(conn, journey_id=journey_id)
+        conn.commit()
+    return Response(status=200)
 
 
 def define_journey(conn, origin, destination) -> int:
