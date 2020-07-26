@@ -21,6 +21,7 @@ import pendulum
 from psycopg2.extensions import connection
 import requests
 
+from gargbot_3000 import config, database, health
 from gargbot_3000.logger import log
 
 stride = 0.75
@@ -227,19 +228,92 @@ def most_recent_location(conn, journey_id) -> t.Optional[dict]:
     return as_dict
 
 
-def completion_celebration(date, steps, journey_id) -> str:
-    report = "Vi har ankommet reisens mål!"
-    return report
+def format_response(
+    date: pendulum.DateTime,
+    steps_data: dict,
+    dist_today: int,
+    dist_total: int,
+    dist_remaining: int,
+    address: t.Optional[str],
+    poi: t.Optional[str],
+    img_url: t.Optional[str],
+    map_url: str,
+    weight_reports: t.List[str],
+    finished: bool,
+) -> dict:
+    blocks = []
+    title_txt = (
+        f"*Ekspedisjonsrapport for {date.day}.{date.month}.{date.year}*"
+        if not finished
+        else "*Ekspedisjon complete!*"
+    )
+    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": title_txt}})
+
+    steps_txt = "\n\t".join(
+        [
+            f"- {row['first_name']}: {row['amount']}"
+            for row in sorted(steps_data, key=itemgetter("amount"), reverse=True)
+        ]
+    )
+    steps_txt = "Steps taken:\n\t :star: " + steps_txt
+    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": steps_txt}})
+
+    distance_txt = (
+        f"I går gikk vi {dist_today} km. "
+        f"Vi har gått {dist_total} km totalt på vår journey, "
+        f"og har igjen {dist_remaining} km til vi er fremme."
+    )
+    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": distance_txt}})
+
+    location_txt = ""
+    if address is not None:
+        location_txt += f"Vi har nå kommet til {address}. "
+    if poi is not None:
+        location_txt += f"Kveldens underholdning er {poi}."
+    if location_txt:
+        blocks.append(
+            {"type": "section", "text": {"type": "mrkdwn", "text": location_txt}}
+        )
+
+    if img_url is not None:
+        alt_text = address if address is not None else "Check it!"
+        blocks.append({"type": "image", "img_url": img_url, "alt_text": alt_text})
+
+    blocks.append(
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"<{map_url}|Se deg litt rundt da vel!>",
+            },
+        }
+    )
+
+    blocks.append({"type": "divider"})
+
+    if weight_reports:
+        weight_txt = "\n\n".join(weight_reports)
+        blocks.append(
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": f"Also: {weight_txt}"},
+            }
+        )
+
+    response = {"blocks": blocks}
+    return response
 
 
 def perform_daily_update(
-    conn: connection, client, journey_id: int, date: pendulum.DateTime
-) -> t.Optional[t.Tuple[str, t.Optional[str], t.Optional[str]]]:
+    conn: connection,
+    activity_func: t.Callable,
+    journey_id: int,
+    date: pendulum.DateTime,
+) -> t.Optional[dict]:
     journey = queries.get_journey(conn, journey_id=journey_id)
     if journey["finished_at"] is not None or journey["started_at"] is None:
         return None
-    steps_data = client.steps_today(date)
-    # steps_data = steps_func(date)
+    steps_data, weight_reports = activity_func(date)
     store_steps(conn, steps_data, journey_id, date)
     last_location = most_recent_location(conn, journey_id)
     last_total_distance = last_location["distance"] if last_location else 0
@@ -247,32 +321,26 @@ def perform_daily_update(
     if steps_today == 0:
         return None
     distance_today = steps_today * stride
-    distance = distance_today + last_total_distance
-    loc = get_location(conn, journey_id, distance)
+    distance_total = distance_today + last_total_distance
+    loc = get_location(conn, journey_id, distance_total)
+    dist_remaining = loc["journey_distance"] - distance_total
     store_location(conn, journey_id, date, loc)
-    steps_summary = ", ".join(
-        [
-            f"{row['gargling_id']}: {row['amount']}"
-            for row in sorted(steps_data, key=itemgetter("amount"), reverse=True)
-        ]
-    )
-    if loc.pop("finished"):
+    finished = loc.pop("finished")
+    if finished:
         queries.finish_journey(conn, journey_id=journey_id, date=date)
-        return (
-            completion_celebration(date, steps_summary, journey_id),
-            loc["img_url"],
-            loc["map_url"],
-        )
-    poi = f"Kveldens underholdning: {loc['poi']}\n" if loc["poi"] else ""
-    report = (
-        f"Daily report for {date.day}.{date.month}.{date.year}:\n"
-        f"Steps taken: {steps_summary}\n"
-        f"Distance travelled: {round(distance_today / 1000, 1)} km\n"
-        f"Distance travelled totalt: {round(distance / 1000, 1)} km\n"
-        f"Address: {loc['address']}\n"
-        f"{poi}"
-    )
-    return report, loc["img_url"], loc["map_url"]
+    return {
+        "date": date,
+        "steps_data": steps_data,
+        "dist_today": round(distance_today / 1000, 1),
+        "dist_total": round(distance_total / 1000, 1),
+        "dist_remaining": round(dist_remaining / 1000, 1),
+        "address": loc["address"],
+        "poi": loc["poi"],
+        "img_url": loc["img_url"],
+        "map_url": loc["map_url"],
+        "weight_reports": weight_reports,
+        "finished": finished,
+    }
 
 
 def days_to_update(conn, journey_id, date) -> t.Iterable[dt.datetime]:
@@ -291,18 +359,22 @@ def days_to_update(conn, journey_id, date) -> t.Iterable[dt.datetime]:
         yield day
 
 
-def main(
-    conn, steps_func: t.Callable
-) -> t.List[t.Tuple[str, t.Optional[str], t.Optional[str]]]:
+def main(conn) -> t.List[dict]:
     ongoing_journey = conn.get_ongoing_journey()
     journey_id = ongoing_journey["journey_id"]
     current_date = pendulum.now("UTC")
     data = []
     for date in days_to_update(conn, journey_id, current_date):
         try:
-            datum = perform_daily_update(conn, steps_func, journey_id, date)
+            datum = perform_daily_update(
+                conn=conn,
+                activity_func=health.activity,
+                journey_id=journey_id,
+                date=date,
+            )
             if datum:
-                data.append(datum)
+                formatted = format_response(**datum)
+                data.append(formatted)
         except Exception as exc:
             log.exception(exc)
     return data

@@ -14,6 +14,7 @@ where
     ongoing = true;
 
 
+-- TODO: rename to waypoint
 create table point (
     id serial primary key,
     journey_id smallint not null references journey(id),
@@ -107,9 +108,20 @@ where
 
 
 -- name: get_point_for_distance^
--- (self, journey_id, distance) -> dict:
 select
-    *
+    *,
+    (
+        select
+            cum_dist
+        from
+            point
+        where
+            journey_id = :journey_id
+        order by
+            cum_dist desc
+        fetch first
+            row only
+    ) as journey_distance
 from
     point
 where
@@ -122,7 +134,6 @@ fetch first
 
 
 -- name: get_next_point_for_point^
--- (self, journey_id, point_in: dict) -> t.Optional[dict]:
 select
     *
 from
@@ -178,4 +189,16 @@ fetch first
 insert into
     step (journey_id, gargling_id, taken_at, amount)
 values
-    (:journey_id, :gargling_id, :taken_at, :amount);
+    (
+        :journey_id,
+        (
+            select
+                id
+            from
+                gargling
+            where
+                first_name = :first_name
+        ),
+        :taken_at,
+        :amount
+    );
