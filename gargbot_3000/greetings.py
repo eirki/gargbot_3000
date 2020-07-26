@@ -1,19 +1,20 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
+from dataclasses import dataclass
 import itertools
+from operator import attrgetter
 import sys
 import time
 import typing as t
-from operator import attrgetter
 
 import aiosql
-import pendulum
 from dropbox import Dropbox
+import pendulum
 from psycopg2.extensions import connection
+import schedule
 from slackclient import SlackClient
 
-from dataclasses import dataclass
-from gargbot_3000 import config, database, health, pictures, task
+from gargbot_3000 import config, database, journey, pictures, task
 from gargbot_3000.logger import log
 
 queries = aiosql.from_path("sql/congrats.sql", "psycopg2")
@@ -61,63 +62,36 @@ def formulate_congrat(recipient: Recipient, conn: connection, dbx: Dropbox) -> t
     return response
 
 
-def send_congrats(conn: connection, slack_client: SlackClient):
+def send_congrats() -> None:
     dbx = pictures.connect_dbx()
+    conn = database.connect()
     recipients = todays_recipients(conn)
+    if not recipients:
+        return
     log.info(f"Recipients today {recipients}")
+    slack_client = SlackClient(config.slack_bot_user_token)
     for recipient in recipients:
         greet = formulate_congrat(recipient, conn, dbx)
         task.send_response(slack_client, greet, channel=config.main_channel)
 
 
-def send_report(conn: connection, slack_client: SlackClient):
-    report = health.report(conn)
-    if report is not None:
-        task.send_response(slack_client, report, channel=config.health_channel)
+def update_journey() -> None:
+    conn = database.connect()
+    updates = journey.main(conn)
+    if not updates:
+        return
+    slack_client = SlackClient(config.slack_bot_user_token)
+    for update in updates:
+        task.send_response(slack_client, update, channel=config.health_channel)
 
 
-@dataclass(frozen=True)
-class Event:
-    until: pendulum.Period
-    func: t.Callable
-
-    @staticmethod
-    def possible():
-        types = [(10, send_report), (7, send_congrats)]
-        times = (pendulum.today, pendulum.tomorrow)
-        return itertools.product(times, types)
-
-    @staticmethod
-    def next() -> "Event":
-        events = []
-        now = pendulum.now()
-        for day, (hour, func) in Event.possible():
-            when = day(config.tz).at(hour)
-            if when.is_past():
-                continue
-            events.append(Event(until=(when - now), func=func))
-        events.sort(key=attrgetter("until"))
-        event = events[0]
-        return event
-
-
-def main() -> None:
+def main():
+    schedule.every().day.at("07:00").do(send_congrats)
+    schedule.every().day.at("12:00").do(update_journey)
     log.info("GargBot 3000 greeter starter")
     try:
         while True:
-            event = Event.next()
-            log.info(
-                f"Next greeting check at: {event.until.end}, "
-                f"sleeping for {event.until.in_words()}"
-            )
-            time.sleep(event.until.total_seconds())
-            try:
-                slack_client = SlackClient(config.slack_bot_user_token)
-                conn = database.connect()
-                event.func(conn, slack_client)
-            except Exception:
-                log.error("Error in command execution", exc_info=True)
-            finally:
-                conn.close()
+            schedule.run_pending()
+            time.sleep(1)
     except KeyboardInterrupt:
         sys.exit()
