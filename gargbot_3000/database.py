@@ -1,20 +1,20 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
+from contextlib import contextmanager
 import datetime as dt
 import os
+from pathlib import Path
 import re
 import typing as t
-from contextlib import contextmanager
-from pathlib import Path
 from xml.dom.minidom import parseString
 
+from PIL import Image
 import aiosql
+from aiosql.adapters.psycopg2 import PsycoPG2Adapter
 import dropbox
 import jinja2
 import migra
 import psycopg2
-from aiosql.adapters.psycopg2 import PsycoPG2Adapter
-from PIL import Image
 from psycopg2.extensions import connection
 from psycopg2.extras import DictCursor
 from psycopg2.pool import ThreadedConnectionPool
@@ -30,7 +30,6 @@ class LoggingCursor(DictCursor):
         return super().execute(query, args)
 
     def executemany(self, query, args=None):
-        log.info(query % args if args else query)
         return super().executemany(query, args)
 
 
