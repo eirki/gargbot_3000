@@ -113,18 +113,8 @@ from
   fitbit_token as fitbit
   inner join fitbit_token_gargling on fitbit.id = fitbit_token_gargling.fitbit_id
   inner join gargling on fitbit_token_gargling.gargling_id = gargling.id
-  /*{% if slack_nicks or only_report %}*/
 where
-  /*{% endif  %}*/
-  /*{% set and = joiner(" and ") %}*/
-  /*{% if slack_nicks %}*/
-  /*{{ and() }}*/
-  gargling.slack_nick = any(:slack_nicks)
-  /*{% endif  %}*/
-  /*{% if only_report %}*/
-  /*{{ and() }}*/
   fitbit.enable_report
-  /*{% endif  %}*/
 union
 all
 select
@@ -138,18 +128,8 @@ from
   withings_token as withings
   inner join withings_token_gargling on withings.id = withings_token_gargling.withings_id
   inner join gargling on withings_token_gargling.gargling_id = gargling.id
-  /*{% if slack_nicks or only_report %}*/
 where
-  /*{% endif  %}*/
-  /*{% set and = joiner(" and ") %}*/
-  /*{% if slack_nicks %}*/
-  /*{{ and() }}*/
-  gargling.slack_nick = any(:slack_nicks)
-  /*{% endif  %}*/
-  /*{% if only_report %}*/
-  /*{{ and() }}*/
   withings.enable_report
-  /*{% endif  %}*/
 ;
 
 

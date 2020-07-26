@@ -3,10 +3,10 @@
 from unittest.mock import Mock, patch
 
 import arrow
-import pendulum
-import pytest
 from flask import testing
+import pendulum
 from psycopg2.extensions import connection
+import pytest
 from withings_api.common import (
     Credentials,
     MeasureGetActivityActivity,
@@ -159,9 +159,8 @@ def test_toggle_report(
 
 @patch.object(health, "WithingsApi")
 @patch.object(health, "FitbitApi")
-def test_daily_report(mock_Fitbit: Mock, mock_Withings: Mock, conn: connection):
+def test_activity(mock_Fitbit: Mock, mock_Withings: Mock, conn: connection):
     test_date = pendulum.datetime(2020, 1, 2, 12)
-    pendulum.set_test_now(test_date)
     withings_instance1, withings_instance2 = Mock(), Mock()
     none_data = {
         "timezone": None,
@@ -227,35 +226,23 @@ def test_daily_report(mock_Fitbit: Mock, mock_Withings: Mock, conn: connection):
             {"dateTime": "2020-01-02", "value": "86"},
         ]
     }
-    response = health.report(conn)
+    response = health.activity(conn, test_date)
     assert response is not None
-
-    assert len(response["blocks"]) == 4
-
-    assert any("*6620* skritt" in block["text"]["text"] for block in response["blocks"])
-    assert any("*6619* skritt" in block["text"]["text"] for block in response["blocks"])
-    assert not any(
-        "*22* skritt" in block["text"]["text"] for block in response["blocks"]
-    )
-
-    assert any(
-        "*13475* skritt" in block["text"]["text"] for block in response["blocks"]
-    )
-    assert any(
-        "*13474* skritt" in block["text"]["text"] for block in response["blocks"]
-    )
-    assert not any(
-        "*86* skritt" in block["text"]["text"] for block in response["blocks"]
-    )
-
-    assert any("*100* kg" in block["text"]["text"] for block in response["blocks"])
-    assert not any("*50* kg" in block["text"]["text"] for block in response["blocks"])
-    assert not any("*125* kg" in block["text"]["text"] for block in response["blocks"])
+    steps_data, weight_data = response
+    assert steps_data == [
+        {"amount": 13475, "name": "name2"},
+        {"amount": 13474, "name": "name5"},
+        {"amount": 22, "name": "name10"},
+    ]
+    assert weight_data == [
+        "name2 har ikke veid seg på *7305* dager. Skjerpings!",
+        "name5 veier nå *100* kg!",
+    ]
 
 
 @patch.object(health, "WithingsApi")
 @patch.object(health, "FitbitApi")
-def test_daily_report_no_data(mock_Fitbit: Mock, mock_Withings: Mock, conn: connection):
+def test_activity_no_data(mock_Fitbit: Mock, mock_Withings: Mock, conn: connection):
     withings_instance1, withings_instance2 = Mock(), Mock()
     mock_Withings.side_effect = [withings_instance1, withings_instance2]
     withings_instance1.measure_get_activity.return_value = MeasureGetActivityResponse(
@@ -272,5 +259,9 @@ def test_daily_report_no_data(mock_Fitbit: Mock, mock_Withings: Mock, conn: conn
     fitbit_instance1.time_series.return_value = {"activities-steps": []}
     fitbit_instance2.time_series.return_value = {"activities-steps": []}
 
-    response = health.report(conn)
-    assert response is None
+    test_date = pendulum.datetime(2020, 1, 2, 12)
+    response = health.activity(conn, test_date)
+    assert response is not None
+    steps_data, weight_data = response
+    assert steps_data == []
+    assert weight_data == []

@@ -11,6 +11,7 @@ from fitbit import Fitbit as FitbitApi
 from flask import Blueprint, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 import pendulum
+from psycopg2.extensions import connection
 import withings_api
 from withings_api import AuthScope, WithingsApi, WithingsAuth
 from withings_api.common import (
@@ -31,8 +32,8 @@ withings_api.common.enforce_type = lambda value, expected: value
 
 @contextmanager
 def connection_context(
-    conn=t.Optional[db.connection],
-) -> t.Generator[db.connection, None, None]:
+    conn=t.Optional[connection],
+) -> t.Generator[connection, None, None]:
     if conn is not None:
         yield conn
     elif current_app:
@@ -49,7 +50,7 @@ def connection_context(
 class Withings:
     @staticmethod
     def persist_token(
-        credentials: Credentials, conn: t.Optional[db.connection] = None
+        credentials: Credentials, conn: t.Optional[connection] = None
     ) -> None:
         with connection_context(conn) as conn:
             queries.persist_token(
@@ -106,12 +107,10 @@ class Withings:
         return client
 
     @staticmethod
-    def weight(client: WithingsApi) -> t.Optional[dict]:
+    def weight(client: WithingsApi, date: pendulum.DateTime) -> t.Optional[dict]:
         return None
         data = client.measure_get_meas(
-            startdate=pendulum.today().subtract(weeks=1),
-            enddate=pendulum.today(),
-            meastype=MeasureType.WEIGHT,
+            startdate=date, enddate=date.add(days=1), meastype=MeasureType.WEIGHT,
         ).measuregrps
         if not data:
             log.info("No weight data")
@@ -125,21 +124,16 @@ class Withings:
         }
 
     @staticmethod
-    def steps(client: WithingsApi) -> t.Optional[int]:
+    def steps(client: WithingsApi, date: pendulum.DateTime) -> t.Optional[int]:
         result = client.measure_get_activity(
             data_fields=[GetActivityField.STEPS],
-            startdateymd=pendulum.yesterday(),
-            enddateymd=pendulum.today(),
+            startdateymd=date,
+            enddateymd=date.add(days=1),
         )
-        yesterday = next(
-            (
-                act
-                for act in result.activities
-                if act.date.day == pendulum.yesterday().day
-            ),
-            None,
+        entry = next(
+            (act for act in result.activities if act.date.day == date.day), None,
         )
-        return yesterday.steps if yesterday else None
+        return entry.steps if entry else None
 
     @staticmethod
     def sleep(client: WithingsApi) -> str:
@@ -156,7 +150,7 @@ class Withings:
 
 class Fitbit:
     @staticmethod
-    def persist_token(token: dict, conn: t.Optional[db.connection] = None) -> None:
+    def persist_token(token: dict, conn: t.Optional[connection] = None) -> None:
         with connection_context(conn) as conn:
             queries.persist_token(
                 conn,
@@ -207,8 +201,8 @@ class Fitbit:
         return client
 
     @staticmethod
-    def weight(client: FitbitApi) -> t.Optional[dict]:
-        data = client.get_bodyweight(period="7d")
+    def weight(client: FitbitApi, date: pendulum.DateTime) -> t.Optional[dict]:
+        data = client.get_bodyweight(base_date=date.subtract(days=6), period="1w")
         if len(data["weight"]) == 0:
             log.info("No weight data")
             return None
@@ -221,18 +215,14 @@ class Fitbit:
         return most_recent
 
     @staticmethod
-    def steps(client: FitbitApi) -> t.Optional[int]:
-        data = client.time_series(resource="activities/steps", period="1w")
-        entries = data["activities-steps"]
-        yesterday = next(
-            (
-                entry
-                for entry in entries
-                if pendulum.parse(entry["dateTime"]).day == pendulum.yesterday().day
-            ),
-            None,
+    def steps(client: FitbitApi, date: pendulum.DateTime) -> t.Optional[int]:
+        data = client.time_series(
+            resource="activities/steps", base_date=date, period="1d"
         )
-        return int(yesterday["value"]) if yesterday else None
+        if not data["activities-steps"]:
+            return None
+        entry = data["activities-steps"][0]
+        return int(entry["value"]) if entry else None
 
     @staticmethod
     def sleep(client: FitbitApi) -> str:
@@ -306,53 +296,43 @@ def toggle_report():
     return Response(status=200)
 
 
-def weight_blocks(clients) -> t.List[dict]:
-    now = pendulum.now()
-    blocks = []
+def weight(clients, date: pendulum.DateTime) -> t.List[str]:
+    reports = []
     for name, (client, service) in clients.items():
         try:
-            weight_data = service.value.weight(client)
+            weight_data = service.value.weight(client, date)
         except Exception:
             log.error(f"Error getting {service} weight data for {name}", exc_info=True)
             continue
         if weight_data is None:
             continue
-        elapsed = (now - weight_data["datetime"]).days
+        elapsed = (date - weight_data["datetime"]).days
         if elapsed < 2:
             desc = f"{name} veier nå *{weight_data['weight']}* kg!"
         else:
             desc = f"{name} har ikke veid seg på *{elapsed}* dager. Skjerpings!"
-        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": desc}})
-    return blocks
+        reports.append(desc)
+    return reports
 
 
-def steps_blocks(clients) -> t.List[dict]:
+def steps(clients, date: pendulum.DateTime) -> t.List[dict]:
     step_amounts = []
     for name, (client, service) in clients.items():
         try:
-            steps = service.value.steps(client)
+            steps = service.value.steps(client, date)
         except Exception:
             log.error(f"Error getting {service} steps data for {name}", exc_info=True)
             continue
         if steps is None:
             continue
-        step_amounts.append((steps, name))
-    if not step_amounts:
-        return []
-    step_amounts.sort(reverse=True)
-    steps, name = step_amounts[0]
-    desc = f"{name} gikk *{steps}* skritt i går. "
-    if len(step_amounts) > 1:
-        desc = desc.replace("gikk", "(:star:) gikk")
-        desc += ", ".join(
-            [f"{name} gikk *{steps}* skritt" for steps, name in step_amounts[1:]]
-        )
-        desc += "."
-    return [{"type": "section", "text": {"type": "mrkdwn", "text": desc}}]
+        step_amounts.append({"amount": steps, "name": name})
+    return step_amounts
 
 
-def report(conn: db.connection) -> t.Optional[dict]:
-    tokens = queries.tokens(conn, only_report=True, slack_nicks=None)
+def activity(
+    conn: connection, date: pendulum.DateTime
+) -> t.Optional[t.Tuple[list, list]]:
+    tokens = queries.tokens(conn)
     if not tokens:
         return None
     clients = {}
@@ -360,19 +340,6 @@ def report(conn: db.connection) -> t.Optional[dict]:
         service = Service[token["service"]]
         client = service.value.init_client(token)
         clients[token["first_name"]] = (client, service)
-    blocks = []
-    blocks.extend(weight_blocks(clients))
-    blocks.extend(steps_blocks(clients))
-    if not blocks:
-        return None
-    response = {
-        "text": "Attention garglings!",
-        "blocks": [
-            {
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": "*Attention garglings:*"},
-            }
-        ]
-        + blocks,
-    }
-    return response
+    steps_data = steps(clients, date)
+    weight_data = weight(clients, date)
+    return steps_data, weight_data
