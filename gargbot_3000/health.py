@@ -308,7 +308,7 @@ def weight(clients, date: pendulum.DateTime) -> t.List[str]:
             continue
         elapsed = (date - weight_data["datetime"]).days
         if elapsed < 2:
-            desc = f"{name} veier nå *{weight_data['weight']}* kg!"
+            desc = f"{name} veier nå *{weight_data['weight']}* kg."
         else:
             desc = f"{name} har ikke veid seg på *{elapsed}* dager. Skjerpings!"
         reports.append(desc)

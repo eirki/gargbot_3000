@@ -266,8 +266,8 @@ def get_location(conn, journey_id, distance) -> dict:
         "lon": current_lon,
         "distance": distance,
         "journey_distance": latest_waypoint["journey_distance"],
-        "address": address,  # need to inspect data type
-        "img_url": img_url,  # how to store image?
+        "address": address,
+        "img_url": img_url,
         "map_url": map_url,
         "poi": poi,
         "latest_waypoint": latest_waypoint["id"],
@@ -312,6 +312,7 @@ def most_recent_location(conn, journey_id) -> t.Optional[dict]:
 
 
 def format_response(
+    destination: str,
     date: pendulum.DateTime,
     steps_data: dict,
     dist_today: int,
@@ -326,11 +327,18 @@ def format_response(
 ) -> dict:
     blocks = []
     title_txt = (
-        f"*Ekspedisjonsrapport for {date.day}.{date.month}.{date.year}*"
+        f"*Ekspedisjonsrapport for {date.day}.{date.month}.{date.year}*:"
         if not finished
         else "*Ekspedisjon complete!*"
     )
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": title_txt}})
+
+    distance_summary = f"Vi gikk *{dist_today} km*!"
+    distance_txt = distance_summary + (
+        f" Nå har vi gått {dist_total} km totalt på vår journey til {destination} -"
+        f" vi har {dist_remaining} km igjen til vi er framme."
+    )
+    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": distance_txt}})
 
     sorted_steps_data = sorted(steps_data, key=itemgetter("amount"), reverse=True)
     steps_txt = "Steps taken:"
@@ -344,13 +352,6 @@ def format_response(
         desc = f"\n\t• {row['first_name']}: {amount}"
         steps_txt += desc
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": steps_txt}})
-
-    distance_txt = (
-        f"I går gikk vi {dist_today} km. "
-        f"Vi har gått {dist_total} km totalt på vår journey, "
-        f"og har igjen {dist_remaining} km til vi er fremme."
-    )
-    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": distance_txt}})
 
     location_txt = ""
     if address is not None:
@@ -376,9 +377,8 @@ def format_response(
         }
     )
 
-    blocks.append({"type": "divider"})
-
     if weight_reports:
+        blocks.append({"type": "divider"})
         weight_txt = "\n\n".join(weight_reports)
         blocks.append(
             {
@@ -387,7 +387,7 @@ def format_response(
             }
         )
 
-    response = {"text": title_txt, "blocks": blocks}
+    response = {"text": f"{title_txt} {distance_summary}", "blocks": blocks}
     return response
 
 
@@ -449,6 +449,7 @@ def days_to_update(conn, journey_id, date) -> t.Iterable[dt.datetime]:
 def main(conn) -> t.List[dict]:
     ongoing_journey = queries.get_ongoing_journey(conn)
     journey_id = ongoing_journey["id"]
+    destination = ongoing_journey["destination"]
     current_date = pendulum.now("UTC")
     data = []
     for date in days_to_update(conn, journey_id, current_date):
@@ -460,7 +461,7 @@ def main(conn) -> t.List[dict]:
                 date=date,
             )
             if datum:
-                formatted = format_response(**datum)
+                formatted = format_response(destination=destination, **datum)
                 data.append(formatted)
         except Exception as exc:
             log.exception(exc)

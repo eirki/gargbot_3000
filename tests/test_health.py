@@ -236,7 +236,7 @@ def test_activity(mock_Fitbit: Mock, mock_Withings: Mock, conn: connection):
     ]
     assert weight_data == [
         "name2 har ikke veid seg på *7305* dager. Skjerpings!",
-        "name5 veier nå *100* kg!",
+        "name5 veier nå *100* kg.",
     ]
 
 

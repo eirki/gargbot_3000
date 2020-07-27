@@ -294,13 +294,24 @@ def test_daily_update(
 
 def test_format_response():
     data = example_update_data()
+    data["destination"] = "Destinasjon"
+
     formatted = journey.format_response(**data)
     expected = {
-        "text": "*Ekspedisjonsrapport for 31.3.2013*",
+        "text": "*Ekspedisjonsrapport for 31.3.2013*: Vi gikk *26.8 km*!",
         "blocks": [
             {
                 "text": {
-                    "text": "*Ekspedisjonsrapport for 31.3.2013*",
+                    "text": "*Ekspedisjonsrapport for 31.3.2013*:",
+                    "type": "mrkdwn",
+                },
+                "type": "section",
+            },
+            {
+                "text": {
+                    "text": "Vi gikk *26.8 km*! Nå har vi gått 26.8 km "
+                    "totalt på vår journey til Destinasjon - vi har 29.0 km igjen til "
+                    "vi er framme.",
                     "type": "mrkdwn",
                 },
                 "type": "section",
@@ -312,15 +323,6 @@ def test_format_response():
                     "\t• name2: 11521\n"
                     "\t• name3: 6380\n"
                     "\t• name5: _111_",
-                    "type": "mrkdwn",
-                },
-                "type": "section",
-            },
-            {
-                "text": {
-                    "text": "I går gikk vi 26.8 km. Vi har gått 26.8 km "
-                    "totalt på vår journey, og har igjen 29.0 km til "
-                    "vi er fremme.",
                     "type": "mrkdwn",
                 },
                 "type": "section",
@@ -356,6 +358,8 @@ def test_format_response():
 
 def test_format_response_no_address():
     data = example_update_data()
+    data["destination"] = "Destinasjon"
+
     data["address"] = None
     response = journey.format_response(**data)
     address_block = response["blocks"][3]
@@ -371,6 +375,8 @@ def test_format_response_no_address():
 
 def test_format_response_nopoi():
     data = example_update_data()
+    data["destination"] = "Destinasjon"
+
     data["poi"] = None
     response = journey.format_response(**data)
     address_block = response["blocks"][3]
@@ -383,6 +389,8 @@ def test_format_response_nopoi():
 
 def test_format_response_no_img_url():
     data = example_update_data()
+    data["destination"] = "Destinasjon"
+
     data["img_url"] = None
     response = journey.format_response(**data)
     assert len(response["blocks"]) == 7
@@ -390,6 +398,8 @@ def test_format_response_no_img_url():
 
 def test_format_response_no_all():
     data = example_update_data()
+    data["destination"] = "Destinasjon"
+
     data["address"] = None
     data["poi"] = None
     data["img_url"] = None
@@ -497,7 +507,7 @@ def test_journey_main(
     start_date = pendulum.datetime(2013, 3, 31, tz="UTC")
     journey.start_journey(conn, journey_id, start_date)
     pendulum.set_test_now(start_date.add(days=2))
-    data = journey.main(conn)
-    assert len(data) == 2
-    assert data[0]["blocks"][0]["text"]["text"] == "*Ekspedisjonsrapport for 31.3.2013*"
-    assert data[1]["blocks"][0]["text"]["text"] == "*Ekspedisjonsrapport for 1.4.2013*"
+    dat = journey.main(conn)
+    assert len(dat) == 2
+    assert dat[0]["blocks"][0]["text"]["text"] == "*Ekspedisjonsrapport for 31.3.2013*:"
+    assert dat[1]["blocks"][0]["text"]["text"] == "*Ekspedisjonsrapport for 1.4.2013*:"
