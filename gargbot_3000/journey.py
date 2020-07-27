@@ -443,8 +443,8 @@ def days_to_update(conn, journey_id, date) -> t.Iterable[dt.datetime]:
 
 
 def main(conn) -> t.List[dict]:
-    ongoing_journey = conn.get_ongoing_journey()
-    journey_id = ongoing_journey["journey_id"]
+    ongoing_journey = queries.get_ongoing_journey(conn)
+    journey_id = ongoing_journey["id"]
     current_date = pendulum.now("UTC")
     data = []
     for date in days_to_update(conn, journey_id, current_date):

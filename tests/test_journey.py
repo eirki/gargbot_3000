@@ -433,3 +433,32 @@ def test_journey_finished(
         data.append(datum)
     last_loc = [datum for datum in data if datum is not None][-1]
     assert last_loc["finished"]
+
+
+@patch("gargbot_3000.journey.health.activity")
+@patch("gargbot_3000.journey.address_for_location")
+@patch("gargbot_3000.journey.image_for_location")
+@patch("gargbot_3000.journey.map_url_for_location")
+@patch("gargbot_3000.journey.poi_for_location")
+def test_journey_main(
+    mock_poi_func,
+    mock_map_url_func,
+    mock_image_func,
+    mock_address_func,
+    mock_activity,
+    conn: connection,
+):
+    mock_poi_func.return_value = "Poi"
+    mock_map_url_func.return_value = "www.mapurl"
+    mock_image_func.return_value = "www.image"
+    mock_address_func.return_value = "Adress"
+    health = MockHealth()
+    mock_activity.return_value = health.activity(date=None)
+    journey_id = insert_journey_data(conn)
+    start_date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    journey.start_journey(conn, journey_id, start_date)
+    pendulum.set_test_now(start_date.add(days=2))
+    data = journey.main(conn)
+    assert len(data) == 2
+    assert data[0]["blocks"][0]["text"]["text"] == "*Ekspedisjonsrapport for 31.3.2013*"
+    assert data[1]["blocks"][0]["text"]["text"] == "*Ekspedisjonsrapport for 1.4.2013*"
