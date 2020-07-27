@@ -202,7 +202,7 @@ class Fitbit:
 
     @staticmethod
     def weight(client: FitbitApi, date: pendulum.DateTime) -> t.Optional[dict]:
-        data = client.get_bodyweight(base_date=date.subtract(days=6), period="1w")
+        data = client.get_bodyweight(base_date=date, period="1w")
         if len(data["weight"]) == 0:
             log.info("No weight data")
             return None
