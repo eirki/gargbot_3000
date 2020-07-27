@@ -364,7 +364,7 @@ def format_response(
 
     if img_url is not None:
         alt_text = address if address is not None else "Check it!"
-        blocks.append({"type": "image", "img_url": img_url, "alt_text": alt_text})
+        blocks.append({"type": "image", "image_url": img_url, "alt_text": alt_text})
 
     blocks.append(
         {

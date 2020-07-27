@@ -333,7 +333,7 @@ def test_format_response():
                 },
                 "type": "section",
             },
-            {"alt_text": "Address", "img_url": "www.image", "type": "image"},
+            {"alt_text": "Address", "image_url": "www.image", "type": "image"},
             {
                 "text": {
                     "text": "<www.mapurl|Se deg litt rundt da vel!>",
@@ -364,7 +364,7 @@ def test_format_response_no_address():
         "type": "section",
     }
     img_block = response["blocks"][4]
-    expected_img = {"alt_text": "Check it!", "img_url": "www.image", "type": "image"}
+    expected_img = {"alt_text": "Check it!", "image_url": "www.image", "type": "image"}
     assert address_block == expected_address
     assert img_block == expected_img
 
