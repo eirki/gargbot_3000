@@ -387,7 +387,7 @@ def format_response(
             }
         )
 
-    response = {"blocks": blocks}
+    response = {"text": title_txt, "blocks": blocks}
     return response
 
 

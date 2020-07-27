@@ -296,6 +296,7 @@ def test_format_response():
     data = example_update_data()
     formatted = journey.format_response(**data)
     expected = {
+        "text": "*Ekspedisjonsrapport for 31.3.2013*",
         "blocks": [
             {
                 "text": {
@@ -345,11 +346,12 @@ def test_format_response():
                 "text": {"text": "Also: name2 veier 60 kg", "type": "mrkdwn"},
                 "type": "section",
             },
-        ]
+        ],
     }
     assert len(formatted["blocks"]) == len(expected["blocks"])
     for f_block, e_block in zip(formatted["blocks"], expected["blocks"]):
         assert f_block == e_block
+    assert formatted["text"] == expected["text"]
 
 
 def test_format_response_no_address():
