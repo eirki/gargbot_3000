@@ -77,12 +77,16 @@ def send_congrats() -> None:
 
 def update_journey() -> None:
     conn = database.connect()
-    updates = journey.main(conn)
-    if not updates:
-        return
-    slack_client = SlackClient(config.slack_bot_user_token)
-    for update in updates:
-        task.send_response(slack_client, update, channel=config.health_channel)
+    try:
+        updates = journey.main(conn)
+        if not updates:
+            return
+        slack_client = SlackClient(config.slack_bot_user_token)
+        for update in updates:
+            task.send_response(slack_client, update, channel=config.health_channel)
+    finally:
+        conn.commit()
+        conn.close()
 
 
 def local_hour_at_utc(hour: int) -> str:
