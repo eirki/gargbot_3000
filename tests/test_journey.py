@@ -270,10 +270,10 @@ def test_format_response():
             {
                 "text": {
                     "text": "Steps taken:\n"
-                    "\t :star: - name6: 17782\n"
-                    "\t- name2: 11521\n"
-                    "\t- name3: 6380\n"
-                    "\t- name5: 111",
+                    "\t• name6: *17782* :star:\n"
+                    "\t• name2: 11521\n"
+                    "\t• name3: 6380\n"
+                    "\t• name5: _111_",
                     "type": "mrkdwn",
                 },
                 "type": "section",

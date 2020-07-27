@@ -332,13 +332,17 @@ def format_response(
     )
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": title_txt}})
 
-    steps_txt = "\n\t".join(
-        [
-            f"- {row['first_name']}: {row['amount']}"
-            for row in sorted(steps_data, key=itemgetter("amount"), reverse=True)
-        ]
-    )
-    steps_txt = "Steps taken:\n\t :star: " + steps_txt
+    sorted_steps_data = sorted(steps_data, key=itemgetter("amount"), reverse=True)
+    steps_txt = "Steps taken:"
+    for i, row in enumerate(sorted_steps_data):
+        if i == 0:
+            amount = f"*{row['amount']}* :star:"
+        elif i == len(steps_data) - 1:
+            amount = f"_{row['amount']}_"
+        else:
+            amount = str(row["amount"])
+        desc = f"\n\t• {row['first_name']}: {amount}"
+        steps_txt += desc
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": steps_txt}})
 
     distance_txt = (
