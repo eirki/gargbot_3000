@@ -325,7 +325,7 @@ def steps(clients, date: pendulum.DateTime) -> t.List[dict]:
             continue
         if steps is None:
             continue
-        step_amounts.append({"amount": steps, "name": name})
+        step_amounts.append({"amount": steps, "first_name": name})
     return step_amounts
 
 
