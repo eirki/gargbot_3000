@@ -85,8 +85,10 @@ def update_journey() -> None:
         task.send_response(slack_client, update, channel=config.health_channel)
 
 
-def local_hour_at_utc(hour: int) -> int:
-    return pendulum.today(config.tz).at(hour).in_timezone("UTC").hour
+def local_hour_at_utc(hour: int) -> str:
+    utc_hour = pendulum.today(config.tz).at(hour).in_timezone("UTC").hour
+    formatted = str(utc_hour).zfill(2) + ":00"
+    return formatted
 
 
 def main():
@@ -95,11 +97,11 @@ def main():
         while True:
             schedule.clear()
 
-            hour = f"{local_hour_at_utc(7)}:00"
+            hour = local_hour_at_utc(7)
             log.info(f"Greeter scheduling send_congrats at {hour}")
             schedule.every().day.at(hour).do(send_congrats)
 
-            hour = f"{local_hour_at_utc(12)}:00"
+            hour = local_hour_at_utc(12)
             log.info(f"Greeter scheduling update_journey at {hour}")
             schedule.every().day.at(hour).do(update_journey)
 
