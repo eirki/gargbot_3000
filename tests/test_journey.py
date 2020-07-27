@@ -3,6 +3,7 @@
 import random
 from unittest.mock import Mock, patch
 
+from flask.testing import FlaskClient
 import pendulum
 import psycopg2
 from psycopg2.extensions import connection
@@ -125,6 +126,42 @@ def example_update_data() -> dict:
 #     mock_map_url_func.return_value = "www.mapurl"
 #     mock_image_func.return_value = "www.image"
 #     mock_address_func.return_value = "Adress"
+
+
+@patch("gargbot_3000.health.get_jwt_identity")
+@patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
+def test_list_journeys(
+    mock_jwt_required, mock_jwt_identity, client: FlaskClient, conn: connection
+):
+    journey_id = insert_journey_data(conn)
+    date1 = pendulum.datetime(2013, 3, 31, tz="UTC")
+    location1 = {
+        "lat": 47.58633461507472,
+        "lon": 40.69297732817553,
+        "distance": 300,
+        "latest_waypoint": 2,
+        "address": "address1",
+        "img_url": "image1",
+        "map_url": "map_url1",
+        "poi": "poi1",
+    }
+
+    date2 = pendulum.datetime(2013, 4, 10, tz="UTC")
+    location2 = {
+        "lat": 47.58633461507472,
+        "lon": 40.69297732817553,
+        "distance": 301,
+        "latest_waypoint": 3,
+        "address": "address2",
+        "img_url": "image2",
+        "map_url": "map_url2",
+        "poi": "poi2",
+    }
+
+    journey.store_location(conn, journey_id, date1, location1)
+    journey.store_location(conn, journey_id, date2, location2)
+    response = client.get("/list_journeys")
+    assert len(response.json["journeys"]) == 1
 
 
 def test_define_journey(conn):

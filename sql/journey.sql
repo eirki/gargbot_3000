@@ -113,7 +113,39 @@ where
 select
     *
 from
-    journey;
+    journey
+    left join (
+        select
+            journey_id as id,
+            count(*) as n_waypoints
+        from
+            waypoint
+        group by
+            journey_id
+    ) as n_waypoints on journey.id = n_waypoints.id
+    left join (
+        select
+            journey_id,
+            latest_waypoint,
+            lat as loc_lat,
+            lon as loc_lon,
+            distance,
+            date as loc_date
+        from
+            (
+                select
+                    *,
+                    row_number() over (
+                        partition by journey_id
+                        order by
+                            date desc
+                    ) as row_num
+                from
+                    location
+            ) as locs
+        where
+            row_num = 1
+    ) as location on journey.id = location.journey_id;
 
 
 -- name: get_journey^
