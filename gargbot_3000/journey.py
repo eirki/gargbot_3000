@@ -400,7 +400,7 @@ def perform_daily_update(
     journey = queries.get_journey(conn, journey_id=journey_id)
     if journey["finished_at"] is not None or journey["started_at"] is None:
         return None
-    steps_data, weight_reports = activity_func(date)
+    steps_data, weight_reports = activity_func(conn, date)
     store_steps(conn, steps_data, journey_id, date)
     last_location = most_recent_location(conn, journey_id)
     last_total_distance = last_location["distance"] if last_location else 0

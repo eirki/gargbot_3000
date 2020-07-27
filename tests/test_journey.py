@@ -43,7 +43,7 @@ class MockHealth:
     def __init__(self):
         self.called = 0
 
-    def activity(self, date):
+    def activity(self, conn, date):
         steps = self.steps[self.called]
         self.called += 1
         steps_data = [
@@ -490,7 +490,7 @@ def test_journey_main(
     mock_image_func.return_value = "www.image"
     mock_address_func.return_value = "Adress"
     health = MockHealth()
-    mock_activity.return_value = health.activity(date=None)
+    mock_activity.return_value = health.activity(conn=None, date=None)
     journey_id = insert_journey_data(conn)
     start_date = pendulum.datetime(2013, 3, 31, tz="UTC")
     journey.start_journey(conn, journey_id, start_date)
