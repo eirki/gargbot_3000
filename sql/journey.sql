@@ -1,3 +1,4 @@
+
 -- name: create_schema#
 create table journey (
     id serial primary key,
@@ -38,12 +39,11 @@ create table location (
     lon double precision not null,
     distance int not null,
     date timestamptz not null,
-    address text not null,
-    img_url text not null,
+    address text,
+    img_url text,
     map_url text not null,
-    poi text not null
+    poi text
 );
-
 
 -- name: add_journey<!
 insert into
