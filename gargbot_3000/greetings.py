@@ -85,13 +85,29 @@ def update_journey() -> None:
         task.send_response(slack_client, update, channel=config.health_channel)
 
 
+def local_hour_at_utc(hour: int) -> int:
+    return pendulum.today(config.tz).at(hour).in_timezone("UTC").hour
+
+
 def main():
-    schedule.every().day.at("07:00").do(send_congrats)
-    schedule.every().day.at("12:00").do(update_journey)
     log.info("GargBot 3000 greeter starter")
     try:
         while True:
-            schedule.run_pending()
-            time.sleep(1)
+            schedule.clear()
+
+            hour = f"{local_hour_at_utc(7)}:00"
+            log.info(f"Greeter scheduling send_congrats at {hour}")
+            schedule.every().day.at(hour).do(send_congrats)
+
+            hour = f"{local_hour_at_utc(12)}:00"
+            log.info(f"Greeter scheduling update_journey at {hour}")
+            schedule.every().day.at(hour).do(update_journey)
+
+            now = pendulum.now(config.tz)
+            tomorrow = pendulum.tomorrow(config.tz).at(now.hour, now.minute, now.second)
+            seconds_until_this_time_tomorrow = (tomorrow - now).seconds
+            for _ in range(seconds_until_this_time_tomorrow):
+                schedule.run_pending()
+                time.sleep(1)
     except KeyboardInterrupt:
         sys.exit()
