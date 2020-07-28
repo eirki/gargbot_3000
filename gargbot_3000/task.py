@@ -1,17 +1,17 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
 import datetime as dt
+from functools import partial
 import sys
 import time
 import typing as t
-from functools import partial
 
-import psycopg2
-import websocket
 from dropbox import Dropbox
+import psycopg2
 from psycopg2.extensions import connection
 from slackclient import SlackClient
 from slackclient.server import SlackConnectionError
+import websocket
 
 from gargbot_3000 import commands, config, database, pictures
 from gargbot_3000.logger import log
@@ -63,13 +63,16 @@ def send_response(
 ):
     log.info(dt.datetime.now())
     log.info(f"response: {response}")
-    slack_client.api_call(
+    result = slack_client.api_call(
         "chat.postMessage",
         channel=channel,
         as_user=True,
         thread_ts=thread_ts,
         **response,
     )
+    if not result.get("ok"):
+        log.info("Sending response failed:")
+        log.info(result)
 
 
 def setup() -> t.Tuple[SlackClient, Dropbox, connection]:
