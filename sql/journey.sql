@@ -1,4 +1,3 @@
-
 -- name: create_schema#
 create table journey (
     id serial primary key,
@@ -32,6 +31,9 @@ create table step (
 );
 
 
+create unique index on step (journey_id, gargling_id, taken_at);
+
+
 create table location (
     journey_id smallint not null references journey(id),
     latest_waypoint smallint not null references waypoint(id),
@@ -44,6 +46,7 @@ create table location (
     map_url text not null,
     poi text
 );
+
 
 -- name: add_journey<!
 insert into
@@ -268,3 +271,14 @@ values
         :taken_at,
         :amount
     );
+
+
+-- name: get_steps
+select
+    step.*,
+    gargling.first_name
+from
+    step
+    left join gargling on step.gargling_id = gargling.id
+where
+    step.journey_id = :journey_id;

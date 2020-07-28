@@ -1,5 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
+from operator import itemgetter
 import random
 from unittest.mock import Mock, patch
 
@@ -264,6 +265,32 @@ def test_start_two_journeys_fails(conn):
     journey.start_journey(conn, journey_id1, date)
     with pytest.raises(psycopg2.errors.UniqueViolation):
         journey.start_journey(conn, journey_id2, date)
+
+
+def test_store_steps(conn: connection):
+    journey_id = insert_journey_data(conn)
+    date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    mock_health = MockHealth()
+    data_in, _ = mock_health.activity(conn=None, date=None)
+    journey.store_steps(conn, data_in, journey_id, date)
+    data_out = journey.queries.get_steps(conn, journey_id=journey_id)
+    data_out = [dict(d) for d in data_out]
+    data_in.sort(key=itemgetter("first_name"))
+    data_out.sort(key=itemgetter("first_name"))
+    assert len(data_in) == len(data_out)
+    for d_in, d_out in zip(data_in, data_out):
+        d_out.pop("gargling_id")
+        assert d_in == d_out
+
+
+def test_store_steps_twice_fails(conn: connection):
+    journey_id = insert_journey_data(conn)
+    date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    mock_health = MockHealth()
+    steps_data, _ = mock_health.activity(conn=None, date=None)
+    journey.store_steps(conn, steps_data, journey_id, date)
+    with pytest.raises(psycopg2.errors.UniqueViolation):
+        journey.store_steps(conn, steps_data, journey_id, date)
 
 
 @patch("gargbot_3000.journey.address_for_location")
