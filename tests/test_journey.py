@@ -1,8 +1,9 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
+from contextlib import contextmanager
 from operator import itemgetter
 import random
-from unittest.mock import Mock, patch
+from unittest.mock import DEFAULT, Mock, patch
 
 from flask.testing import FlaskClient
 import pendulum
@@ -115,18 +116,20 @@ def example_update_data() -> dict:
     }
 
 
-# @pytest.fixture
-# @patch("gargbot_3000.journey.address_for_location")
-# @patch("gargbot_3000.journey.image_for_location")
-# @patch("gargbot_3000.journey.map_url_for_location")
-# @patch("gargbot_3000.journey.poi_for_location")
-# def mock_geo_services(
-#     mock_poi_func, mock_map_url_func, mock_image_func, mock_address_func
-# ):
-#     mock_poi_func.return_value = "Poi"
-#     mock_map_url_func.return_value = "www.mapurl"
-#     mock_image_func.return_value = "www.image"
-#     mock_address_func.return_value = "Adress"
+@contextmanager
+def api_mocker():
+    with patch.multiple(
+        "gargbot_3000.journey",
+        address_for_location=DEFAULT,
+        image_for_location=DEFAULT,
+        map_url_for_location=DEFAULT,
+        poi_for_location=DEFAULT,
+    ) as mocks:
+        mocks["address_for_location"].return_value = "Address"
+        mocks["image_for_location"].return_value = "www.image"
+        mocks["map_url_for_location"].return_value = "www.mapurl"
+        mocks["poi_for_location"].return_value = "Poi"
+        yield
 
 
 @patch("gargbot_3000.health.get_jwt_identity")
@@ -179,29 +182,19 @@ def test_parse_xml(conn):
     assert len(data) == 14
 
 
-@patch("gargbot_3000.journey.address_for_location")
-@patch("gargbot_3000.journey.image_for_location")
-@patch("gargbot_3000.journey.map_url_for_location")
-@patch("gargbot_3000.journey.poi_for_location")
-# @pytest.mark.usefixtures("mock_geo_services")
-def test_get_location(
-    mock_poi_func, mock_map_url_func, mock_image_func, mock_address_func, conn
-):
-    mock_poi_func.return_value = None
-    mock_map_url_func.return_value = None
-    mock_image_func.return_value = None
-    mock_address_func.return_value = None
-    journey_id = insert_journey_data(conn)
-    location = journey.get_location(conn, journey_id, distance=300)
+def test_get_location(conn: connection):
+    with api_mocker():
+        journey_id = insert_journey_data(conn)
+        location = journey.get_location(conn, journey_id, distance=300)
     assert location == {
         "lat": pytest.approx(47.58633461507472),
         "lon": pytest.approx(40.69297732817553),
         "distance": 300,
         "latest_waypoint": 3,
-        "address": None,
-        "img_url": None,
-        "map_url": None,
-        "poi": None,
+        "address": "Address",
+        "img_url": "www.image",
+        "map_url": "www.mapurl",
+        "poi": "Poi",
         "finished": False,
         "journey_distance": 55862,
     }
@@ -293,27 +286,13 @@ def test_store_steps_twice_fails(conn: connection):
         journey.store_steps(conn, steps_data, journey_id, date)
 
 
-@patch("gargbot_3000.journey.address_for_location")
-@patch("gargbot_3000.journey.image_for_location")
-@patch("gargbot_3000.journey.map_url_for_location")
-@patch("gargbot_3000.journey.poi_for_location")
-def test_daily_update(
-    mock_poi_func,
-    mock_map_url_func,
-    mock_image_func,
-    mock_address_func,
-    conn: connection,
-):
-    mock_address_func.return_value = "Address"
-    mock_poi_func.return_value = "Poi"
-    mock_map_url_func.return_value = "www.mapurl"
-    mock_image_func.return_value = "www.image"
-
+def test_daily_update(conn: connection):
     health = MockHealth()
     journey_id = insert_journey_data(conn)
     date = pendulum.datetime(2013, 3, 31, tz="UTC")
     journey.start_journey(conn, journey_id, date)
-    data = journey.perform_daily_update(conn, health.activity, journey_id, date)
+    with api_mocker():
+        data = journey.perform_daily_update(conn, health.activity, journey_id, date)
     assert data is not None
     expected = example_update_data()
     assert data == expected
@@ -454,26 +433,13 @@ def test_days_to_update_unstarted_two_days(conn):
     assert days == [date, date.add(days=1)]
 
 
-@patch("gargbot_3000.journey.address_for_location")
-@patch("gargbot_3000.journey.image_for_location")
-@patch("gargbot_3000.journey.map_url_for_location")
-@patch("gargbot_3000.journey.poi_for_location")
-def test_days_to_update(
-    mock_poi_func,
-    mock_map_url_func,
-    mock_image_func,
-    mock_address_func,
-    conn: connection,
-):
-    mock_poi_func.return_value = "Poi"
-    mock_map_url_func.return_value = "www.mapurl"
-    mock_image_func.return_value = "www.image"
-    mock_address_func.return_value = "Adress"
+def test_days_to_update(conn: connection):
     health = MockHealth()
     journey_id = insert_journey_data(conn)
     start_date = pendulum.datetime(2013, 3, 31, tz="UTC")
     journey.start_journey(conn, journey_id, start_date)
-    journey.perform_daily_update(conn, health.activity, journey_id, start_date)
+    with api_mocker():
+        journey.perform_daily_update(conn, health.activity, journey_id, start_date)
 
     cur_date = start_date.add(days=2)
     itr = journey.days_to_update(conn, journey_id, cur_date)
@@ -481,60 +447,37 @@ def test_days_to_update(
     assert days == [cur_date.subtract(days=1)]
 
 
-@patch("gargbot_3000.journey.address_for_location")
-@patch("gargbot_3000.journey.image_for_location")
-@patch("gargbot_3000.journey.map_url_for_location")
-@patch("gargbot_3000.journey.poi_for_location")
-def test_journey_finished(
-    mock_poi_func,
-    mock_map_url_func,
-    mock_image_func,
-    mock_address_func,
-    conn: connection,
-):
-    mock_poi_func.return_value = "Poi"
-    mock_map_url_func.return_value = "www.mapurl"
-    mock_image_func.return_value = "www.image"
-    mock_address_func.return_value = "Adress"
+def test_journey_finished(conn: connection):
     health = MockHealth()
     journey_id = insert_journey_data(conn)
     start_date = pendulum.datetime(2013, 3, 31, tz="UTC")
     journey.start_journey(conn, journey_id, start_date)
-    journey.perform_daily_update(conn, health.activity, journey_id, start_date)
-
-    cur_date = start_date.add(days=4)
-    data = []
-    for date in journey.days_to_update(conn, journey_id, cur_date):
-        datum = journey.perform_daily_update(conn, health.activity, journey_id, date)
-        data.append(datum)
-    last_loc = [datum for datum in data if datum is not None][-1]
+    with api_mocker():
+        journey.perform_daily_update(conn, health.activity, journey_id, start_date)
+        cur_date = start_date.add(days=4)
+        data = []
+        for date in journey.days_to_update(conn, journey_id, cur_date):
+            datum = journey.perform_daily_update(
+                conn, health.activity, journey_id, date
+            )
+            data.append(datum)
+        last_loc = [datum for datum in data if datum is not None][-1]
     assert last_loc["finished"]
 
 
 @patch("gargbot_3000.journey.health.activity")
-@patch("gargbot_3000.journey.address_for_location")
-@patch("gargbot_3000.journey.image_for_location")
-@patch("gargbot_3000.journey.map_url_for_location")
-@patch("gargbot_3000.journey.poi_for_location")
 def test_journey_main(
-    mock_poi_func,
-    mock_map_url_func,
-    mock_image_func,
-    mock_address_func,
-    mock_activity,
-    conn: connection,
+    mock_activity, conn: connection,
 ):
-    mock_poi_func.return_value = "Poi"
-    mock_map_url_func.return_value = "www.mapurl"
-    mock_image_func.return_value = "www.image"
-    mock_address_func.return_value = "Adress"
+
     health = MockHealth()
     mock_activity.return_value = health.activity(conn=None, date=None)
     journey_id = insert_journey_data(conn)
     start_date = pendulum.datetime(2013, 3, 31, tz="UTC")
     journey.start_journey(conn, journey_id, start_date)
     pendulum.set_test_now(start_date.add(days=2))
-    dat = journey.main(conn)
+    with api_mocker():
+        dat = journey.main(conn)
     assert len(dat) == 2
     assert dat[0]["blocks"][0]["text"]["text"] == "*Ekspedisjonsrapport for 31.3.2013*:"
     assert dat[1]["blocks"][0]["text"]["text"] == "*Ekspedisjonsrapport for 1.4.2013*:"
