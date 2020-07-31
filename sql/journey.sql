@@ -19,7 +19,7 @@ create table waypoint (
     journey_id smallint not null references journey(id),
     lat double precision not null,
     lon double precision not null,
-    cum_dist int null
+    cum_dist float not null
 );
 
 

@@ -196,7 +196,7 @@ def test_get_location(conn: connection):
         "map_url": "www.mapurl",
         "poi": "Poi",
         "finished": False,
-        "journey_distance": 55862,
+        "journey_distance": 55862.151884,
     }
 
 
