@@ -176,6 +176,18 @@ where
     journey_id = :journey_id;
 
 
+-- name: waypoints_before_distance
+select
+    lat,
+    lon,
+    cum_dist
+from
+    waypoint
+where
+    journey_id = :journey_id
+    and :distance > cum_dist;
+
+
 -- name: get_waypoint_for_distance^
 select
     *,

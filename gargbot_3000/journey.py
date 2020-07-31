@@ -65,6 +65,28 @@ poi_types = {
 }
 
 
+@blueprint.route("/detail_journey/<journey_id>")
+def detail_journey(journey_id):
+    with current_app.pool.get_connection() as conn:
+        j = queries.get_journey(conn, journey_id=journey_id)
+        most_recent = most_recent_location(conn, journey_id)
+        if most_recent is None:
+            return jsonify(waypoints=[])
+
+        waypoints = queries.waypoints_before_distance(
+            conn, journey_id=journey_id, distance=most_recent["distance"]
+        )
+        waypoints = [dict(point) for point in waypoints]
+        waypoints.append(
+            {
+                "lat": most_recent["lat"],
+                "lon": most_recent["lon"],
+                "cum_dist": most_recent["distance"],
+            }
+        )
+    return jsonify(waypoints=waypoints, **dict(j))
+
+
 @blueprint.route("/list_journeys")
 @jwt_required
 def list_journeys():

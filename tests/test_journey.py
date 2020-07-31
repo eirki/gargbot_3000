@@ -3,6 +3,7 @@
 from contextlib import contextmanager
 from operator import itemgetter
 import random
+import typing as t
 from unittest.mock import DEFAULT, Mock, patch
 
 from flask.testing import FlaskClient
@@ -33,6 +34,23 @@ xml = """<?xml version="1.0" encoding="UTF-8" standalone="no" ?><gpx xmlns="http
 </trk>
 </gpx>"""
 
+gps_data = [
+    {"lat": 47.586392, "lon": 40.688998, "cum_dist": 0.000000},
+    {"lat": 47.586482, "lon": 40.690648, "cum_dist": 124.290397},
+    {"lat": 47.586346, "lon": 40.692903, "cum_dist": 294.277151},
+    {"lat": 47.586119, "lon": 40.694385, "cum_dist": 408.383249},
+    {"lat": 47.585707, "lon": 40.695735, "cum_dist": 519.639149},
+    {"lat": 47.582350, "lon": 40.704350, "cum_dist": 1266.708526},
+    {"lat": 47.581214, "lon": 40.707144, "cum_dist": 1511.674758},
+    {"lat": 47.580374, "lon": 40.708726, "cum_dist": 1662.856365},
+    {"lat": 47.579466, "lon": 40.710005, "cum_dist": 1802.287666},
+    {"lat": 47.577354, "lon": 40.712160, "cum_dist": 2087.707336},
+    {"lat": 47.549180, "lon": 40.750911, "cum_dist": 6367.173839},
+    {"lat": 47.523033, "lon": 40.764962, "cum_dist": 9463.573534},
+    {"lat": 47.427366, "lon": 41.011354, "cum_dist": 30843.651920},
+    {"lat": 47.327962, "lon": 41.309018, "cum_dist": 55862.151884},
+]
+
 
 class MockHealth:
     steps = {
@@ -60,33 +78,8 @@ def insert_journey_data(conn) -> int:
     journey_id = journey.define_journey(
         conn, origin="Origin", destination="Destination"
     )
-    data = [
-        (47.586392, 40.688998, 0.000000),
-        (47.586482, 40.690648, 124.290397),
-        (47.586346, 40.692903, 294.277151),
-        (47.586119, 40.694385, 408.383249),
-        (47.585707, 40.695735, 519.639149),
-        (47.582350, 40.704350, 1266.708526),
-        (47.581214, 40.707144, 1511.674758),
-        (47.580374, 40.708726, 1662.856365),
-        (47.579466, 40.710005, 1802.287666),
-        (47.577354, 40.712160, 2087.707336),
-        (47.549180, 40.750911, 6367.173839),
-        (47.523033, 40.764962, 9463.573534),
-        (47.427366, 41.011354, 30843.651920),
-        (47.327962, 41.309018, 55862.151884),
-    ]
-    data_as_dict = [
-        {
-            "index": i,
-            "journey_id": journey_id,
-            "lat": lat,
-            "lon": lon,
-            "cum_dist": cum_dist,
-        }
-        for i, (lat, lon, cum_dist) in enumerate(data)
-    ]
-    journey.queries.add_waypoints(conn, data_as_dict)
+    data_in: t.List[dict] = [{"journey_id": journey_id, **d} for d in gps_data]
+    journey.queries.add_waypoints(conn, data_in)
     return journey_id
 
 
@@ -166,6 +159,33 @@ def test_list_journeys(
     journey.store_location(conn, journey_id, date2, location2)
     response = client.get("/list_journeys")
     assert len(response.json["journeys"]) == 1
+
+
+def test_detail_journey(client: FlaskClient, conn: connection):
+    journey_id = insert_journey_data(conn)
+    health = MockHealth()
+    date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    journey.start_journey(conn, journey_id, date)
+    with api_mocker():
+        journey.perform_daily_update(conn, health.activity, journey_id, date)
+        response = client.get(f"/detail_journey/{journey_id}")
+    waypoints = response.json.pop("waypoints")
+    length = len(waypoints) - 1
+    assert waypoints[:length] == gps_data[:length]
+    loc = journey.most_recent_location(conn, journey_id)
+    assert loc is not None
+    assert waypoints[length]["cum_dist"] == loc["distance"]
+    assert waypoints[length]["lat"] == loc["lat"]
+    assert waypoints[length]["lon"] == loc["lon"]
+    expected = {
+        "destination": "Destination",
+        "finished_at": None,
+        "id": 1,
+        "ongoing": True,
+        "origin": "Origin",
+        "started_at": "Sun, 31 Mar 2013 00:00:00 GMT",
+    }
+    assert response.json == expected
 
 
 def test_define_journey(conn):
