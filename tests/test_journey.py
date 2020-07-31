@@ -324,11 +324,13 @@ def test_format_response():
             },
             {
                 "text": {
-                    "text": "Steps taken:\n"
-                    "\t• name6: *17782* :star:\n"
-                    "\t• name2: 11521\n"
-                    "\t• name3: 6380\n"
-                    "\t• name5: _111_",
+                    "text": (
+                        "Steps taken:\n"
+                        "\t• name6: *17782* (13.3 km) :star:\n"
+                        "\t• name2: 11521 (8.6 km)\n"
+                        "\t• name3: 6380 (4.8 km)\n"
+                        "\t• name5: _111_ (10 m)"
+                    ),
                     "type": "mrkdwn",
                 },
                 "type": "section",

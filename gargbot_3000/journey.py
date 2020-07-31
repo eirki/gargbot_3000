@@ -343,12 +343,21 @@ def format_response(
     sorted_steps_data = sorted(steps_data, key=itemgetter("amount"), reverse=True)
     steps_txt = "Steps taken:"
     for i, row in enumerate(sorted_steps_data):
-        if i == 0:
-            amount = f"*{row['amount']}* :star:"
-        elif i == len(steps_data) - 1:
-            amount = f"_{row['amount']}_"
+        steps = row["amount"]
+        distance = round((steps * stride) / 1000, 1)
+        if distance < 1:
+            distance *= 100
+            unit = "m"
         else:
-            amount = str(row["amount"])
+            unit = "km"
+        if int(distance) == distance:
+            distance = int(distance)
+        if i == 0:
+            amount = f"*{steps}* ({distance} {unit}) :star:"
+        elif i == len(steps_data) - 1:
+            amount = f"_{steps}_ ({distance} {unit})"
+        else:
+            amount = f"{steps} ({distance} {unit})"
         desc = f"\n\t• {row['first_name']}: {amount}"
         steps_txt += desc
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": steps_txt}})
