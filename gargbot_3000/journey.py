@@ -6,6 +6,7 @@ import hashlib
 import hmac
 from operator import itemgetter
 import os
+from pathlib import Path
 import random
 import typing as t
 import urllib
@@ -23,6 +24,7 @@ import gpxpy
 import pendulum
 from psycopg2.extensions import connection
 import requests
+from staticmap import CircleMarker, Line, StaticMap
 
 from gargbot_3000 import config, database, health
 from gargbot_3000.logger import log
@@ -73,8 +75,8 @@ def detail_journey(journey_id):
         if most_recent is None:
             return jsonify(waypoints=[])
 
-        waypoints = queries.waypoints_before_distance(
-            conn, journey_id=journey_id, distance=most_recent["distance"]
+        waypoints = queries.waypoints_between_distances(
+            conn, journey_id=journey_id, low=0, high=most_recent["distance"]
         )
         waypoints = [dict(point) for point in waypoints]
         waypoints.append(
@@ -178,16 +180,16 @@ def store_steps(conn, steps, journey_id, date) -> None:
 
 
 def address_for_location(lat, lon) -> t.Optional[str]:
-    geolocator = Nominatim(user_agent="gargbot 3000")
+    geolocator = Nominatim(user_agent=config.bot_name)
     try:
         location = geolocator.reverse(f"{lat}, {lon}")
         return location.address
-    except Exception as exc:
-        log.exception(exc)
+    except Exception:
+        log.error("Error getting address for location", exc_info=True)
         return None
 
 
-def image_for_location(lat, lon, journey_id: int, waypoint_id: int) -> t.Optional[str]:
+def image_for_location(lat, lon) -> t.Optional[bytes]:
     domain = "https://maps.googleapis.com"
     endpoint = "/maps/api/streetview?"
     params = {
@@ -211,19 +213,7 @@ def image_for_location(lat, lon, journey_id: int, waypoint_id: int) -> t.Optiona
     except Exception:
         log.error("Error downloading streetview image", exc_info=True)
         return None
-
-    dbx = Dropbox(config.dropbox_token)
-    upload_path = config.dbx_journey_folder / f"{journey_id}_{waypoint_id}.jpg"
-    try:
-        uploaded = dbx.files_upload(
-            f=data, path=upload_path.as_posix(), autorename=True
-        )
-    except Exception:
-        log.error("Error uploading streetview image", exc_info=True)
-        return None
-    shared = dbx.sharing_create_shared_link(uploaded.path_display)
-    url = shared.url.replace("?dl=0", "?raw=1")
-    return url
+    return data
 
 
 def map_url_for_location(lat, lon) -> str:
@@ -249,7 +239,7 @@ def poi_for_location(lat, lon) -> t.Optional[str]:
         return None
 
 
-def get_location(conn, journey_id, distance) -> dict:
+def get_location(conn, journey_id, distance) -> t.Tuple[float, float, int, bool]:
     latest_waypoint = queries.get_waypoint_for_distance(
         conn, journey_id=journey_id, distance=distance
     )
@@ -274,76 +264,147 @@ def get_location(conn, journey_id, distance) -> dict:
             latest_waypoint["lat"], latest_waypoint["lon"]
         )
         current_lat, current_lon = delta.move(latest_waypoint_obj)
-    address = address_for_location(current_lat, current_lon)
-    img_url = image_for_location(
-        current_lat,
-        current_lon,
-        journey_id=journey_id,
-        waypoint_id=latest_waypoint["id"],
-    )
-    map_url = map_url_for_location(current_lat, current_lon)
-    poi = poi_for_location(current_lat, current_lon)
-    location = {
-        "lat": current_lat,
-        "lon": current_lon,
-        "distance": distance,
-        "journey_distance": latest_waypoint["journey_distance"],
-        "address": address,
-        "img_url": img_url,
-        "map_url": map_url,
-        "poi": poi,
-        "latest_waypoint": latest_waypoint["id"],
-        "finished": finished,
-    }
-    return location
+    return current_lat, current_lon, latest_waypoint["id"], finished
 
 
-def store_location(conn, journey_id, date, loc: dict) -> None:
-    queries.add_location(
-        conn,
-        journey_id=journey_id,
-        latest_waypoint=loc["latest_waypoint"],
-        lat=loc["lat"],
-        lon=loc["lon"],
-        distance=loc["distance"],
-        date=date,
-        address=loc["address"],
-        img_url=loc["img_url"],
-        map_url=loc["map_url"],
-        poi=loc["poi"],
+def data_for_location(
+    lat: float, lon: float
+) -> t.Tuple[
+    t.Optional[str], t.Optional[bytes], str, t.Optional[str],
+]:
+    address = address_for_location(lat, lon)
+    street_view_img = image_for_location(lat, lon)
+    map_url = map_url_for_location(lat, lon)
+    poi = poi_for_location(lat, lon)
+    return address, street_view_img, map_url, poi
+
+
+def traversal_data(
+    conn: connection,
+    journey_id: int,
+    last_location: t.Optional[dict],
+    current_lat: float,
+    current_lon: float,
+    current_distance: float,
+) -> t.Tuple[
+    t.List[t.Tuple[float, float]],
+    t.List[t.Tuple[float, float]],
+    t.List[t.Tuple[float, float]],
+]:
+    if last_location is not None:
+        old_waypoints = queries.waypoints_between_distances(
+            conn, journey_id=journey_id, low=0, high=last_location["distance"]
+        )
+        old_coords = [(loc["lon"], loc["lat"]) for loc in old_waypoints]
+        old_coords.append((last_location["lon"], last_location["lat"]))
+        locations = queries.location_coordinates(
+            conn, journey_id=journey_id, low=0, high=last_location["distance"]
+        )
+        location_coordinates = [(old_waypoints[0]["lon"], old_waypoints[0]["lat"])]
+        location_coordinates.extend([(loc["lon"], loc["lat"]) for loc in locations])
+        start_dist = last_location["distance"]
+        coords = [(last_location["lon"], last_location["lat"])]
+    else:
+        old_coords = []
+        location_coordinates = []
+        start_dist = 0
+        coords = []
+
+    current_waypoints = queries.waypoints_between_distances(
+        conn, journey_id=journey_id, low=start_dist, high=current_distance
     )
+    coords.extend([(loc["lon"], loc["lat"]) for loc in current_waypoints])
+    coords.append((current_lon, current_lat))
+    return old_coords, location_coordinates, coords
+
+
+def render_map(traversal_map) -> t.Optional[bytes]:
+    try:
+        img = traversal_map.render()
+        return img.getvalue()
+    except Exception:
+        log.error("Error rendering traversal map", exc_info=True)
+        return None
+
+
+def generate_traversal_map(
+    conn: connection,
+    journey_id: int,
+    last_location: t.Optional[dict],
+    current_lat: float,
+    current_lon: float,
+    current_distance: float,
+) -> t.Optional[bytes]:
+    old_coords, locations, coords = traversal_data(
+        conn, journey_id, last_location, current_lat, current_lon, current_distance
+    )
+    traversal_map = StaticMap(width=500, height=300)
+    traversal_map.add_line(Line(old_coords, "grey", 2))
+    for lon, lat in locations:
+        traversal_map.add_marker(CircleMarker((lon, lat), "blue", 6))
+    traversal_map.add_line(Line(coords, "red", 2))
+    traversal_map.add_marker(CircleMarker((current_lon, current_lat), "red", 6))
+    img = render_map(traversal_map)
+    return img
+
+
+def upload_images(
+    journey_id: int,
+    waypoint_id: int,
+    street_view_img: t.Optional[bytes],
+    traversal_map: t.Optional[bytes],
+) -> t.Tuple[t.Optional[str], t.Optional[str]]:
+    dbx = Dropbox(config.dropbox_token)
+
+    def upload(data: bytes, name: str) -> t.Optional[str]:
+        path = config.dbx_journey_folder / f"{journey_id}_{waypoint_id}_{name}.jpg"
+        try:
+            uploaded = dbx.files_upload(f=data, path=path.as_posix(), autorename=True)
+        except Exception:
+            log.error("Error uploading streetview image", exc_info=True)
+            return None
+        shared = dbx.sharing_create_shared_link(uploaded.path_display)
+        url = shared.url.replace("?dl=0", "?raw=1")
+        return url
+
+    sw_url = upload(street_view_img, name="street_view") if street_view_img else None
+    traversal_map_url = upload(traversal_map, name="map") if traversal_map else None
+    return sw_url, traversal_map_url
 
 
 def most_recent_location(conn, journey_id) -> t.Optional[dict]:
     loc = queries.most_recent_location(conn, journey_id=journey_id)
     if loc is None:
         return None
-    as_dict = {
-        "journey_id": loc["journey_id"],
-        "latest_waypoint": loc["latest_waypoint"],
-        "lat": loc["lat"],
-        "lon": loc["lon"],
-        "distance": loc["distance"],
-        "date": pendulum.instance(loc["date"]),
-        "address": loc["address"],
-        "img_url": loc["img_url"],
-        "map_url": loc["map_url"],
-        "poi": loc["poi"],
-    }
-    return as_dict
+    loc = dict(loc)
+    loc["date"] = pendulum.instance(loc["date"])
+    return loc
+
+
+def round_meters(n: float) -> str:
+    if n < 1000:
+        unit = "m"
+    else:
+        n /= 1000
+        unit = "km"
+    n = round(n, 1)
+    if int(n) == n:
+        n = int(n)
+    return f"{n} {unit}"
 
 
 def format_response(
     destination: str,
     date: pendulum.DateTime,
     steps_data: dict,
-    dist_today: int,
-    dist_total: int,
-    dist_remaining: int,
+    dist_today: float,
+    dist_total: float,
+    dist_remaining: float,
     address: t.Optional[str],
     poi: t.Optional[str],
     img_url: t.Optional[str],
     map_url: str,
+    traversal_map_url: t.Optional[str],
     weight_reports: t.List[str],
     finished: bool,
 ) -> dict:
@@ -355,34 +416,31 @@ def format_response(
     )
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": title_txt}})
 
-    distance_summary = f"Vi gikk *{dist_today} km*!"
+    distance_summary = f"Vi gikk *{round_meters(dist_today)}*!"
     distance_txt = distance_summary + (
-        f" Nå har vi gått {dist_total} km totalt på vår journey til {destination} -"
-        f" vi har {dist_remaining} km igjen til vi er framme."
+        f" Nå har vi gått {round_meters(dist_total)} totalt på vår journey til {destination} -"
+        f" vi har {round_meters(dist_remaining)} igjen til vi er framme."
     )
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": distance_txt}})
 
-    sorted_steps_data = sorted(steps_data, key=itemgetter("amount"), reverse=True)
     steps_txt = "Steps taken:"
-    for i, row in enumerate(sorted_steps_data):
+    for i, row in enumerate(steps_data):
         steps = row["amount"]
-        distance = round((steps * stride) / 1000, 1)
-        if distance < 1:
-            distance *= 100
-            unit = "m"
-        else:
-            unit = "km"
-        if int(distance) == distance:
-            distance = int(distance)
+        distance = round_meters(steps * stride)
         if i == 0:
-            amount = f"*{steps}* ({distance} {unit}) :star:"
+            amount = f"*{steps}* ({distance}) :star:"
         elif i == len(steps_data) - 1:
-            amount = f"_{steps}_ ({distance} {unit})"
+            amount = f"_{steps}_ ({distance})"
         else:
-            amount = f"{steps} ({distance} {unit})"
+            amount = f"{steps} ({distance})"
         desc = f"\n\t• {row['first_name']}: {amount}"
         steps_txt += desc
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": steps_txt}})
+
+    if traversal_map_url is not None:
+        blocks.append(
+            {"type": "image", "image_url": traversal_map_url, "alt_text": "Breakdown!"}
+        )
 
     location_txt = ""
     if address is not None:
@@ -432,30 +490,55 @@ def perform_daily_update(
     if journey["finished_at"] is not None or journey["started_at"] is None:
         return None
     steps_data, weight_reports = activity_func(conn, date)
-    store_steps(conn, steps_data, journey_id, date)
-    last_location = most_recent_location(conn, journey_id)
-    last_total_distance = last_location["distance"] if last_location else 0
+    steps_data.sort(key=itemgetter("amount"), reverse=True)
     steps_today = sum(data["amount"] for data in steps_data)
     if steps_today == 0:
         return None
+    store_steps(conn, steps_data, journey_id, date)
+
+    last_location = most_recent_location(conn, journey_id)
+    last_total_distance = last_location["distance"] if last_location else 0
+
     distance_today = steps_today * stride
     distance_total = distance_today + last_total_distance
-    loc = get_location(conn, journey_id, distance_total)
-    dist_remaining = loc["journey_distance"] - distance_total
-    store_location(conn, journey_id, date, loc)
-    finished = loc.pop("finished")
+    lat, lon, latest_waypoint_id, finished = get_location(
+        conn, journey_id, distance_total
+    )
+    address, street_view_img, map_url, poi = data_for_location(lat, lon)
+
+    traversal_map = generate_traversal_map(
+        conn, journey_id, last_location, lat, lon, distance_total
+    )
+    img_url, traversal_map_url = upload_images(
+        journey_id, latest_waypoint_id, street_view_img, traversal_map,
+    )
+    queries.add_location(
+        conn,
+        journey_id=journey_id,
+        latest_waypoint=latest_waypoint_id,
+        lat=lat,
+        lon=lon,
+        distance=distance_total,
+        date=date,
+        address=address,
+        img_url=img_url,
+        map_url=map_url,
+        traversal_map_url=traversal_map_url,
+        poi=poi,
+    )
     if finished:
         queries.finish_journey(conn, journey_id=journey_id, date=date)
     return {
         "date": date,
         "steps_data": steps_data,
-        "dist_today": round(distance_today / 1000, 1),
-        "dist_total": round(distance_total / 1000, 1),
-        "dist_remaining": round(dist_remaining / 1000, 1),
-        "address": loc["address"],
-        "poi": loc["poi"],
-        "img_url": loc["img_url"],
-        "map_url": loc["map_url"],
+        "dist_today": distance_today,
+        "dist_total": distance_total,
+        "dist_remaining": journey["distance"] - distance_total,
+        "address": address,
+        "poi": poi,
+        "img_url": img_url,
+        "map_url": map_url,
+        "traversal_map_url": traversal_map_url,
         "weight_reports": weight_reports,
         "finished": finished,
     }

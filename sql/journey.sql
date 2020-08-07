@@ -44,6 +44,7 @@ create table location (
     address text,
     img_url text,
     map_url text not null,
+    traversal_map_url text ,
     poi text
 );
 
@@ -153,7 +154,19 @@ from
 
 -- name: get_journey^
 select
-    *
+    *,
+    (
+        select
+            cum_dist
+        from
+            waypoint
+        where
+            journey_id = :journey_id
+        order by
+            cum_dist desc
+        fetch first
+            row only
+    ) as distance
 from
     journey
 where
@@ -176,7 +189,7 @@ where
     journey_id = :journey_id;
 
 
--- name: waypoints_before_distance
+-- name: waypoints_between_distances
 select
     lat,
     lon,
@@ -185,24 +198,18 @@ from
     waypoint
 where
     journey_id = :journey_id
-    and :distance > cum_dist;
+    and (
+        cum_dist between :low
+        and :high
+    )
+order by
+    cum_dist;
+
 
 
 -- name: get_waypoint_for_distance^
 select
-    *,
-    (
-        select
-            cum_dist
-        from
-            waypoint
-        where
-            journey_id = :journey_id
-        order by
-            cum_dist desc
-        fetch first
-            row only
-    ) as journey_distance
+    *
 from
     waypoint
 where
@@ -236,6 +243,7 @@ insert into
         address,
         img_url,
         map_url,
+        traversal_map_url,
         poi
     )
 values
@@ -249,6 +257,7 @@ values
         :address,
         :img_url,
         :map_url,
+        :traversal_map_url,
         :poi
     );
 
@@ -264,6 +273,16 @@ order by
     date desc
 fetch first
     row only;
+
+
+-- name: location_coordinates
+select
+    lat,
+    lon
+from
+    location
+where
+    journey_id = :journey_id
 
 
 -- name: add_steps*!

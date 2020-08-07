@@ -86,10 +86,10 @@ def insert_journey_data(conn) -> int:
 def example_update_data() -> dict:
     date = pendulum.datetime(2013, 3, 31, tz="UTC")
     expected_steps_data = [
+        {"first_name": "name6", "amount": 17782},
         {"first_name": "name2", "amount": 11521},
         {"first_name": "name3", "amount": 6380},
         {"first_name": "name5", "amount": 111},
-        {"first_name": "name6", "amount": 17782},
     ]
     for d in expected_steps_data:
         d["taken_at"] = date
@@ -97,13 +97,14 @@ def example_update_data() -> dict:
     return {
         "date": date,
         "steps_data": expected_steps_data,
-        "dist_today": 26.8,
-        "dist_total": 26.8,
-        "dist_remaining": 29.0,
+        "dist_today": 26845.5,
+        "dist_total": 26845.5,
+        "dist_remaining": 29016.651884,
         "address": "Address",
         "poi": "Poi",
         "img_url": "www.image",
         "map_url": "www.mapurl",
+        "traversal_map_url": "www.tmap",
         "weight_reports": ["name2 veier 60 kg"],
         "finished": False,
     }
@@ -117,11 +118,15 @@ def api_mocker():
         image_for_location=DEFAULT,
         map_url_for_location=DEFAULT,
         poi_for_location=DEFAULT,
+        render_map=DEFAULT,
+        upload_images=DEFAULT,
     ) as mocks:
         mocks["address_for_location"].return_value = "Address"
-        mocks["image_for_location"].return_value = "www.image"
+        mocks["image_for_location"].return_value = b"image"
         mocks["map_url_for_location"].return_value = "www.mapurl"
         mocks["poi_for_location"].return_value = "Poi"
+        mocks["render_map"].return_value = b"map"
+        mocks["upload_images"].return_value = "www.image", "www.tmap"
         yield
 
 
@@ -140,6 +145,7 @@ def test_list_journeys(
         "address": "address1",
         "img_url": "image1",
         "map_url": "map_url1",
+        "traversal_map_url": "tmap_url1",
         "poi": "poi1",
     }
 
@@ -152,11 +158,11 @@ def test_list_journeys(
         "address": "address2",
         "img_url": "image2",
         "map_url": "map_url2",
+        "traversal_map_url": "tmap_url2",
         "poi": "poi2",
     }
-
-    journey.store_location(conn, journey_id, date1, location1)
-    journey.store_location(conn, journey_id, date2, location2)
+    journey.queries.add_location(conn, journey_id=journey_id, date=date1, **location1)
+    journey.queries.add_location(conn, journey_id=journey_id, date=date2, **location2)
     response = client.get("/list_journeys")
     assert len(response.json["journeys"]) == 1
 
@@ -179,6 +185,7 @@ def test_detail_journey(client: FlaskClient, conn: connection):
     assert waypoints[length]["lon"] == loc["lon"]
     expected = {
         "destination": "Destination",
+        "distance": 55862.151884,
         "finished_at": None,
         "id": 1,
         "ongoing": True,
@@ -203,21 +210,14 @@ def test_parse_xml(conn):
 
 
 def test_get_location(conn: connection):
-    with api_mocker():
-        journey_id = insert_journey_data(conn)
-        location = journey.get_location(conn, journey_id, distance=300)
-    assert location == {
-        "lat": pytest.approx(47.58633461507472),
-        "lon": pytest.approx(40.69297732817553),
-        "distance": 300,
-        "latest_waypoint": 3,
-        "address": "Address",
-        "img_url": "www.image",
-        "map_url": "www.mapurl",
-        "poi": "Poi",
-        "finished": False,
-        "journey_distance": 55862.151884,
-    }
+    journey_id = insert_journey_data(conn)
+    lat, lon, latest_waypoint, finished = journey.get_location(
+        conn, journey_id, distance=300
+    )
+    assert lat == pytest.approx(47.58633461507472)
+    assert lon == pytest.approx(40.69297732817553)
+    assert latest_waypoint == 3
+    assert finished is False
 
 
 def test_store_get_most_recent_location(conn):
@@ -231,6 +231,7 @@ def test_store_get_most_recent_location(conn):
         "address": "address1",
         "img_url": "image1",
         "map_url": "map_url1",
+        "traversal_map_url": "tmap_url1",
         "poi": "poi1",
     }
 
@@ -243,11 +244,12 @@ def test_store_get_most_recent_location(conn):
         "address": "address2",
         "img_url": "image2",
         "map_url": "map_url2",
+        "traversal_map_url": "tmap_url2",
         "poi": "poi2",
     }
 
-    journey.store_location(conn, journey_id, date1, location1)
-    journey.store_location(conn, journey_id, date2, location2)
+    journey.queries.add_location(conn, journey_id=journey_id, date=date1, **location1)
+    journey.queries.add_location(conn, journey_id=journey_id, date=date2, **location2)
     j = journey.most_recent_location(conn, journey_id)
     location2["lat"] = pytest.approx(location2["lat"])
     location2["lon"] = pytest.approx(location2["lon"])
@@ -336,7 +338,7 @@ def test_format_response():
             {
                 "text": {
                     "text": "Vi gikk *26.8 km*! Nå har vi gått 26.8 km "
-                    "totalt på vår journey til Destinasjon - vi har 29.0 km igjen til "
+                    "totalt på vår journey til Destinasjon - vi har 29 km igjen til "
                     "vi er framme.",
                     "type": "mrkdwn",
                 },
@@ -349,12 +351,13 @@ def test_format_response():
                         "\t• name6: *17782* (13.3 km) :star:\n"
                         "\t• name2: 11521 (8.6 km)\n"
                         "\t• name3: 6380 (4.8 km)\n"
-                        "\t• name5: _111_ (10 m)"
+                        "\t• name5: _111_ (83.2 m)"
                     ),
                     "type": "mrkdwn",
                 },
                 "type": "section",
             },
+            {"alt_text": "Breakdown!", "image_url": "www.tmap", "type": "image"},
             {
                 "text": {
                     "text": "Vi har nå kommet til Address. Kveldens "
@@ -390,12 +393,12 @@ def test_format_response_no_address():
 
     data["address"] = None
     response = journey.format_response(**data)
-    address_block = response["blocks"][3]
+    address_block = response["blocks"][4]
     expected_address = {
         "text": {"text": "Kveldens underholdning er Poi.", "type": "mrkdwn"},
         "type": "section",
     }
-    img_block = response["blocks"][4]
+    img_block = response["blocks"][5]
     expected_img = {"alt_text": "Check it!", "image_url": "www.image", "type": "image"}
     assert address_block == expected_address
     assert img_block == expected_img
@@ -407,7 +410,7 @@ def test_format_response_nopoi():
 
     data["poi"] = None
     response = journey.format_response(**data)
-    address_block = response["blocks"][3]
+    address_block = response["blocks"][4]
     expected = {
         "type": "section",
         "text": {"type": "mrkdwn", "text": "Vi har nå kommet til Address. "},
@@ -421,7 +424,7 @@ def test_format_response_no_img_url():
 
     data["img_url"] = None
     response = journey.format_response(**data)
-    assert len(response["blocks"]) == 7
+    assert len(response["blocks"]) == 8
 
 
 def test_format_response_no_all():
@@ -431,6 +434,7 @@ def test_format_response_no_all():
     data["address"] = None
     data["poi"] = None
     data["img_url"] = None
+    data["traversal_map_url"] = None
     response = journey.format_response(**data)
     assert len(response["blocks"]) == 6
 
