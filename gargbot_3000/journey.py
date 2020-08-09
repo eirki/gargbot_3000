@@ -4,6 +4,7 @@ import base64
 import datetime as dt
 import hashlib
 import hmac
+from io import BytesIO
 from operator import itemgetter
 import os
 from pathlib import Path
@@ -12,6 +13,7 @@ import typing as t
 import urllib
 import urllib.parse as urlparse
 
+from PIL import Image
 import aiosql
 from dotenv import load_dotenv
 from dropbox import Dropbox
@@ -179,6 +181,19 @@ def store_steps(conn, steps, journey_id, date) -> None:
     queries.add_steps(conn, steps)
 
 
+def get_colors(conn: connection, steps_data: t.List[dict]) -> None:
+    names = [gargling["first_name"] for gargling in steps_data]
+    colors = queries.get_colors(conn, names=names)
+    colors_d = {
+        gargling["first_name"]: (gargling["color_name"], gargling["color_hex"])
+        for gargling in colors
+    }
+    for gargling in steps_data:
+        color_name, color_hex = colors_d[gargling["first_name"]]
+        gargling["color_name"] = color_name
+        gargling["color_hex"] = color_hex
+
+
 def address_for_location(lat, lon) -> t.Optional[str]:
     geolocator = Nominatim(user_agent=config.bot_name)
     try:
@@ -239,6 +254,23 @@ def poi_for_location(lat, lon) -> t.Optional[str]:
         return None
 
 
+def location_between_waypoints(
+    first_waypoint, last_waypoint, distance: float
+) -> t.Tuple[float, float]:
+    angle = gpxpy.geo.get_course(
+        first_waypoint["lat"],
+        first_waypoint["lon"],
+        last_waypoint["lat"],
+        last_waypoint["lon"],
+    )
+    delta = gpxpy.geo.LocationDelta(distance=distance, angle=angle)
+    first_waypoint_obj = gpxpy.geo.Location(
+        first_waypoint["lat"], first_waypoint["lon"]
+    )
+    current_lat, current_lon = delta.move(first_waypoint_obj)
+    return current_lat, current_lon
+
+
 def get_location(conn, journey_id, distance) -> t.Tuple[float, float, int, bool]:
     latest_waypoint = queries.get_waypoint_for_distance(
         conn, journey_id=journey_id, distance=distance
@@ -253,17 +285,9 @@ def get_location(conn, journey_id, distance) -> t.Tuple[float, float, int, bool]
     else:
         finished = False
         remaining_dist = distance - latest_waypoint["cum_dist"]
-        angle = gpxpy.geo.get_course(
-            latest_waypoint["lat"],
-            latest_waypoint["lon"],
-            next_waypoint["lat"],
-            next_waypoint["lon"],
+        current_lat, current_lon = location_between_waypoints(
+            latest_waypoint, next_waypoint, remaining_dist
         )
-        delta = gpxpy.geo.LocationDelta(distance=remaining_dist, angle=angle)
-        latest_waypoint_obj = gpxpy.geo.Location(
-            latest_waypoint["lat"], latest_waypoint["lon"]
-        )
-        current_lat, current_lon = delta.move(latest_waypoint_obj)
     return current_lat, current_lon, latest_waypoint["id"], finished
 
 
@@ -286,10 +310,12 @@ def traversal_data(
     current_lat: float,
     current_lon: float,
     current_distance: float,
+    steps_data: t.List[dict],
 ) -> t.Tuple[
     t.List[t.Tuple[float, float]],
     t.List[t.Tuple[float, float]],
     t.List[t.Tuple[float, float]],
+    t.List[t.Tuple[str, t.List[t.Tuple[float, float]]]],
 ]:
     if last_location is not None:
         old_waypoints = queries.waypoints_between_distances(
@@ -303,28 +329,80 @@ def traversal_data(
         location_coordinates = [(old_waypoints[0]["lon"], old_waypoints[0]["lat"])]
         location_coordinates.extend([(loc["lon"], loc["lat"]) for loc in locations])
         start_dist = last_location["distance"]
-        coords = [(last_location["lon"], last_location["lat"])]
+        overview_coords = [(last_location["lon"], last_location["lat"])]
     else:
         old_coords = []
         location_coordinates = []
         start_dist = 0
-        coords = []
+        overview_coords = []
 
     current_waypoints = queries.waypoints_between_distances(
         conn, journey_id=journey_id, low=start_dist, high=current_distance
     )
-    coords.extend([(loc["lon"], loc["lat"]) for loc in current_waypoints])
-    coords.append((current_lon, current_lat))
-    return old_coords, location_coordinates, coords
+    overview_coords.extend([(loc["lon"], loc["lat"]) for loc in current_waypoints])
+    overview_coords.append((current_lon, current_lat))
+
+    detailed_coords: t.List[t.Tuple[str, t.List[t.Tuple[float, float]]]] = []
+    waypoints_itr = iter(current_waypoints)
+    starting_location = last_location
+    for gargling in steps_data:
+        gargling_coords = []
+        if starting_location is not None:
+            gargling_coords.append(
+                (starting_location["lon"], starting_location["lat"],)
+            )
+            latest_waypoint = starting_location
+        distance = gargling["amount"] * stride
+        total_distance = start_dist + distance
+        for waypoint in waypoints_itr:
+            if waypoint["cum_dist"] < total_distance:
+                gargling_coords.append((waypoint["lon"], waypoint["lat"]))
+                latest_waypoint = waypoint
+            else:
+                remaining_dist = total_distance - waypoint["cum_dist"]
+                last_lat, last_lon = location_between_waypoints(
+                    latest_waypoint, waypoint, remaining_dist
+                )
+                break
+        else:
+            # last waypoint for last gargling: no break
+            last_lat = current_lat
+            last_lon = current_lon
+        gargling_coords.append((last_lon, last_lat))
+        detailed_coords.append((gargling["color_hex"], gargling_coords))
+        starting_location = {"lat": last_lat, "lon": last_lon}
+        start_dist = total_distance
+
+    return old_coords, location_coordinates, overview_coords, detailed_coords
 
 
-def render_map(traversal_map) -> t.Optional[bytes]:
+def render_map(map_: StaticMap) -> t.Optional[Image.Image]:
     try:
-        img = traversal_map.render()
-        return img.getvalue()
+        img = map_.render()
     except Exception:
-        log.error("Error rendering traversal map", exc_info=True)
+        log.error("Error rendering map", exc_info=True)
+        img = None
+    return img
+
+
+def merge_maps(
+    overview_img: t.Optional[Image.Image], detailed_img: t.Optional[Image.Image]
+) -> t.Optional[bytes]:
+    if overview_img is not None and detailed_img is not None:
+        img = Image.new(
+            "RGB", ((overview_img.width + detailed_img.width), overview_img.height)
+        )
+        img.paste(overview_img, (0, 0))
+        img.paste(detailed_img, (overview_img.width, 0))
+    elif overview_img is not None:
+        img = detailed_img
+    elif detailed_img is not None:
+        img = overview_img
+    else:
         return None
+    bytes_io = BytesIO()
+    img.save(bytes_io, format="JPEG")
+    return bytes_io.getvalue()
 
 
 def generate_traversal_map(
@@ -334,17 +412,31 @@ def generate_traversal_map(
     current_lat: float,
     current_lon: float,
     current_distance: float,
+    steps_data: t.List[dict],
 ) -> t.Optional[bytes]:
-    old_coords, locations, coords = traversal_data(
-        conn, journey_id, last_location, current_lat, current_lon, current_distance
+    old_coords, locations, overview_coords, detailed_coords = traversal_data(
+        conn,
+        journey_id,
+        last_location,
+        current_lat,
+        current_lon,
+        current_distance,
+        steps_data,
     )
-    traversal_map = StaticMap(width=500, height=300)
-    traversal_map.add_line(Line(old_coords, "grey", 2))
+    overview_map = StaticMap(width=500, height=300)
+    overview_map.add_line(Line(old_coords, "grey", 2))
     for lon, lat in locations:
-        traversal_map.add_marker(CircleMarker((lon, lat), "blue", 6))
-    traversal_map.add_line(Line(coords, "red", 2))
-    traversal_map.add_marker(CircleMarker((current_lon, current_lat), "red", 6))
-    img = render_map(traversal_map)
+        overview_map.add_marker(CircleMarker((lon, lat), "blue", 6))
+    overview_map.add_line(Line(overview_coords, "red", 2))
+    overview_map.add_marker(CircleMarker((current_lon, current_lat), "red", 6))
+
+    detailed_map = StaticMap(width=500, height=300)
+    for color, coords in detailed_coords:
+        detailed_map.add_line(Line(coords, color, 3))
+
+    overview_img = render_map(overview_map)
+    detailed_img = render_map(detailed_map)
+    img = merge_maps(overview_img, detailed_img)
     return img
 
 
@@ -433,7 +525,7 @@ def format_response(
             amount = f"_{steps}_ ({distance})"
         else:
             amount = f"{steps} ({distance})"
-        desc = f"\n\t• {row['first_name']}: {amount}"
+        desc = f"\n\t:dot-{row['color_name']}: {row['first_name']}: {amount}"
         steps_txt += desc
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": steps_txt}})
 
@@ -495,6 +587,7 @@ def perform_daily_update(
     if steps_today == 0:
         return None
     store_steps(conn, steps_data, journey_id, date)
+    get_colors(conn, steps_data)
 
     last_location = most_recent_location(conn, journey_id)
     last_total_distance = last_location["distance"] if last_location else 0
@@ -507,7 +600,7 @@ def perform_daily_update(
     address, street_view_img, map_url, poi = data_for_location(lat, lon)
 
     traversal_map = generate_traversal_map(
-        conn, journey_id, last_location, lat, lon, distance_total
+        conn, journey_id, last_location, lat, lon, distance_total, steps_data
     )
     img_url, traversal_map_url = upload_images(
         journey_id, latest_waypoint_id, street_view_img, traversal_map,

@@ -6,7 +6,9 @@ create table gargling (
   first_name text,
   birthday date not null,
   avatar text,
-  slack_avatar text
+  slack_avatar text,
+  color_hex text not null,
+  color_name text not null
 );
 
 
@@ -18,7 +20,9 @@ insert into
     slack_nick,
     first_name,
     birthday,
-    avatar
+    avatar,
+    color_name,
+    color_hex
   )
 values
   (
@@ -27,7 +31,9 @@ values
     :slack_nick,
     :first_name,
     :birthday,
-    :avatar
+    :avatar,
+    :color_name,
+    :color_hex
   );
 
 
@@ -58,3 +64,5 @@ from
   gargling
 where
   slack_id = :slack_id;
+
+

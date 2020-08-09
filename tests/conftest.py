@@ -37,16 +37,18 @@ class User:
     slack_nick: str
     birthday: dt.datetime
     avatar: str
+    color_hex: str
+    color_name: str
 
 users = [
-    User(id=2, first_name="name2", slack_id="s_id2", slack_nick="slack_nick2", birthday=dt.datetime(byear, 2, 1), avatar="2.jpg"),
-    User(id=3, first_name="name3", slack_id="s_id3", slack_nick="slack_nick3", birthday=dt.datetime(byear, 3, 1), avatar="3.jpg"),
-    User(id=5, first_name="name5", slack_id="s_id5", slack_nick="slack_nick5", birthday=dt.datetime(byear, 5, 1), avatar="5.jpg"),
-    User(id=6, first_name="name6", slack_id="s_id6", slack_nick="slack_nick6", birthday=dt.datetime(byear, 6, 1), avatar="6.jpg"),
-    User(id=7, first_name="name7", slack_id="s_id7", slack_nick="slack_nick7", birthday=dt.datetime(byear, 7, 1), avatar="7.jpg"),
-    User(id=9, first_name="name9", slack_id="s_id9", slack_nick="slack_nick9", birthday=dt.datetime(byear, 9, 1), avatar="9.jpg"),
-    User(id=10, first_name="name10", slack_id="s_id10", slack_nick="slack_nick10", birthday=dt.datetime(byear, 11, 1), avatar="10.jpg"),
-    User(id=11, first_name="name11", slack_id="s_id11", slack_nick="slack_nick11", birthday=dt.datetime(byear, 11, 1), avatar="11.jpg"),
+    User(id=2, first_name="name2", slack_id="s_id2", slack_nick="slack_nick2", birthday=dt.datetime(byear, 2, 1), avatar="2.jpg", color_name="green", color_hex="#3cb44b"),
+    User(id=3, first_name="name3", slack_id="s_id3", slack_nick="slack_nick3", birthday=dt.datetime(byear, 3, 1), avatar="3.jpg", color_name="orange", color_hex="#f58231"),
+    User(id=5, first_name="name5", slack_id="s_id5", slack_nick="slack_nick5", birthday=dt.datetime(byear, 5, 1), avatar="5.jpg", color_name="purple", color_hex="#911eb4"),
+    User(id=6, first_name="name6", slack_id="s_id6", slack_nick="slack_nick6", birthday=dt.datetime(byear, 6, 1), avatar="6.jpg", color_name="cyan", color_hex="#42d4f4"),
+    User(id=7, first_name="name7", slack_id="s_id7", slack_nick="slack_nick7", birthday=dt.datetime(byear, 7, 1), avatar="7.jpg", color_name="magenta", color_hex="#f032e6"),
+    User(id=9, first_name="name9", slack_id="s_id9", slack_nick="slack_nick9", birthday=dt.datetime(byear, 9, 1), avatar="9.jpg", color_name="lime", color_hex="#bfef45"),
+    User(id=10, first_name="name10", slack_id="s_id10", slack_nick="slack_nick10", birthday=dt.datetime(byear, 11, 1), avatar="10.jpg", color_name="red", color_hex="#e6194B"),
+    User(id=11, first_name="name11", slack_id="s_id11", slack_nick="slack_nick11", birthday=dt.datetime(byear, 11, 1), avatar="11.jpg", color_name="blue", color_hex="#4363d8"),
 ]
 
 

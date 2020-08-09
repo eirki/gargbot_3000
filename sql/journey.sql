@@ -44,7 +44,7 @@ create table location (
     address text,
     img_url text,
     map_url text not null,
-    traversal_map_url text ,
+    traversal_map_url text,
     poi text
 );
 
@@ -206,7 +206,6 @@ order by
     cum_dist;
 
 
-
 -- name: get_waypoint_for_distance^
 select
     *
@@ -282,7 +281,7 @@ select
 from
     location
 where
-    journey_id = :journey_id
+    journey_id = :journey_id;
 
 
 -- name: add_steps*!
@@ -302,6 +301,17 @@ values
         :taken_at,
         :amount
     );
+
+
+-- name: get_colors
+select
+    first_name,
+    color_name,
+    color_hex
+from
+    gargling
+where
+    first_name = any(:names);
 
 
 -- name: get_steps

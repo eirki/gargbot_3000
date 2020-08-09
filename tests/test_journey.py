@@ -6,6 +6,7 @@ import random
 import typing as t
 from unittest.mock import DEFAULT, Mock, patch
 
+from PIL import Image
 from flask.testing import FlaskClient
 import pendulum
 import psycopg2
@@ -91,9 +92,17 @@ def example_update_data() -> dict:
         {"first_name": "name3", "amount": 6380},
         {"first_name": "name5", "amount": 111},
     ]
-    for d in expected_steps_data:
+    colors = [
+        ("#42d4f4", "cyan"),
+        ("#3cb44b", "green"),
+        ("#f58231", "orange"),
+        ("#911eb4", "purple"),
+    ]
+    for d, (c_hex, c_name) in zip(expected_steps_data, colors):
         d["taken_at"] = date
         d["journey_id"] = 1
+        d["color_hex"] = c_hex
+        d["color_name"] = c_name
     return {
         "date": date,
         "steps_data": expected_steps_data,
@@ -125,7 +134,7 @@ def api_mocker():
         mocks["image_for_location"].return_value = b"image"
         mocks["map_url_for_location"].return_value = "www.mapurl"
         mocks["poi_for_location"].return_value = "Poi"
-        mocks["render_map"].return_value = b"map"
+        mocks["render_map"].return_value = Image.new("RGB", (500, 300))
         mocks["upload_images"].return_value = "www.image", "www.tmap"
         yield
 
@@ -348,10 +357,10 @@ def test_format_response():
                 "text": {
                     "text": (
                         "Steps taken:\n"
-                        "\t• name6: *17782* (13.3 km) :star:\n"
-                        "\t• name2: 11521 (8.6 km)\n"
-                        "\t• name3: 6380 (4.8 km)\n"
-                        "\t• name5: _111_ (83.2 m)"
+                        "\t:dot-cyan: name6: *17782* (13.3 km) :star:\n"
+                        "\t:dot-green: name2: 11521 (8.6 km)\n"
+                        "\t:dot-orange: name3: 6380 (4.8 km)\n"
+                        "\t:dot-purple: name5: _111_ (83.2 m)"
                     ),
                     "type": "mrkdwn",
                 },
