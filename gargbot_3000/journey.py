@@ -392,8 +392,10 @@ def merge_maps(
         img = Image.new(
             "RGB", ((overview_img.width + detailed_img.width), overview_img.height)
         )
+        sep = Image.new("RGB", (3, overview_img.height), (255, 255, 255))
         img.paste(overview_img, (0, 0))
-        img.paste(detailed_img, (overview_img.width, 0))
+        img.paste(sep, (overview_img.width, 0))
+        img.paste(detailed_img, (overview_img.width + sep.width, 0))
     elif overview_img is not None:
         img = detailed_img
     elif detailed_img is not None:
@@ -431,8 +433,10 @@ def generate_traversal_map(
     overview_map.add_marker(CircleMarker((current_lon, current_lat), "red", 6))
 
     detailed_map = StaticMap(width=500, height=300)
+    detailed_map.add_marker(CircleMarker(detailed_coords[0][1][0], "grey", 6))
     for color, coords in detailed_coords:
-        detailed_map.add_line(Line(coords, color, 3))
+        detailed_map.add_line(Line(coords, color, 2))
+        detailed_map.add_marker(CircleMarker(coords[-1], color, 6))
 
     overview_img = render_map(overview_map)
     detailed_img = render_map(detailed_map)
