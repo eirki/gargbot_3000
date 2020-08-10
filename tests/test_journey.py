@@ -333,13 +333,13 @@ def test_format_response():
     data = example_update_data()
     data["destination"] = "Destinasjon"
 
-    formatted = journey.format_response(**data)
+    formatted = journey.format_response(n_day=8, **data)
     expected = {
-        "text": "*Ekspedisjonsrapport for 31.3.2013*: Vi gikk *26.8 km*!",
+        "text": "*Ekspedisjonsrapport 31.3.2013 - dag 8*: Vi gikk *26.8 km*!",
         "blocks": [
             {
                 "text": {
-                    "text": "*Ekspedisjonsrapport for 31.3.2013*:",
+                    "text": "*Ekspedisjonsrapport 31.3.2013 - dag 8*",
                     "type": "mrkdwn",
                 },
                 "type": "section",
@@ -401,7 +401,7 @@ def test_format_response_no_address():
     data["destination"] = "Destinasjon"
 
     data["address"] = None
-    response = journey.format_response(**data)
+    response = journey.format_response(n_day=8, **data)
     address_block = response["blocks"][4]
     expected_address = {
         "text": {"text": "Kveldens underholdning er Poi.", "type": "mrkdwn"},
@@ -418,7 +418,7 @@ def test_format_response_nopoi():
     data["destination"] = "Destinasjon"
 
     data["poi"] = None
-    response = journey.format_response(**data)
+    response = journey.format_response(n_day=8, **data)
     address_block = response["blocks"][4]
     expected = {
         "type": "section",
@@ -432,7 +432,7 @@ def test_format_response_no_img_url():
     data["destination"] = "Destinasjon"
 
     data["img_url"] = None
-    response = journey.format_response(**data)
+    response = journey.format_response(n_day=8, **data)
     assert len(response["blocks"]) == 8
 
 
@@ -444,7 +444,7 @@ def test_format_response_no_all():
     data["poi"] = None
     data["img_url"] = None
     data["traversal_map_url"] = None
-    response = journey.format_response(**data)
+    response = journey.format_response(n_day=8, **data)
     assert len(response["blocks"]) == 6
 
 
@@ -514,5 +514,9 @@ def test_journey_main(
     with api_mocker():
         dat = journey.main(conn)
     assert len(dat) == 2
-    assert dat[0]["blocks"][0]["text"]["text"] == "*Ekspedisjonsrapport for 31.3.2013*:"
-    assert dat[1]["blocks"][0]["text"]["text"] == "*Ekspedisjonsrapport for 1.4.2013*:"
+    assert (
+        dat[0]["blocks"][0]["text"]["text"] == "*Ekspedisjonsrapport 31.3.2013 - dag 1*"
+    )
+    assert (
+        dat[1]["blocks"][0]["text"]["text"] == "*Ekspedisjonsrapport 1.4.2013 - dag 2*"
+    )

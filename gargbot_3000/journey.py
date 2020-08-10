@@ -425,14 +425,15 @@ def generate_traversal_map(
         current_distance,
         steps_data,
     )
-    overview_map = StaticMap(width=500, height=300)
+    template = "https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png"
+    overview_map = StaticMap(width=500, height=300, url_template=template)
     overview_map.add_line(Line(old_coords, "grey", 2))
     for lon, lat in locations:
         overview_map.add_marker(CircleMarker((lon, lat), "blue", 6))
     overview_map.add_line(Line(overview_coords, "red", 2))
     overview_map.add_marker(CircleMarker((current_lon, current_lat), "red", 6))
 
-    detailed_map = StaticMap(width=500, height=300)
+    detailed_map = StaticMap(width=500, height=300, url_template=template)
     detailed_map.add_marker(CircleMarker(detailed_coords[0][1][0], "grey", 6))
     for color, coords in detailed_coords:
         detailed_map.add_line(Line(coords, color, 2))
@@ -475,105 +476,6 @@ def most_recent_location(conn, journey_id) -> t.Optional[dict]:
     loc = dict(loc)
     loc["date"] = pendulum.instance(loc["date"])
     return loc
-
-
-def round_meters(n: float) -> str:
-    if n < 1000:
-        unit = "m"
-    else:
-        n /= 1000
-        unit = "km"
-    n = round(n, 1)
-    if int(n) == n:
-        n = int(n)
-    return f"{n} {unit}"
-
-
-def format_response(
-    destination: str,
-    date: pendulum.DateTime,
-    steps_data: dict,
-    dist_today: float,
-    dist_total: float,
-    dist_remaining: float,
-    address: t.Optional[str],
-    poi: t.Optional[str],
-    img_url: t.Optional[str],
-    map_url: str,
-    traversal_map_url: t.Optional[str],
-    weight_reports: t.List[str],
-    finished: bool,
-) -> dict:
-    blocks = []
-    title_txt = (
-        f"*Ekspedisjonsrapport for {date.day}.{date.month}.{date.year}*:"
-        if not finished
-        else "*Ekspedisjon complete!*"
-    )
-    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": title_txt}})
-
-    distance_summary = f"Vi gikk *{round_meters(dist_today)}*!"
-    distance_txt = distance_summary + (
-        f" Nå har vi gått {round_meters(dist_total)} totalt på vår journey til {destination} -"
-        f" vi har {round_meters(dist_remaining)} igjen til vi er framme."
-    )
-    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": distance_txt}})
-
-    steps_txt = "Steps taken:"
-    for i, row in enumerate(steps_data):
-        steps = row["amount"]
-        distance = round_meters(steps * stride)
-        if i == 0:
-            amount = f"*{steps}* ({distance}) :star:"
-        elif i == len(steps_data) - 1:
-            amount = f"_{steps}_ ({distance})"
-        else:
-            amount = f"{steps} ({distance})"
-        desc = f"\n\t:dot-{row['color_name']}: {row['first_name']}: {amount}"
-        steps_txt += desc
-    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": steps_txt}})
-
-    if traversal_map_url is not None:
-        blocks.append(
-            {"type": "image", "image_url": traversal_map_url, "alt_text": "Breakdown!"}
-        )
-
-    location_txt = ""
-    if address is not None:
-        location_txt += f"Vi har nå kommet til {address}. "
-    if poi is not None:
-        location_txt += f"Kveldens underholdning er {poi}."
-    if location_txt:
-        blocks.append(
-            {"type": "section", "text": {"type": "mrkdwn", "text": location_txt}}
-        )
-
-    if img_url is not None:
-        alt_text = address if address is not None else "Check it!"
-        blocks.append({"type": "image", "image_url": img_url, "alt_text": alt_text})
-
-    blocks.append(
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"<{map_url}|Se deg litt rundt da vel!>",
-            },
-        }
-    )
-
-    if weight_reports:
-        blocks.append({"type": "divider"})
-        weight_txt = "\n\n".join(weight_reports)
-        blocks.append(
-            {
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": f"Also: {weight_txt}"},
-            }
-        )
-
-    response = {"text": f"{title_txt} {distance_summary}", "blocks": blocks}
-    return response
 
 
 def perform_daily_update(
@@ -657,6 +559,106 @@ def days_to_update(conn, journey_id, date) -> t.Iterable[dt.datetime]:
         yield day
 
 
+def round_meters(n: float) -> str:
+    if n < 1000:
+        unit = "m"
+    else:
+        n /= 1000
+        unit = "km"
+    n = round(n, 1)
+    if int(n) == n:
+        n = int(n)
+    return f"{n} {unit}"
+
+
+def format_response(
+    destination: str,
+    n_day: int,
+    date: pendulum.DateTime,
+    steps_data: dict,
+    dist_today: float,
+    dist_total: float,
+    dist_remaining: float,
+    address: t.Optional[str],
+    poi: t.Optional[str],
+    img_url: t.Optional[str],
+    map_url: str,
+    traversal_map_url: t.Optional[str],
+    weight_reports: t.List[str],
+    finished: bool,
+) -> dict:
+    blocks = []
+    title_txt = (
+        f"*Ekspedisjonsrapport {date.day}.{date.month}.{date.year} - dag {n_day}*"
+        if not finished
+        else "*Ekspedisjon complete!*"
+    )
+    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": title_txt}})
+
+    distance_summary = f"Vi gikk *{round_meters(dist_today)}*!"
+    distance_txt = distance_summary + (
+        f" Nå har vi gått {round_meters(dist_total)} totalt på vår journey til {destination} -"
+        f" vi har {round_meters(dist_remaining)} igjen til vi er framme."
+    )
+    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": distance_txt}})
+
+    steps_txt = "Steps taken:"
+    for i, row in enumerate(steps_data):
+        steps = row["amount"]
+        distance = round_meters(steps * stride)
+        if i == 0:
+            amount = f"*{steps}* ({distance}) :star:"
+        elif i == len(steps_data) - 1:
+            amount = f"_{steps}_ ({distance})"
+        else:
+            amount = f"{steps} ({distance})"
+        desc = f"\n\t:dot-{row['color_name']}: {row['first_name']}: {amount}"
+        steps_txt += desc
+    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": steps_txt}})
+
+    if traversal_map_url is not None:
+        blocks.append(
+            {"type": "image", "image_url": traversal_map_url, "alt_text": "Breakdown!"}
+        )
+
+    location_txt = ""
+    if address is not None:
+        location_txt += f"Vi har nå kommet til {address}. "
+    if poi is not None:
+        location_txt += f"Kveldens underholdning er {poi}."
+    if location_txt:
+        blocks.append(
+            {"type": "section", "text": {"type": "mrkdwn", "text": location_txt}}
+        )
+
+    if img_url is not None:
+        alt_text = address if address is not None else "Check it!"
+        blocks.append({"type": "image", "image_url": img_url, "alt_text": alt_text})
+
+    blocks.append(
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"<{map_url}|Se deg litt rundt da vel!>",
+            },
+        }
+    )
+
+    if weight_reports:
+        blocks.append({"type": "divider"})
+        weight_txt = "\n\n".join(weight_reports)
+        blocks.append(
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": f"Also: {weight_txt}"},
+            }
+        )
+
+    response = {"text": f"{title_txt}: {distance_summary}", "blocks": blocks}
+    return response
+
+
 def main(conn) -> t.List[dict]:
     ongoing_journey = queries.get_ongoing_journey(conn)
     journey_id = ongoing_journey["id"]
@@ -672,7 +674,10 @@ def main(conn) -> t.List[dict]:
                 date=date,
             )
             if datum:
-                formatted = format_response(destination=destination, **datum)
+                n_day = (date - ongoing_journey["started_at"]).days + 1
+                formatted = format_response(
+                    destination=destination, n_day=n_day, **datum
+                )
                 data.append(formatted)
         except Exception as exc:
             log.exception(exc)
