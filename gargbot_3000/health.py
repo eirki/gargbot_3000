@@ -107,6 +107,18 @@ class Withings:
         return client
 
     @staticmethod
+    def steps(client: WithingsApi, date: pendulum.DateTime) -> t.Optional[int]:
+        result = client.measure_get_activity(
+            data_fields=[GetActivityField.STEPS],
+            startdateymd=date,
+            enddateymd=date.add(days=1),
+        )
+        entry = next(
+            (act for act in result.activities if act.date.day == date.day), None,
+        )
+        return entry.steps if entry else None
+
+    @staticmethod
     def weight(client: WithingsApi, date: pendulum.DateTime) -> t.Optional[dict]:
         return None
         data = client.measure_get_meas(
@@ -124,16 +136,8 @@ class Withings:
         }
 
     @staticmethod
-    def steps(client: WithingsApi, date: pendulum.DateTime) -> t.Optional[int]:
-        result = client.measure_get_activity(
-            data_fields=[GetActivityField.STEPS],
-            startdateymd=date,
-            enddateymd=date.add(days=1),
-        )
-        entry = next(
-            (act for act in result.activities if act.date.day == date.day), None,
-        )
-        return entry.steps if entry else None
+    def bodyfat(client: WithingsApi, date: pendulum.DateTime) -> None:
+        return None
 
     @staticmethod
     def sleep(client: WithingsApi) -> str:
@@ -201,6 +205,16 @@ class Fitbit:
         return client
 
     @staticmethod
+    def steps(client: FitbitApi, date: pendulum.DateTime) -> t.Optional[int]:
+        data = client.time_series(
+            resource="activities/steps", base_date=date, period="1d"
+        )
+        if not data["activities-steps"]:
+            return None
+        entry = data["activities-steps"][0]
+        return int(entry["value"]) if entry else None
+
+    @staticmethod
     def weight(client: FitbitApi, date: pendulum.DateTime) -> t.Optional[dict]:
         data = client.get_bodyweight(base_date=date, period="1w")
         if len(data["weight"]) == 0:
@@ -215,14 +229,21 @@ class Fitbit:
         return most_recent
 
     @staticmethod
-    def steps(client: FitbitApi, date: pendulum.DateTime) -> t.Optional[int]:
-        data = client.time_series(
-            resource="activities/steps", base_date=date, period="1d"
-        )
-        if not data["activities-steps"]:
+    def bodyfat(client: FitbitApi, date: pendulum.DateTime) -> t.Optional[dict]:
+        data = client.get_bodyfat(base_date=date, period="1w")
+        if len(data["bodyfat"]) == 0:
+            log.info("No bodyfat data")
             return None
-        entry = data["activities-steps"][0]
-        return int(entry["value"]) if entry else None
+        entries = data["bodyfat"]
+        for entry in entries:
+            entry["datetime"] = pendulum.parse(f"{entry['date']}T{entry['time']}")
+        entries.sort(key=itemgetter("datetime"), reverse=True)
+        most_recent = entries[0]
+        if (date - most_recent["datetime"]).days > 2:
+            log.info(f"No recent bodyfat data after {most_recent['datetime']}")
+            return None
+        log.info(f"bodyfat data: {most_recent}")
+        return most_recent
 
     @staticmethod
     def sleep(client: FitbitApi) -> str:
@@ -296,25 +317,6 @@ def toggle_report():
     return Response(status=200)
 
 
-def weight(clients, date: pendulum.DateTime) -> t.List[str]:
-    reports = []
-    for name, (client, service) in clients.items():
-        try:
-            weight_data = service.value.weight(client, date)
-        except Exception:
-            log.error(f"Error getting {service} weight data for {name}", exc_info=True)
-            continue
-        if weight_data is None:
-            continue
-        elapsed = (date - weight_data["datetime"]).days
-        if elapsed < 2:
-            desc = f"{name} veier nå *{weight_data['weight']}* kg."
-        else:
-            desc = f"{name} har ikke veid seg på *{elapsed}* dager. Skjerpings!"
-        reports.append(desc)
-    return reports
-
-
 def steps(clients, date: pendulum.DateTime) -> t.List[dict]:
     step_amounts = []
     for name, (client, service) in clients.items():
@@ -329,6 +331,37 @@ def steps(clients, date: pendulum.DateTime) -> t.List[dict]:
     return step_amounts
 
 
+def body_details(clients, date: pendulum.DateTime) -> t.List[str]:
+    reports = []
+    for name, (client, service) in clients.items():
+        desc = None
+        try:
+            weight_data = service.value.weight(client, date)
+        except Exception:
+            log.error(f"Error getting {service} weight data for {name}", exc_info=True)
+            weight_data = None
+        try:
+            bodyfat_data = service.value.bodyfat(client, date)["fat"]
+        except Exception:
+            log.error(f"Error getting {service} bodyfat data for {name}", exc_info=True)
+            bodyfat_data = None
+
+        if weight_data:
+            elapsed = (date - weight_data["datetime"]).days
+            if elapsed < 2:
+                desc = f"{name} veier nå *{weight_data['weight']}* kg."
+            else:
+                desc = f"{name} har ikke veid seg på *{elapsed}* dager. Skjerpings!"
+            if bodyfat_data:
+                desc += f"Bodyfat prosent er {bodyfat_data}"
+        elif bodyfat_data:
+            desc = f"{name} sin bodyfat prosent er {bodyfat_data}"
+
+        if desc:
+            reports.append(desc)
+    return reports
+
+
 def activity(
     conn: connection, date: pendulum.DateTime
 ) -> t.Optional[t.Tuple[list, list]]:
@@ -341,5 +374,5 @@ def activity(
         client = service.value.init_client(token)
         clients[token["first_name"]] = (client, service)
     steps_data = steps(clients, date)
-    weight_data = weight(clients, date)
-    return steps_data, weight_data
+    body_reports = body_details(clients, date)
+    return steps_data, body_reports
