@@ -89,9 +89,7 @@ def test_handle_redirect(
 ):
     user, fake_id, fake_token = fake_tokens[service]
     mock_jwt_identity.return_value = user.id
-    with patch(
-        f"gargbot_3000.health.{service.capitalize()}.handle_redirect"
-    ) as mock_handler:
+    with patch(f"gargbot_3000.health.{service.capitalize()}.token") as mock_handler:
         mock_handler.return_value = fake_id, fake_token
         response = client.get(f"/{service}/redirect", query_string={"code": "123"})
     assert response.status_code == 200

@@ -2,28 +2,21 @@
 # coding: utf-8
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
-import datetime as dt
-import enum
-from operator import attrgetter, itemgetter
+from operator import itemgetter
 import typing as t
 
 import accesslink as polar
 import aiosql
 from fitbit import Fitbit as FitbitApi
 from fitbit.api import FitbitOauth2Client
-from flask import Blueprint, Request, Response, current_app, jsonify, request
+from flask import Blueprint, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 import pendulum
 from psycopg2.extensions import connection
 import requests
 import withings_api
 from withings_api import AuthScope, WithingsApi, WithingsAuth
-from withings_api.common import (
-    Credentials,
-    GetActivityField,
-    GetSleepSummaryField,
-    MeasureType,
-)
+from withings_api.common import Credentials, GetActivityField
 
 from gargbot_3000 import config
 from gargbot_3000 import database as db
@@ -70,11 +63,11 @@ class HealthService(metaclass=ABCMeta):
         return Service
 
     @abstractmethod
-    def authorize_user(cls) -> str:
+    def authorization_url(cls) -> str:
         pass
 
     @abstractmethod
-    def handle_redirect(cls, req: Request) -> t.Tuple[service_user_id_type, token_type]:
+    def token(cls, code: str) -> t.Tuple[service_user_id_type, token_type]:
         pass
 
     @staticmethod
@@ -101,12 +94,11 @@ class Withings(HealthService):
         )
         self.client: WithingsAuth = client
 
-    def authorize_user(self) -> str:
+    def authorization_url(self) -> str:
         url = self.client.get_authorize_url()
         return url
 
-    def handle_redirect(self, req: Request) -> t.Tuple[int, Credentials]:
-        code = req.args["code"]
+    def token(self, code: str) -> t.Tuple[int, Credentials]:
         credentials = self.client.get_credentials(code)
         return credentials.userid, credentials
 
@@ -138,13 +130,12 @@ class Fitbit(HealthService):
         )
         self.client: FitbitOauth2Client = client
 
-    def authorize_user(self) -> str:
+    def authorization_url(self) -> str:
         scope = ["activity", "heartrate", "sleep", "weight"]
         url, _ = self.client.authorize_token_url(scope=scope)
         return url
 
-    def handle_redirect(self, req: Request) -> t.Tuple[str, dict]:
-        code = req.args["code"]
+    def token(self, code: str) -> t.Tuple[str, dict]:
         self.client.fetch_access_token(code)
         token = self.client.session.token
         return token["user_id"], token
@@ -174,12 +165,11 @@ class Polar(HealthService):
         )
         self.client: polar.AccessLink = client
 
-    def authorize_user(self) -> str:
+    def authorization_url(self) -> str:
         auth_url = self.client.get_authorization_url()
         return auth_url
 
-    def handle_redirect(self, req: Request) -> t.Tuple[int, dict]:
-        code = req.args["code"]
+    def token(self, code: str) -> t.Tuple[int, dict]:
         token = self.client.get_access_token(code)
         user_id = token["x_user_id"]
         try:
@@ -219,7 +209,8 @@ def authorize(service_name: str):
         )
     if data is None:
         log.info("not registered")
-        url = HealthService.init(service_name).authorize_user()
+        service = HealthService.init(service_name)
+        url = service.authorization_url()
         log.info(url)
         response = jsonify(auth_url=url)
     else:
@@ -238,15 +229,16 @@ def handle_redirect(service_name: str):
         raise Exception("JWT token issued to None")
     log.info(f"gargling_id: {gargling_id}")
     log.info(request)
-    Service = HealthService.init(service_name)
-    service_user_id, token = Service.handle_redirect(request)
+    code = request.args["code"]
+    service = HealthService.init(service_name)
+    service_user_id, token = service.token(code)
     with current_app.pool.get_connection() as conn:
-        Service.persist_token(token, conn)
+        service.persist_token(token, conn)
         queries.match_ids(
             conn,
             gargling_id=gargling_id,
             service_user_id=service_user_id,
-            service=Service.name,
+            service=service.name,
         )
         conn.commit()
     return Response(status=200)
@@ -257,11 +249,11 @@ def handle_redirect(service_name: str):
 def toggle_report():
     gargling_id = get_jwt_identity()
     content = request.json
-    Service = HealthService.init(content["service"])
+    service = HealthService.init(content["service"])
     enable = content["enable"]
     with current_app.pool.get_connection() as conn:
         queries.toggle_report(
-            conn, enable_=enable, gargling_id=gargling_id, service=Service.name
+            conn, enable_=enable, gargling_id=gargling_id, service=service.name
         )
         conn.commit()
     return Response(status=200)
