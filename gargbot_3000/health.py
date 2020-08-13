@@ -261,6 +261,7 @@ def handle_redirect(service_name: str):
     if gargling_id is None:
         raise Exception("JWT token issued to None")
     log.info(f"gargling_id: {gargling_id}")
+    log.info(request)
     Service = HealthService.init(service_name)
     service_user_id, token = Service.handle_redirect(request)
     with current_app.pool.get_connection() as conn:

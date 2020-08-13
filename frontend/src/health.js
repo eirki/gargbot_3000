@@ -33,7 +33,7 @@ function forwardServiceCode(service, slackToken, code, state) {
     })
         .then(response => {
             if (response.status !== 200) {
-                console.log("Failed to authenticletate:" + response.status);
+                throw `Failed to authenticate:${response.status}`;
             }
         })
         .catch(err => {
