@@ -16,15 +16,12 @@ function getCodeifRedirected() {
     const urlParams = new URLSearchParams(queryString)
     const code = urlParams.get("code")
     console.log(code)
-    const state = urlParams.get("state")
-    console.log(state)
-    return [code, state]
+    return code
 }
 
-function forwardServiceCode(service, slackToken, code, state) {
+function forwardServiceCode(service, slackToken, code) {
     const url = new URL(`/${service}/redirect`, config.backend_url)
     url.searchParams.set('code', code);
-    url.searchParams.set('state', state);
     return fetch(url, {
         method: 'GET',
         headers: {
@@ -144,10 +141,10 @@ async function main() {
         redirectLogin(service)
     }
 
-    let [serviceCode, state] = getCodeifRedirected();
+    let serviceCode = getCodeifRedirected();
     if (serviceCode != null) {
         // in the process of logging in to service
-        await forwardServiceCode(service, slackToken, serviceCode, state)
+        await forwardServiceCode(service, slackToken, serviceCode)
     }
 
     let user_data = await authorizeService(service, slackToken)
