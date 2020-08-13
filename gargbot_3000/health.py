@@ -57,28 +57,22 @@ service_user_id_type = t.Union[int, str]
 
 class HealthService(metaclass=ABCMeta):
     name: str
+    client: t.Union[WithingsAuth, FitbitOauth2Client, polar.AccessLink]
 
     @classmethod
-    def init(cls, service_name: str) -> t.Type["HealthService"]:
-        services = {
+    def init(cls, service_name: str) -> "HealthService":
+        services: t.Dict[str, t.Type["HealthService"]] = {
             "withings": Withings,
             "fitbit": Fitbit,
             "polar": Polar,
         }
-        Service = services[service_name]
+        Service = services[service_name]()
         return Service
 
-    @classmethod
-    @abstractmethod
-    def auth_client(cls):
-        pass
-
-    @classmethod
     @abstractmethod
     def authorize_user(cls) -> str:
         pass
 
-    @classmethod
     @abstractmethod
     def handle_redirect(cls, req: Request) -> t.Tuple[service_user_id_type, token_type]:
         pass
@@ -92,8 +86,7 @@ class HealthService(metaclass=ABCMeta):
 class Withings(HealthService):
     name = "withings"
 
-    @classmethod
-    def auth_client(cls) -> WithingsAuth:
+    def __init__(self):
         scope = (
             AuthScope.USER_ACTIVITY,
             AuthScope.USER_METRICS,
@@ -106,19 +99,15 @@ class Withings(HealthService):
             callback_uri=config.withings_redirect_uri,
             scope=scope,
         )
-        return client
+        self.client: WithingsAuth = client
 
-    @classmethod
-    def authorize_user(cls) -> str:
-        auth_client = cls.auth_client()
-        url = auth_client.get_authorize_url()
+    def authorize_user(self) -> str:
+        url = self.client.get_authorize_url()
         return url
 
-    @classmethod
-    def handle_redirect(cls, req: Request) -> t.Tuple[int, Credentials]:
+    def handle_redirect(self, req: Request) -> t.Tuple[int, Credentials]:
         code = req.args["code"]
-        auth_client = cls.auth_client()
-        credentials = auth_client.get_credentials(code)
+        credentials = self.client.get_credentials(code)
         return credentials.userid, credentials
 
     @staticmethod
@@ -140,29 +129,24 @@ class Withings(HealthService):
 class Fitbit(HealthService):
     name = "fitbit"
 
-    @staticmethod
-    def auth_client() -> FitbitOauth2Client:
+    def __init__(self):
         client = FitbitOauth2Client(
             config.fitbit_client_id,
             config.fitbit_client_secret,
             redirect_uri=config.fitbit_redirect_uri,
             timeout=10,
         )
-        return client
+        self.client: FitbitOauth2Client = client
 
-    @classmethod
-    def authorize_user(cls) -> str:
+    def authorize_user(self) -> str:
         scope = ["activity", "heartrate", "sleep", "weight"]
-        auth_client = cls.auth_client()
-        url, _ = auth_client.authorize_token_url(scope=scope)
+        url, _ = self.client.authorize_token_url(scope=scope)
         return url
 
-    @classmethod
-    def handle_redirect(cls, req: Request) -> t.Tuple[str, dict]:
+    def handle_redirect(self, req: Request) -> t.Tuple[str, dict]:
         code = req.args["code"]
-        auth_client = cls.auth_client()
-        auth_client.fetch_access_token(code)
-        token = auth_client.session.token
+        self.client.fetch_access_token(code)
+        token = self.client.session.token
         return token["user_id"], token
 
     @staticmethod
@@ -182,32 +166,24 @@ class Fitbit(HealthService):
 class Polar(HealthService):
     name = "polar"
 
-    @classmethod
-    @abstractmethod
-    def auth_client(cls):
+    def __init__(self):
         client = polar.AccessLink(
             client_id=config.polar_client_id,
             client_secret=config.polar_client_secret,
             redirect_url=config.polar_redirect_uri,
         )
-        return client
+        self.client: polar.AccessLink = client
 
-    @classmethod
-    @abstractmethod
-    def authorize_user(cls) -> str:
-        auth_client = cls.auth_client()
-        auth_url = auth_client.get_authorization_url()
+    def authorize_user(self) -> str:
+        auth_url = self.client.get_authorization_url()
         return auth_url
 
-    @classmethod
-    @abstractmethod
-    def handle_redirect(cls, req: Request) -> t.Tuple[int, dict]:
+    def handle_redirect(self, req: Request) -> t.Tuple[int, dict]:
         code = req.args["code"]
-        auth_client = cls.auth_client()
-        token = auth_client.get_access_token(code)
+        token = self.client.get_access_token(code)
         user_id = token["x_user_id"]
         try:
-            auth_client.users.register(access_token=token)
+            self.client.users.register(access_token=token)
         except requests.exceptions.HTTPError as e:
             # Error 409 Conflict means that the user has already been registered for this client.
             # For most applications, that error can be ignored.
