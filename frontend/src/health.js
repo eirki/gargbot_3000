@@ -33,14 +33,11 @@ function forwardServiceCode(service, slackToken, code, state) {
     })
         .then(response => {
             if (response.status !== 200) {
+                let elem = document.getElementById("msg");
+                elem.innerHTML = `Error sending ${service} code to gargbot`
                 throw `Failed to authenticate:${response.status}`;
             }
         })
-        .catch(err => {
-            console.log('Fetch Error', err)
-            let elem = document.getElementById("msg");
-            elem.innerHTML = `error sending ${service} Code to gargbot`
-        });
 
 }
 
@@ -55,6 +52,8 @@ function authorizeService(service, token) {
     })
         .then(response => {
             if (response.status !== 200) {
+                let elem = document.getElementById("msg");
+                elem.innerHTML = `Error authenticating ${service}`
                 throw "Failed to authenticate"
             }
             return response
@@ -69,7 +68,6 @@ function authorizeService(service, token) {
             console.log(data);
             return data
         })
-        .catch(err => console.log('Fetch Error', err));
 
 }
 
@@ -120,6 +118,7 @@ function toggleReport(service, token, enable) {
         })
 }
 
+
 function buttonClickMaker(service, token) {
     async function inner() {
         this.disabled = true;
@@ -135,6 +134,8 @@ function buttonClickMaker(service, token) {
     }
     return inner
 }
+
+
 async function main() {
     let service = parseService();
     let slackToken = getToken();
