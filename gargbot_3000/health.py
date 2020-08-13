@@ -51,6 +51,10 @@ def connection_context(
             conn.close()
 
 
+token_type = t.Union[Credentials, dict]
+service_user_id_type = t.Union[int, str]
+
+
 class HealthService(metaclass=ABCMeta):
     name: str
 
@@ -76,7 +80,7 @@ class HealthService(metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
-    def handle_redirect(cls, req: Request):
+    def handle_redirect(cls, req: Request) -> t.Tuple[service_user_id_type, token_type]:
         pass
 
     @staticmethod
@@ -111,7 +115,7 @@ class Withings(HealthService):
         return url
 
     @classmethod
-    def handle_redirect(cls, req: Request):
+    def handle_redirect(cls, req: Request) -> t.Tuple[int, Credentials]:
         code = req.args["code"]
         auth_client = cls.auth_client()
         credentials = auth_client.get_credentials(code)
@@ -154,7 +158,7 @@ class Fitbit(HealthService):
         return url
 
     @classmethod
-    def handle_redirect(cls, req: Request):
+    def handle_redirect(cls, req: Request) -> t.Tuple[str, dict]:
         code = req.args["code"]
         auth_client = cls.auth_client()
         auth_client.fetch_access_token(code)
@@ -197,12 +201,11 @@ class Polar(HealthService):
 
     @classmethod
     @abstractmethod
-    def handle_redirect(cls, req: Request):
+    def handle_redirect(cls, req: Request) -> t.Tuple[int, dict]:
         code = req.args["code"]
         auth_client = cls.auth_client()
-        token_response = auth_client.get_access_token(code)
-        token = token_response["access_token"]
-        user_id = token_response["x_user_id"]
+        token = auth_client.get_access_token(code)
+        user_id = token["x_user_id"]
         try:
             auth_client.users.register(access_token=token)
         except requests.exceptions.HTTPError as e:
@@ -218,7 +221,7 @@ class Polar(HealthService):
         with connection_context(conn) as conn:
             queries.persist_token(
                 conn,
-                id=token["user_id"],
+                id=token["x_user_id"],
                 access_token=token["access_token"],
                 refresh_token=None,
                 expires_at=None,

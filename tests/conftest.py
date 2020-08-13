@@ -157,10 +157,8 @@ class HealthUser:
             }
         elif self.service=="polar":
             return {
-                "user_id": self.service_user_id,
+                "x_user_id": self.service_user_id,
                 "access_token": self.access_token,
-                "refresh_token": None,
-                "expires_at": None,
             }
 
 
