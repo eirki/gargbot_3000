@@ -1,5 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
+from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
 import datetime as dt
 import enum
@@ -8,7 +9,8 @@ import typing as t
 
 import aiosql
 from fitbit import Fitbit as FitbitApi
-from flask import Blueprint, Response, current_app, jsonify, request
+from fitbit.api import FitbitOauth2Client
+from flask import Blueprint, Request, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 import pendulum
 from psycopg2.extensions import connection
@@ -47,7 +49,71 @@ def connection_context(
             conn.close()
 
 
-class Withings:
+class HealthService(metaclass=ABCMeta):
+    name: str
+
+    @classmethod
+    def init(cls, service_name: str) -> t.Type["HealthService"]:
+        services = {
+            "withings": Withings,
+            "fitbit": Fitbit,
+        }
+        Service = services[service_name]
+        return Service
+
+    @classmethod
+    @abstractmethod
+    def auth_client(cls):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def authorize_user(cls) -> str:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def handle_redirect(cls, req: Request):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def persist_token(token, conn) -> None:
+        pass
+
+
+class Withings(HealthService):
+    name = "withings"
+
+    @classmethod
+    def auth_client(cls) -> WithingsAuth:
+        scope = (
+            AuthScope.USER_ACTIVITY,
+            AuthScope.USER_METRICS,
+            AuthScope.USER_INFO,
+            AuthScope.USER_SLEEP_EVENTS,
+        )
+        client = WithingsAuth(
+            client_id=config.withings_client_id,
+            consumer_secret=config.withings_consumer_secret,
+            callback_uri=config.withings_redirect_uri,
+            scope=scope,
+        )
+        return client
+
+    @classmethod
+    def authorize_user(cls) -> str:
+        auth_client = cls.auth_client()
+        url = auth_client.get_authorize_url()
+        return url
+
+    @classmethod
+    def handle_redirect(cls, req: Request):
+        code = req.args["code"]
+        auth_client = cls.auth_client()
+        credentials = auth_client.get_credentials(code)
+        return credentials.userid, credentials
+
     @staticmethod
     def persist_token(
         credentials: Credentials, conn: t.Optional[connection] = None
@@ -63,96 +129,35 @@ class Withings:
             )
             conn.commit()
 
+
+class Fitbit(HealthService):
+    name = "fitbit"
+
     @staticmethod
-    def auth_client():
-        scope = (
-            AuthScope.USER_ACTIVITY,
-            AuthScope.USER_METRICS,
-            AuthScope.USER_INFO,
-            AuthScope.USER_SLEEP_EVENTS,
-        )
-        client = WithingsAuth(
-            client_id=config.withings_client_id,
-            consumer_secret=config.withings_consumer_secret,
-            callback_uri=config.withings_redirect_uri,
-            scope=scope,
+    def auth_client() -> FitbitOauth2Client:
+        client = FitbitOauth2Client(
+            config.fitbit_client_id,
+            config.fitbit_client_secret,
+            redirect_uri=config.fitbit_redirect_uri,
+            timeout=10,
         )
         return client
 
-    @staticmethod
-    def authorize_user():
-        auth_client = Withings.auth_client()
-        url = auth_client.get_authorize_url()
+    @classmethod
+    def authorize_user(cls) -> str:
+        scope = ["activity", "heartrate", "sleep", "weight"]
+        auth_client = cls.auth_client()
+        url, _ = auth_client.authorize_token_url(scope=scope)
         return url
 
-    @staticmethod
-    def handle_redirect(request):
-        code = request.args["code"]
-        auth_client = Withings.auth_client()
-        credentials = auth_client.get_credentials(code)
-        return credentials.userid, credentials
+    @classmethod
+    def handle_redirect(cls, req: Request):
+        code = req.args["code"]
+        auth_client = cls.auth_client()
+        auth_client.fetch_access_token(code)
+        token = auth_client.session.token
+        return token["user_id"], token
 
-    @staticmethod
-    def init_client(token: dict,) -> WithingsApi:
-        credentials = Credentials(
-            userid=token["id"],
-            access_token=token["access_token"],
-            refresh_token=token["refresh_token"],
-            token_expiry=token["expires_at"],
-            client_id=config.withings_client_id,
-            consumer_secret=config.withings_consumer_secret,
-            token_type="Bearer",
-        )
-        client = WithingsApi(credentials, refresh_cb=Withings.persist_token)
-        return client
-
-    @staticmethod
-    def steps(client: WithingsApi, date: pendulum.DateTime) -> t.Optional[int]:
-        result = client.measure_get_activity(
-            data_fields=[GetActivityField.STEPS],
-            startdateymd=date,
-            enddateymd=date.add(days=1),
-        )
-        entry = next(
-            (act for act in result.activities if act.date.day == date.day), None,
-        )
-        return entry.steps if entry else None
-
-    @staticmethod
-    def weight(client: WithingsApi, date: pendulum.DateTime) -> t.Optional[dict]:
-        return None
-        data = client.measure_get_meas(
-            startdate=date, enddate=date.add(days=1), meastype=MeasureType.WEIGHT,
-        ).measuregrps
-        if not data:
-            log.info("No weight data")
-            return None
-        data = sorted(data, key=attrgetter("date"), reverse=True)
-        most_recent = data[0]
-        measure = most_recent.measures[0]
-        return {
-            "weight": float(measure.value * pow(10, measure.unit)),
-            "datetime": most_recent.date,
-        }
-
-    @staticmethod
-    def bodyfat(client: WithingsApi, date: pendulum.DateTime) -> None:
-        return None
-
-    @staticmethod
-    def sleep(client: WithingsApi) -> str:
-        return client.sleep_get_summary(
-            data_fields=[
-                GetSleepSummaryField.REM_SLEEP_DURATION,
-                GetSleepSummaryField.LIGHT_SLEEP_DURATION,
-                GetSleepSummaryField.DEEP_SLEEP_DURATION,
-            ],
-            startdateymd=pendulum.yesterday(),
-            enddateymd=pendulum.today(),
-        )
-
-
-class Fitbit:
     @staticmethod
     def persist_token(token: dict, conn: t.Optional[connection] = None) -> None:
         with connection_context(conn) as conn:
@@ -165,96 +170,6 @@ class Fitbit:
                 service="fitbit",
             )
             conn.commit()
-
-    @staticmethod
-    def auth_client():
-        api = FitbitApi(
-            config.fitbit_client_id,
-            config.fitbit_client_secret,
-            redirect_uri=config.fitbit_redirect_uri,
-            timeout=10,
-        )
-        return api.client
-
-    @staticmethod
-    def authorize_user():
-        scope = ["activity", "heartrate", "sleep", "weight"]
-        auth_client = Fitbit.auth_client()
-        url, _ = auth_client.authorize_token_url(scope=scope)
-        return url
-
-    @staticmethod
-    def handle_redirect(request):
-        code = request.args["code"]
-        auth_client = Fitbit.auth_client()
-        auth_client.fetch_access_token(code)
-        token = auth_client.session.token
-        return token["user_id"], token
-
-    @staticmethod
-    def init_client(token: dict) -> FitbitApi:
-        client = FitbitApi(
-            config.fitbit_client_id,
-            config.fitbit_client_secret,
-            access_token=token["access_token"],
-            refresh_token=token["refresh_token"],
-            expires_at=token["expires_at"],
-            refresh_cb=Fitbit.persist_token,
-            system=FitbitApi.METRIC,
-        )
-        return client
-
-    @staticmethod
-    def steps(client: FitbitApi, date: pendulum.DateTime) -> t.Optional[int]:
-        data = client.time_series(
-            resource="activities/steps", base_date=date, period="1d"
-        )
-        if not data["activities-steps"]:
-            return None
-        entry = data["activities-steps"][0]
-        return int(entry["value"]) if entry else None
-
-    @staticmethod
-    def weight(client: FitbitApi, date: pendulum.DateTime) -> t.Optional[dict]:
-        data = client.get_bodyweight(base_date=date, period="1w")
-        if len(data["weight"]) == 0:
-            log.info("No weight data")
-            return None
-        entries = data["weight"]
-        for entry in entries:
-            entry["datetime"] = pendulum.parse(f"{entry['date']}T{entry['time']}")
-        entries.sort(key=itemgetter("datetime"), reverse=True)
-        most_recent = entries[0]
-        log.info(f"weight data: {most_recent}")
-        return most_recent
-
-    @staticmethod
-    def bodyfat(client: FitbitApi, date: pendulum.DateTime) -> t.Optional[dict]:
-        data = client.get_bodyfat(base_date=date, period="1w")
-        if len(data["bodyfat"]) == 0:
-            log.info("No bodyfat data")
-            return None
-        entries = data["bodyfat"]
-        for entry in entries:
-            entry["datetime"] = pendulum.parse(f"{entry['date']}T{entry['time']}")
-        entries.sort(key=itemgetter("datetime"), reverse=True)
-        most_recent = entries[0]
-        if (date - most_recent["datetime"]).days > 2:
-            log.info(f"No recent bodyfat data after {most_recent['datetime']}")
-            return None
-        log.info(f"bodyfat data: {most_recent}")
-        return most_recent
-
-    @staticmethod
-    def sleep(client: FitbitApi) -> str:
-        data = client.get_sleep(date=dt.datetime.today())
-        log.info(f"sleep data: {data}")
-        return data
-
-
-class Service(enum.Enum):
-    withings = Withings
-    fitbit = Fitbit
 
 
 @blueprint.route("/<service_name>/auth", methods=["GET"])
@@ -270,7 +185,7 @@ def authorize(service_name: str):
         )
     if data is None:
         log.info("not registered")
-        url = Service[service_name].value.authorize_user()
+        url = HealthService.init(service_name).authorize_user()
         log.info(url)
         response = jsonify(auth_url=url)
     else:
@@ -288,15 +203,15 @@ def handle_redirect(service_name: str):
     if gargling_id is None:
         raise Exception("JWT token issued to None")
     log.info(f"gargling_id: {gargling_id}")
-    service = Service[service_name]
-    service_user_id, token = service.value.handle_redirect(request)
+    Service = HealthService.init(service_name)
+    service_user_id, token = Service.handle_redirect(request)
     with current_app.pool.get_connection() as conn:
-        service.value.persist_token(token, conn)
+        Service.persist_token(token, conn)
         queries.match_ids(
             conn,
             gargling_id=gargling_id,
             service_user_id=service_user_id,
-            service=service.name,
+            service=Service.name,
         )
         conn.commit()
     return Response(status=200)
@@ -307,55 +222,182 @@ def handle_redirect(service_name: str):
 def toggle_report():
     gargling_id = get_jwt_identity()
     content = request.json
-    service = Service[content["service"]]
+    Service = HealthService.init(content["service"])
     enable = content["enable"]
     with current_app.pool.get_connection() as conn:
         queries.toggle_report(
-            conn, enable_=enable, gargling_id=gargling_id, service=service.name
+            conn, enable_=enable, gargling_id=gargling_id, service=Service.name
         )
         conn.commit()
     return Response(status=200)
 
 
-def steps(clients, date: pendulum.DateTime) -> t.List[dict]:
+class HealthUser(metaclass=ABCMeta):
+    service: t.Type[HealthService]
+    first_name: str
+
+    @classmethod
+    def init(cls, token: dict) -> "HealthUser":
+        services = {
+            "withings": WithingsUser,
+            "fitbit": FitbitUser,
+        }
+        Service = services[token["service"]]
+        service = Service(token)
+        return service
+
+    @abstractmethod
+    def steps(self, date: pendulum.DateTime) -> t.Optional[int]:
+        pass
+
+    @abstractmethod
+    def weight(self, date: pendulum.DateTime) -> t.Optional[dict]:
+        pass
+
+    @abstractmethod
+    def bodyfat(self, date: pendulum.DateTime) -> t.Optional[int]:
+        pass
+
+
+class WithingsUser(HealthUser):
+    service = Withings
+
+    def __init__(self, token):
+        credentials = Credentials(
+            userid=token["id"],
+            access_token=token["access_token"],
+            refresh_token=token["refresh_token"],
+            token_expiry=token["expires_at"],
+            client_id=config.withings_client_id,
+            consumer_secret=config.withings_consumer_secret,
+            token_type="Bearer",
+        )
+        self.client: WithingsApi = WithingsApi(
+            credentials, refresh_cb=self.service.persist_token
+        )
+        self.first_name = token["first_name"]
+
+    def steps(self, date: pendulum.DateTime) -> t.Optional[int]:
+        result = self.client.measure_get_activity(
+            data_fields=[GetActivityField.STEPS],
+            startdateymd=date,
+            enddateymd=date.add(days=1),
+        )
+        entry = next(
+            (act for act in result.activities if act.date.day == date.day), None,
+        )
+        return entry.steps if entry else None
+
+    def weight(self, date: pendulum.DateTime) -> t.Optional[dict]:
+        return None
+
+    def bodyfat(self, date: pendulum.DateTime) -> None:
+        return None
+
+
+class FitbitUser(HealthUser):
+    service = Fitbit
+
+    def __init__(self, token):
+        client = FitbitApi(
+            config.fitbit_client_id,
+            config.fitbit_client_secret,
+            access_token=token["access_token"],
+            refresh_token=token["refresh_token"],
+            expires_at=token["expires_at"],
+            refresh_cb=self.service.persist_token,
+            system=FitbitApi.METRIC,
+        )
+        self.client: FitbitApi = client
+        self.first_name = token["first_name"]
+
+    def steps(self, date: pendulum.DateTime) -> t.Optional[int]:
+        data = self.client.time_series(
+            resource="activities/steps", base_date=date, period="1d"
+        )
+        if not data["activities-steps"]:
+            return None
+        entry = data["activities-steps"][0]
+        return int(entry["value"]) if entry else None
+
+    def weight(self, date: pendulum.DateTime) -> t.Optional[dict]:
+        data = self.client.get_bodyweight(base_date=date, period="1w")
+        if len(data["weight"]) == 0:
+            log.info("No weight data")
+            return None
+        entries = data["weight"]
+        for entry in entries:
+            entry["datetime"] = pendulum.parse(f"{entry['date']}T{entry['time']}")
+        entries.sort(key=itemgetter("datetime"), reverse=True)
+        most_recent = entries[0]
+        log.info(f"weight data: {most_recent}")
+        return most_recent
+
+    def bodyfat(self, date: pendulum.DateTime) -> t.Optional[int]:
+        data = self.client.get_bodyfat(base_date=date, period="1w")
+        if len(data["bodyfat"]) == 0:
+            log.info("No bodyfat data")
+            return None
+        entries = data["bodyfat"]
+        for entry in entries:
+            entry["datetime"] = pendulum.parse(f"{entry['date']}T{entry['time']}")
+        entries.sort(key=itemgetter("datetime"), reverse=True)
+        most_recent = entries[0]
+        if (date - most_recent["datetime"]).days > 2:
+            log.info(f"No recent bodyfat data after {most_recent['datetime']}")
+            return None
+        log.info(f"bodyfat data: {most_recent}")
+        return most_recent["fat"]
+
+
+def steps(users: t.List[HealthUser], date: pendulum.DateTime) -> t.List[dict]:
     step_amounts = []
-    for name, (client, service) in clients.items():
+    for user in users:
         try:
-            steps = service.value.steps(client, date)
+            steps = user.steps(date)
         except Exception:
-            log.error(f"Error getting {service} steps data for {name}", exc_info=True)
+            log.error(
+                f"Error getting {user.service.name} steps data for {user.first_name}",
+                exc_info=True,
+            )
             continue
         if steps is None:
             continue
-        step_amounts.append({"amount": steps, "first_name": name})
+        step_amounts.append({"amount": steps, "first_name": user.first_name})
     return step_amounts
 
 
-def body_details(clients, date: pendulum.DateTime) -> t.List[str]:
+def body_details(users: t.List[HealthUser], date: pendulum.DateTime) -> t.List[str]:
     reports = []
-    for name, (client, service) in clients.items():
+    for user in users:
         desc = None
         try:
-            weight_data = service.value.weight(client, date)
+            weight_data = user.weight(date)
         except Exception:
-            log.error(f"Error getting {service} weight data for {name}", exc_info=True)
+            log.error(
+                f"Error getting {user.service.name} weight data for {user.first_name}",
+                exc_info=True,
+            )
             weight_data = None
         try:
-            bodyfat_data = service.value.bodyfat(client, date)["fat"]
+            bodyfat_data = user.bodyfat(date)
         except Exception:
-            log.error(f"Error getting {service} bodyfat data for {name}", exc_info=True)
+            log.error(
+                f"Error getting {user.service.name} bodyfat data for {user.first_name}",
+                exc_info=True,
+            )
             bodyfat_data = None
 
         if weight_data:
             elapsed = (date - weight_data["datetime"]).days
             if elapsed < 2:
-                desc = f"{name} veier nå *{weight_data['weight']}* kg."
+                desc = f"{user.first_name} veier nå *{weight_data['weight']}* kg."
             else:
-                desc = f"{name} har ikke veid seg på *{elapsed}* dager. Skjerpings!"
+                desc = f"{user.first_name} har ikke veid seg på *{elapsed}* dager. Skjerpings!"
             if bodyfat_data:
                 desc += f"Bodyfat prosent er {bodyfat_data}"
         elif bodyfat_data:
-            desc = f"{name} sin bodyfat prosent er {bodyfat_data}"
+            desc = f"{user.first_name} sin bodyfat prosent er {bodyfat_data}"
 
         if desc:
             reports.append(desc)
@@ -368,11 +410,7 @@ def activity(
     tokens = queries.tokens(conn)
     if not tokens:
         return None
-    clients = {}
-    for token in tokens:
-        service = Service[token["service"]]
-        client = service.value.init_client(token)
-        clients[token["first_name"]] = (client, service)
-    steps_data = steps(clients, date)
-    body_reports = body_details(clients, date)
+    users = [HealthUser.init(token) for token in tokens]
+    steps_data = steps(users, date)
+    body_reports = body_details(users, date)
     return steps_data, body_reports

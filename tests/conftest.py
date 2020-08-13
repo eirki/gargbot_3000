@@ -216,8 +216,8 @@ def populate_congrats_table(conn: connection) -> None:
 def populate_health_table(conn: connection) -> None:
     health.queries.create_schema(conn)
     for health_user in health_users:
-        service = health.Service[health_user.service]
-        service.value.persist_token(health_user.token(), conn)
+        service = health.HealthService.init(health_user.service)
+        service.persist_token(health_user.token(), conn)
 
         health.queries.match_ids(
             conn,
