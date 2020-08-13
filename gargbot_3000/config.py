@@ -57,5 +57,9 @@ withings_client_id = os.environ["withings_client_id"]
 withings_consumer_secret = os.environ["withings_consumer_secret"]
 withings_redirect_uri = os.environ["withings_redirect_uri"]
 
+polar_client_id = os.environ["polar_client_id"]
+polar_client_secret = os.environ["polar_consumer_secret"]
+polar_redirect_uri = os.environ["polar_redirect_uri"]
+
 google_api_key = os.environ["google_api_key"]
 google_api_secret = os.environ["google_api_secret"]

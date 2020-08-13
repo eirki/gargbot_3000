@@ -7,6 +7,7 @@ import enum
 from operator import attrgetter, itemgetter
 import typing as t
 
+import accesslink as polar
 import aiosql
 from fitbit import Fitbit as FitbitApi
 from fitbit.api import FitbitOauth2Client
@@ -14,6 +15,7 @@ from flask import Blueprint, Request, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 import pendulum
 from psycopg2.extensions import connection
+import requests
 import withings_api
 from withings_api import AuthScope, WithingsApi, WithingsAuth
 from withings_api.common import (
@@ -57,6 +59,7 @@ class HealthService(metaclass=ABCMeta):
         services = {
             "withings": Withings,
             "fitbit": Fitbit,
+            "polar": Polar,
         }
         Service = services[service_name]
         return Service
@@ -172,6 +175,58 @@ class Fitbit(HealthService):
             conn.commit()
 
 
+class Polar(HealthService):
+    name = "polar"
+
+    @classmethod
+    @abstractmethod
+    def auth_client(cls):
+        client = polar.AccessLink(
+            client_id=config.polar_client_id,
+            client_secret=config.polar_client_secret,
+            redirect_url=config.polar_redirect_uri,
+        )
+        return client
+
+    @classmethod
+    @abstractmethod
+    def authorize_user(cls) -> str:
+        auth_client = cls.auth_client()
+        auth_url = auth_client.get_authorization_url()
+        return auth_url
+
+    @classmethod
+    @abstractmethod
+    def handle_redirect(cls, req: Request):
+        code = req.args["code"]
+        auth_client = cls.auth_client()
+        token_response = auth_client.get_access_token(code)
+        token = token_response["access_token"]
+        user_id = token_response["x_user_id"]
+        try:
+            auth_client.users.register(access_token=token)
+        except requests.exceptions.HTTPError as e:
+            # Error 409 Conflict means that the user has already been registered for this client.
+            # For most applications, that error can be ignored.
+            if e.response.status_code != 409:
+                raise e
+
+        return user_id, token
+
+    @staticmethod
+    def persist_token(token: dict, conn: t.Optional[connection] = None) -> None:
+        with connection_context(conn) as conn:
+            queries.persist_token(
+                conn,
+                id=token["user_id"],
+                access_token=token["access_token"],
+                refresh_token=None,
+                expires_at=None,
+                service="polar",
+            )
+            conn.commit()
+
+
 @blueprint.route("/<service_name>/auth", methods=["GET"])
 @jwt_required
 def authorize(service_name: str):
@@ -233,14 +288,19 @@ def toggle_report():
 
 
 class HealthUser(metaclass=ABCMeta):
-    service: t.Type[HealthService]
+    service: t.ClassVar[t.Type[HealthService]]
     first_name: str
+
+    @abstractmethod
+    def __init__(self, token):
+        pass
 
     @classmethod
     def init(cls, token: dict) -> "HealthUser":
-        services = {
+        services: t.Dict[str, t.Type["HealthUser"]] = {
             "withings": WithingsUser,
             "fitbit": FitbitUser,
+            "polar": PolarUser,
         }
         Service = services[token["service"]]
         service = Service(token)
@@ -348,6 +408,31 @@ class FitbitUser(HealthUser):
             return None
         log.info(f"bodyfat data: {most_recent}")
         return most_recent["fat"]
+
+
+class PolarUser(HealthUser):
+    service = Polar
+
+    def __init__(self, token):
+        self.client = polar.AccessLink(
+            client_id=config.polar_client_id, client_secret=config.polar_client_secret
+        )
+        self.first_name = token["first_name"]
+        self.user_id = token["id"]
+        self.token = token["access_token"]
+
+    def steps(self, date: pendulum.DateTime) -> t.Optional[int]:
+        trans = self.client.daily_activity.create_transaction(self.user_id, self.token)
+        log.info(trans)
+        steps = trans.get_step_samples()
+        log.info(steps)
+        return None
+
+    def weight(self, date: pendulum.DateTime) -> t.Optional[dict]:
+        return None
+
+    def bodyfat(self, date: pendulum.DateTime) -> t.Optional[int]:
+        return None
 
 
 def steps(users: t.List[HealthUser], date: pendulum.DateTime) -> t.List[dict]:

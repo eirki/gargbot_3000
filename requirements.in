@@ -15,6 +15,7 @@ pyopenssl
 pendulum
 fitbit
 withings-api
+polar-accesslink
 aiosql
 jinja2
 werkzeug

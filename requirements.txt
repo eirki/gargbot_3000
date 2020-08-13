@@ -4,56 +4,57 @@
 #
 #    pip-compile requirements.in
 #
-aiosql==3.0.0             # via -r requirements.in (line 18)
+aiosql==3.0.0
 arrow==0.15.5             # via withings-api
-bbcode==1.0.33            # via -r requirements.in (line 12)
+bbcode==1.0.33
 certifi==2019.11.28       # via requests
 cffi==1.13.2              # via cryptography
 chardet==3.0.4            # via requests
 click==7.0                # via flask
 cryptography==2.8         # via pyopenssl
-dropbox==9.4.0            # via -r requirements.in (line 5)
-fitbit==0.3.1             # via -r requirements.in (line 16)
-flask-cors==3.0.8         # via -r requirements.in (line 9)
-flask-jwt-extended==3.24.1  # via -r requirements.in (line 23)
-flask==1.1.1              # via -r requirements.in (line 8), flask-cors, flask-jwt-extended
+dropbox==9.4.0
+fitbit==0.3.1
+flask-cors==3.0.8
+flask-jwt-extended==3.24.1
+flask==1.1.1
 geographiclib==1.50       # via geopy
-geopy==2.0.0              # via -r requirements.in (line 25)
-googlemaps==4.4.1         # via -r requirements.in (line 26)
-gpxpy==1.4.2              # via -r requirements.in (line 24)
-gunicorn==20.0.4          # via -r requirements.in (line 10)
-html-slacker==0.1.6       # via -r requirements.in (line 13)
+geopy==2.0.0
+googlemaps==4.4.1
+gpxpy==1.4.2
+gunicorn==20.0.4
+html-slacker==0.1.6
 idna==2.8                 # via requests
 itsdangerous==1.1.0       # via flask
-jinja2==2.10.3            # via -r requirements.in (line 19), flask
+jinja2==2.10.3
 markupsafe==1.1.1         # via jinja2
-migra[pg]==1.0.1575954682  # via -r requirements.in (line 21)
+migra[pg]==1.0.1575954682
 oauthlib==3.1.0           # via requests-oauthlib
 pathlib==1.0.1            # via sqlbag
-pendulum==2.0.5           # via -r requirements.in (line 15)
-pillow==6.2.1             # via -r requirements.in (line 6), staticmap
-psycopg2-binary==2.8.4    # via -r requirements.in (line 1), migra
+pendulum==2.0.5
+pillow==6.2.1
+polar-accesslink==0.0.5
+psycopg2-binary==2.8.4
 pycparser==2.19           # via cffi
 pyjwt==1.7.1              # via flask-jwt-extended
-pyopenssl==19.1.0         # via -r requirements.in (line 14)
+pyopenssl==19.1.0
 python-dateutil==2.8.1    # via arrow, fitbit, pendulum
-python-dotenv==0.10.3     # via -r requirements.in (line 11)
-pytz==2019.3              # via -r requirements.in (line 7)
+python-dotenv==0.10.3
+pytz==2019.3
 pytzdata==2019.3          # via pendulum
 requests-oauth==0.4.1     # via withings-api
 requests-oauthlib==1.3.0  # via fitbit, withings-api
-requests==2.22.0          # via -r requirements.in (line 2), dropbox, googlemaps, requests-oauth, requests-oauthlib, slackclient, staticmap
-schedule==0.6.0           # via -r requirements.in (line 27)
+requests==2.22.0
+schedule==0.6.0
 schemainspect==0.1.1576717677  # via migra
 six==1.13.0               # via cryptography, dropbox, flask-cors, flask-jwt-extended, migra, pyopenssl, python-dateutil, schemainspect, slackclient, sqlbag, websocket-client
-slackclient==1.3.1        # via -r requirements.in (line 3)
+slackclient==1.3.1
 sqlalchemy==1.3.12        # via schemainspect, sqlbag
-sqlbag==0.1.1579049654    # via -r requirements.in (line 22), migra
-staticmap==0.5.4          # via -r requirements.in (line 28)
+sqlbag==0.1.1579049654
+staticmap==0.5.4
 urllib3==1.25.7           # via requests
-websocket-client==0.54.0  # via -r requirements.in (line 4), slackclient
-werkzeug==0.16.0          # via -r requirements.in (line 20), flask, flask-jwt-extended
-withings-api==2.1.4       # via -r requirements.in (line 17)
+websocket-client==0.54.0
+werkzeug==0.16.0
+withings-api==2.1.4
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

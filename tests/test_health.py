@@ -232,7 +232,6 @@ def test_activity(mock_Fitbit: Mock, mock_Withings: Mock, conn: connection):
     assert steps_data == [
         {"amount": 13475, "first_name": "name2"},
         {"amount": 13474, "first_name": "name5"},
-        {"amount": 22, "first_name": "name10"},
     ]
     assert weight_data == [
         "name2 har ikke veid seg på *7305* dager. Skjerpings!",

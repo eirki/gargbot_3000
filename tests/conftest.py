@@ -133,8 +133,8 @@ class HealthUser:
     service_user_id: t.Union[str, int]
     gargling_id: t.Optional[int]
     access_token: str
-    refresh_token: str
-    expires_at: t.Union[float, int]
+    refresh_token: t.Optional[str]
+    expires_at: t.Union[float, int, None]
     enable_report: bool = False
 
     def token(self):
@@ -155,6 +155,13 @@ class HealthUser:
                 "refresh_token": self.refresh_token,
                 "expires_at": self.expires_at,
             }
+        elif self.service=="polar":
+            return {
+                "user_id": self.service_user_id,
+                "access_token": self.access_token,
+                "refresh_token": None,
+                "expires_at": None,
+            }
 
 
 health_users = [
@@ -164,8 +171,8 @@ health_users = [
     HealthUser("fitbit", "fitbit_id5", 5, "access_token5", "refresh_token5", 1573921366.6757, True),
     HealthUser("withings", 106, 6, "access_token6", "refresh_token6", 1579111429, True),
     HealthUser("withings", 107, 7, "access_token7", "refresh_token7", 1579111429),
-    HealthUser("withings", 109, 9, "access_token9", "refresh_token9", 1579111429),
-    HealthUser("withings", 1010, 10, "access_token10", "refresh_token10", 1579111429, True),
+    HealthUser("polar", 109, 9, "access_token9", None, None),
+    HealthUser("polar", 1010, 10, "access_token10", None, None, True),
 ]
 # fmt: on
 

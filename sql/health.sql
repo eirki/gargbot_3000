@@ -7,7 +7,6 @@ create table fitbit_token (
   enable_report boolean not null default false
 );
 
-
 create table withings_token (
   id int not null unique primary key,
   access_token text not null,
@@ -16,22 +15,33 @@ create table withings_token (
   enable_report boolean not null default false
 );
 
+create table polar_token (
+  id int not null unique primary key,
+  access_token text not null,
+  refresh_token text default null,
+  expires_at int default null,
+  enable_report boolean default false
+);
 
 create table fitbit_token_gargling (
   fitbit_id text not null references fitbit_token(id),
   gargling_id smallint not null references gargling(id)
 );
 
-
 create table withings_token_gargling (
   withings_id int not null references withings_token(id),
+  gargling_id smallint not null references gargling(id)
+);
+
+create table polar_token_gargling (
+  polar_id int not null references polar_token(id),
   gargling_id smallint not null references gargling(id)
 );
 
 
 -- name: persist_token!
 insert into
-  /*{{ {"fitbit": "fitbit_token", "withings": "withings_token"}[service] }}*/
+  /*{{ {"fitbit": "fitbit_token", "withings": "withings_token", "polar": "polar_token"}[service] }}*/
   (
     id,
     access_token,
@@ -56,30 +66,30 @@ set
 
 --name: toggle_report!
 update
-  /*{{ {"fitbit": "fitbit_token", "withings": "withings_token"}[service] }}*/
+  /*{{ {"fitbit": "fitbit_token", "withings": "withings_token", "polar": "polar_token"}[service] }}*/
   as service_token
 set
   enable_report = :enable_
 from
-  /*{{ {"fitbit": "fitbit_token_gargling", "withings": "withings_token_gargling"}[service] }}*/
+  /*{{ {"fitbit": "fitbit_token_gargling", "withings": "withings_token_gargling", "polar": "polar_token_gargling"}[service] }}*/
   as service_token_gargling
 where
   service_token.id = service_token_gargling.
-  /*{{ {"fitbit": "fitbit_id", "withings": "withings_id"}[service] }}*/
+  /*{{ {"fitbit": "fitbit_id", "withings": "withings_id", "polar": "polar_id"}[service] }}*/
   and service_token_gargling.gargling_id = :gargling_id;
 
 
 -- name: match_ids!
 delete from
-  /*{{ {"fitbit": "fitbit_token_gargling", "withings": "withings_token_gargling"}[service] }}*/
+  /*{{ {"fitbit": "fitbit_token_gargling", "withings": "withings_token_gargling", "polar": "polar_token_gargling"}[service] }}*/
 where
   gargling_id = :gargling_id;
 
 
 insert into
-  /*{{ {"fitbit": "fitbit_token_gargling", "withings": "withings_token_gargling"}[service] }}*/
+  /*{{ {"fitbit": "fitbit_token_gargling", "withings": "withings_token_gargling", "polar": "polar_token_gargling"}[service] }}*/
   (
-    /*{{"fitbit_id" if service == "fitbit" else "withings_id" }}*/
+    /*{{ {"fitbit": "fitbit_id", "withings": "withings_id", "polar": "polar_id"}[service] }}*/
 ,
     gargling_id
   )
@@ -91,12 +101,12 @@ values
 select
   service_token.enable_report
 from
-  /*{{ {"fitbit": "fitbit_token", "withings": "withings_token"}[service] }}*/
+  /*{{ {"fitbit": "fitbit_token", "withings": "withings_token", "polar": "polar_token"}[service] }}*/
   as service_token
   inner join
-  /*{{ {"fitbit": "fitbit_token_gargling", "withings": "withings_token_gargling"}[service] }}*/
+  /*{{ {"fitbit": "fitbit_token_gargling", "withings": "withings_token_gargling", "polar": "polar_token_gargling"}[service] }}*/
   as service_token_gargling on service_token.id = service_token_gargling.
-  /*{{ {"fitbit": "fitbit_id", "withings": "withings_id"}[service] }}*/
+  /*{{ {"fitbit": "fitbit_id", "withings": "withings_id", "polar": "polar_id"}[service] }}*/
 where
   service_token_gargling.gargling_id = :gargling_id;
 
@@ -130,6 +140,21 @@ from
   inner join gargling on withings_token_gargling.gargling_id = gargling.id
 where
   withings.enable_report
+union
+all
+select
+  polar.id :: text,
+  polar.access_token,
+  polar.refresh_token,
+  polar.expires_at,
+  gargling.first_name,
+  'polar' as service
+from
+  polar_token as polar
+  inner join polar_token_gargling on polar.id = polar_token_gargling.polar_id
+  inner join gargling on polar_token_gargling.gargling_id = gargling.id
+where
+  polar.enable_report
 ;
 
 
