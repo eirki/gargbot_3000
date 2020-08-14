@@ -85,7 +85,6 @@ def update_journey() -> None:
         for update in updates:
             task.send_response(slack_client, update, channel=config.health_channel)
     finally:
-        conn.commit()
         conn.close()
 
 

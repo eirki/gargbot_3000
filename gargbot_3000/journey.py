@@ -752,8 +752,8 @@ def main(conn) -> t.List[dict]:
     destination = ongoing_journey["destination"]
     current_date = pendulum.now("UTC")
     data = []
-    for date in days_to_update(conn, journey_id, current_date):
-        try:
+    try:
+        for date in days_to_update(conn, journey_id, current_date):
             datum = perform_daily_update(
                 conn=conn,
                 activity_func=health.activity,
@@ -766,6 +766,9 @@ def main(conn) -> t.List[dict]:
                     destination=destination, n_day=n_day, **datum
                 )
                 data.append(formatted)
-        except Exception as exc:
-            log.exception(exc)
-    return data
+    except Exception as exc:
+        log.exception(exc)
+        return []
+    else:
+        conn.commit()
+        return data
