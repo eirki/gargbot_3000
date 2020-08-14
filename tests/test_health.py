@@ -156,10 +156,55 @@ def test_toggle_report(
 
 
 @patch.object(health, "WithingsApi")
-@patch.object(health, "FitbitApi")
-def test_activity(mock_Fitbit: Mock, mock_Withings: Mock, conn: connection):
+def test_withings_steps(mock_Withings: Mock, conn: connection):
     test_date = pendulum.datetime(2020, 1, 2, 12)
-    withings_instance1, withings_instance2 = Mock(), Mock()
+    withings_instance1 = Mock()
+    none_data = {
+        "timezone": None,
+        "deviceid": None,
+        "brand": None,
+        "is_tracker": None,
+        "distance": None,
+        "elevation": None,
+        "soft": None,
+        "moderate": None,
+        "intense": None,
+        "active": None,
+        "calories": None,
+        "totalcalories": None,
+        "hr_average": None,
+        "hr_min": None,
+        "hr_max": None,
+        "hr_zone_0": None,
+        "hr_zone_1": None,
+        "hr_zone_2": None,
+        "hr_zone_3": None,
+    }
+    n_steps = 6620
+    withings_instance1.measure_get_activity.return_value = MeasureGetActivityResponse(
+        activities=(
+            MeasureGetActivityActivity(date=test_date, steps=n_steps, **none_data),
+        ),
+        more=False,
+        offset=0,
+    )
+    mock_Withings.side_effect = [withings_instance1]
+    tokens = health.queries.tokens(conn)
+    users = [
+        health.HealthUser.init(token)
+        for token in tokens
+        if token["service"] == "withings"
+    ]
+    assert len(users) == 1
+    user = users[0]
+    steps = user.steps(test_date)
+    assert steps == n_steps
+
+
+@patch.object(health, "WithingsApi")
+def test_withings_steps_no_data(mock_Withings: Mock, conn: connection):
+    test_date = pendulum.datetime(2020, 1, 2, 12)
+    withings_instance1 = Mock()
     none_data = {
         "timezone": None,
         "deviceid": None,
@@ -184,39 +229,34 @@ def test_activity(mock_Fitbit: Mock, mock_Withings: Mock, conn: connection):
     withings_instance1.measure_get_activity.return_value = MeasureGetActivityResponse(
         activities=(
             MeasureGetActivityActivity(
-                date=arrow.get(test_date.subtract(days=1)), steps=6620, **none_data
+                date=arrow.get(test_date.subtract(days=1)), steps=123, **none_data
             ),
         ),
         more=False,
         offset=0,
     )
-    withings_instance2.measure_get_activity.return_value = MeasureGetActivityResponse(
-        activities=(
-            MeasureGetActivityActivity(
-                date=arrow.get(test_date.subtract(days=1)), steps=6619, **none_data
-            ),
-            MeasureGetActivityActivity(
-                date=arrow.get(test_date), steps=22, **none_data
-            ),
-        ),
-        more=False,
-        offset=0,
-    )
-    mock_Withings.side_effect = [withings_instance1, withings_instance2]
+    mock_Withings.side_effect = [withings_instance1]
+    tokens = health.queries.tokens(conn)
+    users = [
+        health.HealthUser.init(token)
+        for token in tokens
+        if token["service"] == "withings"
+    ]
+    assert len(users) == 1
+    user = users[0]
+    steps = user.steps(test_date)
+    assert steps is None
 
+
+@patch.object(health, "FitbitApi")
+def test_fitbit_steps(mock_Fitbit: Mock, conn: connection):
+    test_date = pendulum.datetime(2020, 1, 2, 12)
     fitbit_instance1, fitbit_instance2 = Mock(), Mock()
-    mock_Fitbit.side_effect = [fitbit_instance1, fitbit_instance2]
-    fitbit_instance1.get_bodyweight.return_value = {
-        "weight": [{"date": "2000-01-02", "time": "10:11:12", "weight": 50}]
-    }
-    fitbit_instance2.get_bodyweight.return_value = {
-        "weight": [
-            {"date": "2020-01-01", "time": "10:11:12", "weight": 75},
-            {"date": "2020-01-02", "time": "10:11:12", "weight": 100},
-        ]
-    }
     fitbit_instance1.time_series.return_value = {
-        "activities-steps": [{"dateTime": "2020-01-01", "value": "13475"}]
+        "activities-steps": [
+            {"dateTime": "2020-01-01", "value": "13475"},
+            {"dateTime": "2019-12-29", "value": "1"},
+        ]
     }
     fitbit_instance2.time_series.return_value = {
         "activities-steps": [
@@ -224,41 +264,142 @@ def test_activity(mock_Fitbit: Mock, mock_Withings: Mock, conn: connection):
             {"dateTime": "2020-01-02", "value": "86"},
         ]
     }
-    response = health.activity(conn, test_date)
-    assert response is not None
-    steps_data, weight_data = response
-    assert steps_data == [
-        {"amount": 13475, "first_name": "name2"},
-        {"amount": 13474, "first_name": "name5"},
-    ]
-    assert weight_data == [
-        "name2 har ikke veid seg på *7305* dager. Skjerpings!",
-        "name5 veier nå *100* kg.",
-    ]
-
-
-@patch.object(health, "WithingsApi")
-@patch.object(health, "FitbitApi")
-def test_activity_no_data(mock_Fitbit: Mock, mock_Withings: Mock, conn: connection):
-    withings_instance1, withings_instance2 = Mock(), Mock()
-    mock_Withings.side_effect = [withings_instance1, withings_instance2]
-    withings_instance1.measure_get_activity.return_value = MeasureGetActivityResponse(
-        activities=[], more=False, offset=0
-    )
-    withings_instance2.measure_get_activity.return_value = MeasureGetActivityResponse(
-        activities=[], more=False, offset=0
-    )
-
-    fitbit_instance1, fitbit_instance2 = Mock(), Mock()
     mock_Fitbit.side_effect = [fitbit_instance1, fitbit_instance2]
-    fitbit_instance1.get_bodyweight.return_value = {"weight": []}
-    fitbit_instance2.get_bodyweight.return_value = {"weight": []}
+    tokens = health.queries.tokens(conn)
+    users = [
+        health.HealthUser.init(token)
+        for token in tokens
+        if token["service"] == "fitbit"
+    ]
+    assert len(users) == 2
+    steps = [user.steps(test_date) for user in users]
+    assert steps == [13475, 13474]
+
+
+@patch.object(health, "FitbitApi")
+def test_fitbit_steps_no_data(mock_Fitbit: Mock, conn: connection):
+    test_date = pendulum.datetime(2020, 1, 2, 12)
+    fitbit_instance1, fitbit_instance2 = Mock(), Mock()
     fitbit_instance1.time_series.return_value = {"activities-steps": []}
     fitbit_instance2.time_series.return_value = {"activities-steps": []}
+    mock_Fitbit.side_effect = [fitbit_instance1, fitbit_instance2]
+    tokens = health.queries.tokens(conn)
+    users = [
+        health.HealthUser.init(token)
+        for token in tokens
+        if token["service"] == "fitbit"
+    ]
+    assert len(users) == 2
+    steps = [user.steps(test_date) for user in users]
+    assert steps == [None, None]
 
+
+@patch.object(health, "FitbitApi")
+def test_fitbit_body(mock_Fitbit: Mock, conn: connection):
     test_date = pendulum.datetime(2020, 1, 2, 12)
-    response = health.activity(conn, test_date)
-    assert response is not None
-    steps_data, weight_data = response
-    assert steps_data == []
-    assert weight_data == []
+    fitbit_instance1, fitbit_instance2 = Mock(), Mock()
+    fitbit_instance1.get_bodyweight.return_value = {
+        "weight": [{"date": "2019-01-02", "time": "10:11:12", "weight": 50}]
+    }
+    fitbit_instance1.get_bodyfat.return_value = {
+        "fat": [{"date": "2019-01-02", "time": "10:11:12", "fat": 5}]
+    }
+    fitbit_instance2.get_bodyweight.return_value = {
+        "weight": [
+            {"date": "2020-01-01", "time": "10:11:12", "weight": 75},
+            {"date": "2020-01-02", "time": "10:11:12", "weight": 100},
+        ]
+    }
+    fitbit_instance2.get_bodyfat.return_value = {
+        "fat": [
+            {"date": "2020-01-01", "time": "10:11:12", "fat": 7},
+            {"date": "2020-01-02", "time": "10:11:12", "fat": 10},
+        ]
+    }
+    mock_Fitbit.side_effect = [fitbit_instance1, fitbit_instance2]
+    tokens = health.queries.tokens(conn)
+    users = [
+        health.HealthUser.init(token)
+        for token in tokens
+        if token["service"] == "fitbit"
+    ]
+    assert len(users) == 2
+    data = [user.body(test_date) for user in users]
+    expected = [
+        {"elapsed": 365, "weight": None, "fat": None},
+        {"elapsed": None, "weight": 100, "fat": 10},
+    ]
+    assert data == expected
+
+
+@patch.object(health, "FitbitApi")
+def test_fitbit_body_no_data(mock_Fitbit: Mock, conn: connection):
+    test_date = pendulum.datetime(2020, 1, 2, 12)
+    fitbit_instance1, fitbit_instance2 = Mock(), Mock()
+    fitbit_instance1.get_bodyweight.return_value = {"weight": []}
+    fitbit_instance1.get_bodyfat.return_value = {"fat": []}
+    fitbit_instance2.get_bodyweight.return_value = {"weight": []}
+    fitbit_instance2.get_bodyfat.return_value = {"fat": []}
+    mock_Fitbit.side_effect = [fitbit_instance1, fitbit_instance2]
+    tokens = health.queries.tokens(conn)
+    users = [
+        health.HealthUser.init(token)
+        for token in tokens
+        if token["service"] == "fitbit"
+    ]
+    assert len(users) == 2
+    data = [user.body(test_date) for user in users]
+    expected = [
+        {"elapsed": None, "fat": None, "weight": None},
+        {"elapsed": None, "fat": None, "weight": None},
+    ]
+    assert data == expected
+
+
+def test_body_reports0():
+    data_in = [
+        {"elapsed": 365, "weight": None, "fat": None, "first_name": "name1"},
+        {"elapsed": None, "weight": 100, "fat": 10, "first_name": "name2"},
+    ]
+    report = health.body_details(data_in)
+    expected = [
+        "name1 har ikke veid seg på *365* dager. Skjerpings! ",
+        "name2 veier *100* kg. Body fat percentage er *10*",
+    ]
+    assert report == expected
+
+
+def test_body_reports1():
+    data_in = [
+        {"elapsed": None, "weight": None, "fat": None, "first_name": "name1"},
+        {"elapsed": None, "weight": None, "fat": None, "first_name": "name2"},
+    ]
+    report = health.body_details(data_in)
+    assert report == []
+
+
+def test_body_reports2():
+    data_in = [
+        {"elapsed": 365, "weight": None, "fat": None, "first_name": "name1"},
+    ]
+    report = health.body_details(data_in)
+    expected = ["name1 har ikke veid seg på *365* dager. Skjerpings! "]
+    assert report == expected
+
+
+def test_body_reports3():
+    data_in = [
+        {"elapsed": None, "weight": 100, "fat": None, "first_name": "name1"},
+    ]
+    report = health.body_details(data_in)
+    expected = ["name1 veier *100* kg. "]
+    assert report == expected
+
+
+def test_body_reports4():
+    data_in = [
+        {"elapsed": None, "weight": None, "fat": 10, "first_name": "name1"},
+    ]
+    report = health.body_details(data_in)
+    expected = ["name1 sin body fat percentage er *10*. "]
+    assert report == expected

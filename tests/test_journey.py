@@ -71,8 +71,8 @@ class MockHealth:
             {"first_name": name, "amount": step}
             for name, step in zip(["name2", "name3", "name5", "name6"], steps)
         ]
-        weight_reports = ["name2 veier 60 kg"]
-        return steps_data, weight_reports
+        body_reports = ["name2 veier 60 kg"]
+        return steps_data, body_reports
 
 
 def insert_journey_data(conn) -> int:
@@ -114,7 +114,7 @@ def example_update_data() -> dict:
         "img_url": "www.image",
         "map_url": "www.mapurl",
         "traversal_map_url": "www.tmap",
-        "weight_reports": ["name2 veier 60 kg"],
+        "body_reports": ["name2 veier 60 kg"],
         "finished": False,
     }
 

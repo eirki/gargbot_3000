@@ -574,7 +574,7 @@ def perform_daily_update(
     journey = queries.get_journey(conn, journey_id=journey_id)
     if journey["finished_at"] is not None or journey["started_at"] is None:
         return None
-    steps_data, weight_reports = activity_func(conn, date)
+    steps_data, body_reports = activity_func(conn, date)
     steps_data.sort(key=itemgetter("amount"), reverse=True)
     steps_today = sum(data["amount"] for data in steps_data)
     if steps_today == 0:
@@ -625,7 +625,7 @@ def perform_daily_update(
         "img_url": img_url,
         "map_url": map_url,
         "traversal_map_url": traversal_map_url,
-        "weight_reports": weight_reports,
+        "body_reports": body_reports,
         "finished": finished,
     }
 
@@ -671,7 +671,7 @@ def format_response(
     img_url: t.Optional[str],
     map_url: str,
     traversal_map_url: t.Optional[str],
-    weight_reports: t.List[str],
+    body_reports: t.Optional[t.List[str]],
     finished: bool,
 ) -> dict:
     blocks = []
@@ -732,15 +732,10 @@ def format_response(
         }
     )
 
-    if weight_reports:
+    if body_reports:
         blocks.append({"type": "divider"})
-        weight_txt = "\n\n".join(weight_reports)
-        blocks.append(
-            {
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": f"Also: {weight_txt}"},
-            }
-        )
+        body_txt = "Also: " + "".join(body_reports)
+        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": body_txt}})
 
     response = {"text": f"{title_txt}: {distance_summary}", "blocks": blocks}
     return response

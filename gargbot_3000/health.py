@@ -280,11 +280,7 @@ class HealthUser(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def weight(self, date: pendulum.DateTime) -> t.Optional[dict]:
-        pass
-
-    @abstractmethod
-    def bodyfat(self, date: pendulum.DateTime) -> t.Optional[int]:
+    def body(self, date: pendulum.DateTime) -> t.Optional[dict]:
         pass
 
 
@@ -317,10 +313,7 @@ class WithingsUser(HealthUser):
         )
         return entry.steps if entry else None
 
-    def weight(self, date: pendulum.DateTime) -> t.Optional[dict]:
-        return None
-
-    def bodyfat(self, date: pendulum.DateTime) -> None:
+    def body(self, date: pendulum.DateTime) -> None:
         return None
 
 
@@ -349,34 +342,36 @@ class FitbitUser(HealthUser):
         entry = data["activities-steps"][0]
         return int(entry["value"]) if entry else None
 
-    def weight(self, date: pendulum.DateTime) -> t.Optional[dict]:
-        data = self.client.get_bodyweight(base_date=date, period="1w")
-        if len(data["weight"]) == 0:
-            log.info("No weight data")
-            return None
-        entries = data["weight"]
-        for entry in entries:
-            entry["datetime"] = pendulum.parse(f"{entry['date']}T{entry['time']}")
-        entries.sort(key=itemgetter("datetime"), reverse=True)
-        most_recent = entries[0]
-        log.info(f"weight data: {most_recent}")
-        return most_recent
+    def body(self, date: pendulum.DateTime) -> dict:
+        def most_recent(entries: t.List[dict]) -> t.Optional[dict]:
+            if len(entries) == 0:
+                return None
+            for entry in entries:
+                entry["datetime"] = pendulum.parse(f"{entry['date']}T{entry['time']}")
+            entries.sort(key=itemgetter("datetime"), reverse=True)
+            return entries[0]
 
-    def bodyfat(self, date: pendulum.DateTime) -> t.Optional[int]:
-        data = self.client.get_bodyfat(base_date=date, period="1w")
-        if len(data["bodyfat"]) == 0:
-            log.info("No bodyfat data")
-            return None
-        entries = data["bodyfat"]
-        for entry in entries:
-            entry["datetime"] = pendulum.parse(f"{entry['date']}T{entry['time']}")
-        entries.sort(key=itemgetter("datetime"), reverse=True)
-        most_recent = entries[0]
-        if (date - most_recent["datetime"]).days > 2:
-            log.info(f"No recent bodyfat data after {most_recent['datetime']}")
-            return None
-        log.info(f"bodyfat data: {most_recent}")
-        return most_recent["fat"]
+        weight = None
+        elapsed = None
+        fat = None
+        weight_data = self.client.get_bodyweight(base_date=date, period="1w")
+        weight_entry = most_recent(weight_data["weight"])
+        if weight_entry is not None:
+            if weight_entry["datetime"].date() == date.date():
+                weight = weight_entry["weight"]
+            else:
+                elapsed = (date - weight_entry["datetime"]).days
+                print(elapsed)
+        fat_data = self.client.get_bodyfat(base_date=date, period="1w")
+        fat_entry = most_recent(fat_data["fat"])
+        if fat_entry is not None and fat_entry["datetime"].date() == date.date():
+            fat = fat_entry["fat"]
+
+        return {
+            "weight": weight,
+            "elapsed": elapsed,
+            "fat": fat,
+        }
 
 
 class PolarUser(HealthUser):
@@ -397,10 +392,7 @@ class PolarUser(HealthUser):
         steps = trans.get_step_samples()
         log.info(steps)
 
-    def weight(self, date: pendulum.DateTime) -> t.Optional[dict]:
-        return None
-
-    def bodyfat(self, date: pendulum.DateTime) -> t.Optional[int]:
+    def body(self, date: pendulum.DateTime) -> None:
         return None
 
 
@@ -421,50 +413,53 @@ def steps(users: t.List[HealthUser], date: pendulum.DateTime) -> t.List[dict]:
     return step_amounts
 
 
-def body_details(users: t.List[HealthUser], date: pendulum.DateTime) -> t.List[str]:
-    reports = []
+def get_body_data(users: t.List[HealthUser], date: pendulum.DateTime) -> t.List[dict]:
+    all_data = []
     for user in users:
-        desc = None
         try:
-            weight_data = user.weight(date)
+            body_data = user.body(date)
         except Exception:
             log.error(
-                f"Error getting {user.service.name} weight data for {user.first_name}",
+                f"Error getting {user.service.name} body data for {user.first_name}",
                 exc_info=True,
             )
-            weight_data = None
-        try:
-            bodyfat_data = user.bodyfat(date)
-        except Exception:
-            log.error(
-                f"Error getting {user.service.name} bodyfat data for {user.first_name}",
-                exc_info=True,
-            )
-            bodyfat_data = None
+        else:
+            if body_data is None:
+                continue
+            body_data["first_name"] = user.first_name
+            all_data.append(body_data)
+    return all_data
 
-        if weight_data:
-            elapsed = (date - weight_data["datetime"]).days
-            if elapsed < 2:
-                desc = f"{user.first_name} veier nå *{weight_data['weight']}* kg."
-            else:
-                desc = f"{user.first_name} har ikke veid seg på *{elapsed}* dager. Skjerpings!"
-            if bodyfat_data:
-                desc += f"Bodyfat prosent er {bodyfat_data}"
-        elif bodyfat_data:
-            desc = f"{user.first_name} sin bodyfat prosent er {bodyfat_data}"
 
-        if desc:
-            reports.append(desc)
-    return reports
+def body_details(body_data: t.List[dict]) -> t.Optional[list]:
+    user_reports = []
+    for datum in body_data:
+        weight = datum["weight"]
+        fat = datum["fat"]
+        elapsed = datum["elapsed"]
+        name = datum["first_name"]
+        user_report = None
+        if weight is not None:
+            user_report = f"{name} veier *{weight}* kg. "
+            if fat is not None:
+                user_report += f"Body fat percentage er *{fat}*"
+        elif fat is not None:
+            user_report = f"{name} sin body fat percentage er *{fat}*. "
+        elif elapsed is not None:
+            user_report = f"{name} har ikke veid seg på *{elapsed}* dager. Skjerpings! "
+        if user_report is not None:
+            user_reports.append(user_report)
+    return user_reports
 
 
 def activity(
     conn: connection, date: pendulum.DateTime
-) -> t.Optional[t.Tuple[list, list]]:
+) -> t.Optional[t.Tuple[list, t.Optional[list]]]:
     tokens = queries.tokens(conn)
     if not tokens:
         return None
     users = [HealthUser.init(token) for token in tokens]
     steps_data = steps(users, date)
-    body_reports = body_details(users, date)
+    body_data = get_body_data(users, date)
+    body_reports = body_details(body_data)
     return steps_data, body_reports
