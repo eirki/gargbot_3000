@@ -274,14 +274,31 @@ fetch first
     row only;
 
 
--- name: location_coordinates
+-- name: location_between_distances
 select
     lat,
     lon
 from
     location
 where
-    journey_id = :journey_id;
+    journey_id = :journey_id
+    and (
+        distance between :low
+        and :high
+    )
+order by
+    distance;
+
+
+-- name: locations_for_journey
+select
+    *
+from
+    location
+where
+    journey_id = :journey_id
+order by
+    date;
 
 
 -- name: add_steps*!
@@ -317,7 +334,8 @@ where
 -- name: get_steps
 select
     step.*,
-    gargling.first_name
+    gargling.first_name,
+    gargling.color_hex
 from
     step
     left join gargling on step.gargling_id = gargling.id

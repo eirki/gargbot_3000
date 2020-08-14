@@ -304,6 +304,7 @@ def test_store_steps(conn: connection):
     assert len(data_in) == len(data_out)
     for d_in, d_out in zip(data_in, data_out):
         d_out.pop("gargling_id")
+        d_out.pop("color_hex")
         assert d_in == d_out
 
 

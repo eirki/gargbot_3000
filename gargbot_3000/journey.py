@@ -14,7 +14,7 @@ import typing as t
 import urllib
 import urllib.parse as urlparse
 
-from PIL import Image
+from PIL import Image, ImageChops, ImageDraw, ImageFont
 import aiosql
 from dotenv import load_dotenv
 from dropbox import Dropbox
@@ -346,7 +346,7 @@ def traversal_data(
     t.List[t.Tuple[float, float]],
     t.List[t.Tuple[float, float]],
     t.List[t.Tuple[float, float]],
-    t.List[t.Tuple[str, t.List[t.Tuple[float, float]]]],
+    t.List[dict],
 ]:
     if last_location is not None:
         old_waypoints = queries.waypoints_between_distances(
@@ -354,7 +354,7 @@ def traversal_data(
         )
         old_coords = [(loc["lon"], loc["lat"]) for loc in old_waypoints]
         old_coords.append((last_location["lon"], last_location["lat"]))
-        locations = queries.location_coordinates(
+        locations = queries.location_between_distances(
             conn, journey_id=journey_id, low=0, high=last_location["distance"]
         )
         location_coordinates = [(old_waypoints[0]["lon"], old_waypoints[0]["lat"])]
@@ -373,7 +373,7 @@ def traversal_data(
     overview_coords.extend([(loc["lon"], loc["lat"]) for loc in current_waypoints])
     overview_coords.append((current_lon, current_lat))
 
-    detailed_coords: t.List[t.Tuple[str, t.List[t.Tuple[float, float]]]] = []
+    detailed_coords: t.List[dict] = []
     waypoints_itr = iter(current_waypoints)
     starting_location = last_location
     for gargling in steps_data:
@@ -400,37 +400,83 @@ def traversal_data(
             last_lat = current_lat
             last_lon = current_lon
         gargling_coords.append((last_lon, last_lat))
-        detailed_coords.append((gargling["color_hex"], gargling_coords))
+        detailed_coords.append(
+            {
+                "color_hex": gargling["color_hex"],
+                "first_name": gargling["first_name"],
+                "coords": gargling_coords,
+            }
+        )
         starting_location = {"lat": last_lat, "lon": last_lon}
         start_dist = total_distance
 
     return old_coords, location_coordinates, overview_coords, detailed_coords
 
 
-def render_map(map_: StaticMap) -> t.Optional[Image.Image]:
+def map_legend(gargling_coords: t.List[dict]) -> Image.Image:
+    def trim(im):
+        bg = Image.new(im.mode, im.size, im.getpixel((0, 0)))
+        diff = ImageChops.difference(im, bg)
+        diff = ImageChops.add(diff, diff, 2.0, -100)
+        bbox = diff.getbbox()
+        if bbox:
+            left, upper, right, lower = bbox
+            return im.crop((left, upper - 5, right + 5, lower + 5))
+
+    padding = 5
+    line_height = 20
+    img = Image.new("RGB", (1000, 1000), (255, 255, 255))
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.truetype("Pillow/Tests/fonts/DejaVuSans.ttf", line_height)
+    for i, gargling in enumerate(gargling_coords):
+        current_line_height = (line_height + padding) * (i + 1)
+        color = gargling["color_hex"]
+        name = gargling["first_name"]
+        draw.text(
+            xy=(0, current_line_height), text="—", fill=color, font=font,
+        )
+        draw.text(
+            xy=(25, current_line_height), text=name, fill="black", font=font,
+        )
+    trimmed = trim(img)
+    return trimmed
+
+
+def render_map(map_: StaticMap, retry=True) -> t.Optional[Image.Image]:
     try:
         img = map_.render()
     except Exception:
+        if retry:
+            return render_map(map_, retry=False)
         log.error("Error rendering map", exc_info=True)
         img = None
     return img
 
 
 def merge_maps(
-    overview_img: t.Optional[Image.Image], detailed_img: t.Optional[Image.Image]
+    overview_img: t.Optional[Image.Image],
+    detailed_img: t.Optional[Image.Image],
+    legend: Image.Image,
 ) -> t.Optional[bytes]:
+    if detailed_img is not None:
+        detailed_img.paste(legend, (detailed_img.width - legend.width, 0))
+
     if overview_img is not None and detailed_img is not None:
-        img = Image.new(
-            "RGB", ((overview_img.width + detailed_img.width), overview_img.height)
-        )
         sep = Image.new("RGB", (3, overview_img.height), (255, 255, 255))
+        img = Image.new(
+            "RGB",
+            (
+                (overview_img.width + sep.width + detailed_img.width),
+                overview_img.height,
+            ),
+        )
         img.paste(overview_img, (0, 0))
         img.paste(sep, (overview_img.width, 0))
         img.paste(detailed_img, (overview_img.width + sep.width, 0))
     elif overview_img is not None:
-        img = detailed_img
-    elif detailed_img is not None:
         img = overview_img
+    elif detailed_img is not None:
+        img = detailed_img
     else:
         return None
     bytes_io = BytesIO()
@@ -456,23 +502,33 @@ def generate_traversal_map(
         current_distance,
         steps_data,
     )
-    template = "https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png"
-    overview_map = StaticMap(width=500, height=300, url_template=template)
-    overview_map.add_line(Line(old_coords, "grey", 2))
+    template = "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
+    height = 600
+    width = 1000
+    overview_map = StaticMap(width=width, height=height, url_template=template)
+    if old_coords:
+        overview_map.add_line(Line(old_coords, "grey", 2))
     for lon, lat in locations:
         overview_map.add_marker(CircleMarker((lon, lat), "blue", 6))
     overview_map.add_line(Line(overview_coords, "red", 2))
     overview_map.add_marker(CircleMarker((current_lon, current_lat), "red", 6))
 
-    detailed_map = StaticMap(width=500, height=300, url_template=template)
-    detailed_map.add_marker(CircleMarker(detailed_coords[0][1][0], "grey", 6))
-    for color, coords in detailed_coords:
-        detailed_map.add_line(Line(coords, color, 2))
-        detailed_map.add_marker(CircleMarker(coords[-1], color, 6))
+    detailed_map = StaticMap(width=width, height=height, url_template=template)
+    start = detailed_coords[0]["coords"][0]
+    detailed_map.add_marker(CircleMarker(start, "black", 6))
+    detailed_map.add_marker(CircleMarker(start, "grey", 4))
+    for gargling in detailed_coords:
+        detailed_map.add_line(Line(gargling["coords"], "grey", 4))
+        detailed_map.add_line(Line(gargling["coords"], gargling["color_hex"], 2))
+        detailed_map.add_marker(CircleMarker(gargling["coords"][-1], "black", 6))
+        detailed_map.add_marker(
+            CircleMarker(gargling["coords"][-1], gargling["color_hex"], 4)
+        )
+    legend = map_legend(detailed_coords)
 
     overview_img = render_map(overview_map)
     detailed_img = render_map(detailed_map)
-    img = merge_maps(overview_img, detailed_img)
+    img = merge_maps(overview_img, detailed_img, legend)
     return img
 
 
