@@ -59,8 +59,8 @@ class HealthService(metaclass=ABCMeta):
             "fitbit": Fitbit,
             "polar": Polar,
         }
-        Service = services[service_name]()
-        return Service
+        service = services[service_name]()
+        return service
 
     @abstractmethod
     def authorization_url(cls) -> str:
@@ -170,13 +170,14 @@ class Polar(HealthService):
         return auth_url
 
     def token(self, code: str) -> t.Tuple[int, dict]:
-        token = self.client.get_access_token(code)
-        user_id = token["x_user_id"]
+        token_response = self.client.get_access_token(code)
+        user_id = token_response["x_user_id"]
+        token = token_response["access_token"]
+
         try:
             self.client.users.register(access_token=token)
         except requests.exceptions.HTTPError as e:
             # Error 409 Conflict means that the user has already been registered for this client.
-            # For most applications, that error can be ignored.
             if e.response.status_code != 409:
                 raise e
 
@@ -394,11 +395,11 @@ class PolarUser(HealthUser):
         self.token = token["access_token"]
 
     def steps(self, date: pendulum.DateTime) -> t.Optional[int]:
+        return None
         trans = self.client.daily_activity.create_transaction(self.user_id, self.token)
         log.info(trans)
         steps = trans.get_step_samples()
         log.info(steps)
-        return None
 
     def weight(self, date: pendulum.DateTime) -> t.Optional[dict]:
         return None
