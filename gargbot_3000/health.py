@@ -170,18 +170,14 @@ class Polar(HealthService):
         return auth_url
 
     def token(self, code: str) -> t.Tuple[int, dict]:
-        token_response = self.client.get_access_token(code)
-        user_id = token_response["x_user_id"]
-        token = token_response["access_token"]
-
+        token = self.client.get_access_token(code)
         try:
-            self.client.users.register(access_token=token)
+            self.client.users.register(access_token=token["access_token"])
         except requests.exceptions.HTTPError as e:
             # Error 409 Conflict means that the user has already been registered for this client.
             if e.response.status_code != 409:
                 raise e
-
-        return user_id, token
+        return token["x_user_id"], token
 
     @staticmethod
     def persist_token(token: dict, conn: t.Optional[connection] = None) -> None:
