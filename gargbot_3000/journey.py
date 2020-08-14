@@ -5,6 +5,7 @@ import datetime as dt
 import hashlib
 import hmac
 from io import BytesIO
+import itertools
 from operator import itemgetter
 import os
 from pathlib import Path
@@ -67,6 +68,36 @@ poi_types = {
     "tourist_attraction",
     "zoo",
 }
+
+
+def generate_all_maps(journey_id, conn, write=True):
+    all_steps = queries.get_steps(conn, journey_id=journey_id)
+    all_steps.sort(key=itemgetter("taken_at"))
+    steps_for_date = {
+        date: list(steps)
+        for date, steps in itertools.groupby(
+            all_steps, lambda step: step["taken_at"].date()
+        )
+    }
+    locations = queries.locations_for_journey(conn, journey_id=journey_id)
+    last_location = None
+    for location in locations:
+        date = location["date"].date()
+        steps_data = steps_for_date[date]
+        steps_data.sort(key=itemgetter("first_name"))
+        img = generate_traversal_map(
+            conn=conn,
+            journey_id=journey_id,
+            last_location=last_location,
+            current_lat=location["lat"],
+            current_lon=location["lon"],
+            current_distance=location["distance"],
+            steps_data=steps_data,
+        )
+        if img is not None and write is True:
+            with open((Path.cwd() / date.isoformat()).with_suffix((".jpg")), "wb") as f:
+                f.write(img)
+        last_location = location
 
 
 @blueprint.route("/detail_journey/<journey_id>")

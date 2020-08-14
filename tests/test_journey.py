@@ -520,3 +520,18 @@ def test_journey_main(
     assert (
         dat[1]["blocks"][0]["text"]["text"] == "*Ekspedisjonsrapport 1.4.2013 - dag 2*"
     )
+
+
+@patch("gargbot_3000.journey.health.activity")
+def test_generate_all_maps(mock_activity, conn):
+    health = MockHealth()
+    mock_activity.return_value = health.activity(conn=None, date=None)
+    journey_id = insert_journey_data(conn)
+    start_date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    journey.start_journey(conn, journey_id, start_date)
+    with api_mocker():
+        journey.perform_daily_update(conn, health.activity, journey_id, start_date)
+        cur_date = start_date.add(days=4)
+        for date in journey.days_to_update(conn, journey_id, cur_date):
+            journey.perform_daily_update(conn, health.activity, journey_id, date)
+    journey.generate_all_maps(journey_id, conn, write=False)
