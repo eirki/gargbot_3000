@@ -1,11 +1,12 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
 from abc import ABCMeta, abstractmethod
+from collections import defaultdict
 from contextlib import contextmanager
 from operator import itemgetter
 import typing as t
 
-import accesslink as polar
+from accesslink import AccessLink as PolarApi
 import aiosql
 from fitbit import Fitbit as FitbitApi
 from fitbit.api import FitbitOauth2Client
@@ -50,7 +51,7 @@ service_user_id_type = t.Union[int, str]
 
 class HealthService(metaclass=ABCMeta):
     name: str
-    client: t.Union[WithingsAuth, FitbitOauth2Client, polar.AccessLink]
+    client: t.Union[WithingsAuth, FitbitOauth2Client, PolarApi]
 
     @classmethod
     def init(cls, service_name: str) -> "HealthService":
@@ -158,12 +159,12 @@ class Polar(HealthService):
     name = "polar"
 
     def __init__(self):
-        client = polar.AccessLink(
+        client = PolarApi(
             client_id=config.polar_client_id,
             client_secret=config.polar_client_secret,
             redirect_url=config.polar_redirect_uri,
         )
-        self.client: polar.AccessLink = client
+        self.client: PolarApi = client
 
     def authorization_url(self) -> str:
         auth_url = self.client.get_authorization_url()
@@ -259,6 +260,7 @@ def toggle_report():
 class HealthUser(metaclass=ABCMeta):
     service: t.ClassVar[t.Type[HealthService]]
     first_name: str
+    gargling_id: int
 
     @abstractmethod
     def __init__(self, token):
@@ -276,11 +278,13 @@ class HealthUser(metaclass=ABCMeta):
         return service
 
     @abstractmethod
-    def steps(self, date: pendulum.DateTime) -> t.Optional[int]:
+    def steps(
+        self, date: pendulum.Date, conn: t.Optional[connection] = None
+    ) -> t.Optional[int]:
         pass
 
     @abstractmethod
-    def body(self, date: pendulum.DateTime) -> t.Optional[dict]:
+    def body(self, date: pendulum.Date) -> t.Optional[dict]:
         pass
 
 
@@ -301,8 +305,9 @@ class WithingsUser(HealthUser):
             credentials, refresh_cb=self.service.persist_token
         )
         self.first_name = token["first_name"]
+        self.gargling_id = token["first_name"]
 
-    def steps(self, date: pendulum.DateTime) -> t.Optional[int]:
+    def steps(self, date: pendulum.Date, conn: None = None) -> t.Optional[int]:
         result = self.client.measure_get_activity(
             data_fields=[GetActivityField.STEPS],
             startdateymd=date,
@@ -313,7 +318,7 @@ class WithingsUser(HealthUser):
         )
         return entry.steps if entry else None
 
-    def body(self, date: pendulum.DateTime) -> None:
+    def body(self, date: pendulum.Date) -> None:
         return None
 
 
@@ -332,8 +337,9 @@ class FitbitUser(HealthUser):
         )
         self.client: FitbitApi = client
         self.first_name = token["first_name"]
+        self.gargling_id = token["first_name"]
 
-    def steps(self, date: pendulum.DateTime) -> t.Optional[int]:
+    def steps(self, date: pendulum.Date, conn: None = None) -> t.Optional[int]:
         data = self.client.time_series(
             resource="activities/steps", base_date=date, period="1d"
         )
@@ -342,12 +348,14 @@ class FitbitUser(HealthUser):
         entry = data["activities-steps"][0]
         return int(entry["value"]) if entry else None
 
-    def body(self, date: pendulum.DateTime) -> dict:
+    def body(self, date: pendulum.Date) -> dict:
         def most_recent(entries: t.List[dict]) -> t.Optional[dict]:
             if len(entries) == 0:
                 return None
             for entry in entries:
-                entry["datetime"] = pendulum.parse(f"{entry['date']}T{entry['time']}")
+                entry["datetime"] = pendulum.parse(
+                    f"{entry['date']}T{entry['time']}"
+                ).date()
             entries.sort(key=itemgetter("datetime"), reverse=True)
             return entries[0]
 
@@ -357,14 +365,14 @@ class FitbitUser(HealthUser):
         weight_data = self.client.get_bodyweight(base_date=date, period="1w")
         weight_entry = most_recent(weight_data["weight"])
         if weight_entry is not None:
-            if weight_entry["datetime"].date() == date.date():
+            if weight_entry["datetime"] == date:
                 weight = weight_entry["weight"]
             else:
                 elapsed = (date - weight_entry["datetime"]).days
                 print(elapsed)
         fat_data = self.client.get_bodyfat(base_date=date, period="1w")
         fat_entry = most_recent(fat_data["fat"])
-        if fat_entry is not None and fat_entry["datetime"].date() == date.date():
+        if fat_entry is not None and fat_entry["datetime"] == date:
             fat = fat_entry["fat"]
 
         return {
@@ -378,29 +386,53 @@ class PolarUser(HealthUser):
     service = Polar
 
     def __init__(self, token):
-        self.client = polar.AccessLink(
+        self.client = PolarApi(
             client_id=config.polar_client_id, client_secret=config.polar_client_secret
         )
         self.first_name = token["first_name"]
+        self.gargling_id = token["gargling_id"]
         self.user_id = token["id"]
         self.token = token["access_token"]
 
-    def steps(self, date: pendulum.DateTime) -> t.Optional[int]:
-        return None
+    @contextmanager
+    def _step_transaction(self, date: pendulum.Date) -> t.Generator[dict, None, None]:
         trans = self.client.daily_activity.create_transaction(self.user_id, self.token)
-        log.info(trans)
-        steps = trans.get_step_samples()
-        log.info(steps)
+        activities = trans.list_activities()
+        yield activities
+        trans.commit()
 
-    def body(self, date: pendulum.DateTime) -> None:
+    def steps(self, date: pendulum.Date, conn: connection = None) -> t.Optional[int]:
+        steps_by_date: t.Dict[pendulum.Date, int] = defaultdict(int)
+        with self._step_transaction(date) as activities:
+            for activity in activities["activity-log"]:
+                steps_by_date[pendulum.parse(activity["date"]).date()] += activity[
+                    "active-steps"
+                ]
+            not_past = [
+                {"taken_at": sdate, "n_steps": steps, "gargling_id": self.gargling_id}
+                for sdate, steps in steps_by_date.items()
+                if sdate >= date
+            ]
+            queries.upsert_steps(conn, not_past)
+        todays_data = queries.cached_step_for_date(conn, date=date, id=self.gargling_id)
+        steps = todays_data["n_steps"] if todays_data is not None else 0
+        return steps
+
+    def body(self, date: pendulum.Date) -> None:
         return None
 
 
-def steps(users: t.List[HealthUser], date: pendulum.DateTime) -> t.List[dict]:
+def steps(
+    conn: connection, users: t.List[HealthUser], date: pendulum.Date
+) -> t.List[dict]:
     step_amounts = []
     for user in users:
         try:
-            steps = user.steps(date)
+            steps = (
+                user.steps(date)
+                if user.service.name != "Polar"
+                else user.steps(date, conn)
+            )
         except Exception:
             log.error(
                 f"Error getting {user.service.name} steps data for {user.first_name}",
@@ -409,11 +441,11 @@ def steps(users: t.List[HealthUser], date: pendulum.DateTime) -> t.List[dict]:
             continue
         if steps is None:
             continue
-        step_amounts.append({"amount": steps, "first_name": user.first_name})
+        step_amounts.append({"amount": steps, "gargling_id": user.gargling_id})
     return step_amounts
 
 
-def get_body_data(users: t.List[HealthUser], date: pendulum.DateTime) -> t.List[dict]:
+def get_body_data(users: t.List[HealthUser], date: pendulum.Date) -> t.List[dict]:
     all_data = []
     for user in users:
         try:
@@ -453,13 +485,13 @@ def body_details(body_data: t.List[dict]) -> t.Optional[list]:
 
 
 def activity(
-    conn: connection, date: pendulum.DateTime
+    conn: connection, date: pendulum.Date
 ) -> t.Optional[t.Tuple[list, t.Optional[list]]]:
     tokens = queries.tokens(conn)
     if not tokens:
         return None
     users = [HealthUser.init(token) for token in tokens]
-    steps_data = steps(users, date)
+    steps_data = steps(conn, users, date)
     body_data = get_body_data(users, date)
     body_reports = body_details(body_data)
     return steps_data, body_reports

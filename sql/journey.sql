@@ -4,8 +4,8 @@ create table journey (
     origin text not null,
     destination text not null,
     ongoing boolean not null,
-    started_at timestamptz,
-    finished_at timestamptz
+    started_at date,
+    finished_at date
 );
 
 
@@ -26,7 +26,7 @@ create table waypoint (
 create table step (
     journey_id smallint not null references journey(id),
     gargling_id smallint not null references gargling(id),
-    taken_at timestamptz not null,
+    taken_at date not null,
     amount smallint not null
 );
 
@@ -40,7 +40,7 @@ create table location (
     lat double precision not null,
     lon double precision not null,
     distance int not null,
-    date timestamptz not null,
+    date date not null,
     address text,
     img_url text,
     map_url text not null,
@@ -307,28 +307,22 @@ insert into
 values
     (
         :journey_id,
-        (
-            select
-                id
-            from
-                gargling
-            where
-                first_name = :first_name
-        ),
+        :gargling_id,
         :taken_at,
         :amount
     );
 
 
--- name: get_colors
+-- name: colors_names_for_ids
 select
+    id,
     first_name,
     color_name,
     color_hex
 from
     gargling
 where
-    first_name = any(:names);
+    id = any(:ids);
 
 
 -- name: get_steps

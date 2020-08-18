@@ -76,13 +76,14 @@ def send_congrats() -> None:
 
 
 def update_journey() -> None:
+    current_date = pendulum.now()
+    if not isinstance(current_date, pendulum.Date):
+        # now function sometimes returns a date, not datetime??
+        current_date = current_date.date()
     conn = database.connect()
     try:
-        updates = journey.main(conn)
-        if not updates:
-            return
         slack_client = SlackClient(config.slack_bot_user_token)
-        for update in updates:
+        for update in journey.main(conn, current_date):
             task.send_response(slack_client, update, channel=config.health_channel)
     finally:
         conn.close()

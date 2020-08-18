@@ -53,28 +53,6 @@ gps_data = [
 ]
 
 
-class MockHealth:
-    steps = {
-        0: (11521, 6380, 111, 17782),
-        1: (14035, 2507, 6236, 911),
-        2: (5166, 9151, 4212, 14041),
-        3: (11315, 5972, 8992, 10318),
-    }
-
-    def __init__(self):
-        self.called = 0
-
-    def activity(self, conn, date):
-        steps = self.steps[self.called]
-        self.called += 1
-        steps_data = [
-            {"first_name": name, "amount": step}
-            for name, step in zip(["name2", "name3", "name5", "name6"], steps)
-        ]
-        body_reports = ["name2 veier 60 kg"]
-        return steps_data, body_reports
-
-
 def insert_journey_data(conn) -> int:
     journey_id = journey.define_journey(
         conn, origin="Origin", destination="Destination"
@@ -84,37 +62,47 @@ def insert_journey_data(conn) -> int:
     return journey_id
 
 
+def example_activity_data():
+    steps_data = [
+        {"gargling_id": 6, "amount": 17782},
+        {"gargling_id": 2, "amount": 11521},
+        {"gargling_id": 3, "amount": 6380},
+        {"gargling_id": 5, "amount": 111},
+    ]
+    body_reports = ["name2 veier 60 kg"]
+    return steps_data, body_reports
+
+
+def example_gargling_info() -> dict:
+    infos = [
+        (6, "#42d4f4", "cyan", "name6"),
+        (2, "#3cb44b", "green", "name2"),
+        (3, "#f58231", "orange", "name3"),
+        (5, "#911eb4", "purple", "name5"),
+    ]
+    infodict = {
+        id_: {
+            "first_name": first_name,
+            "color_name": color_name,
+            "color_hex": color_hex,
+        }
+        for id_, color_hex, color_name, first_name in infos
+    }
+    return infodict
+
+
 def example_update_data() -> dict:
-    date = pendulum.datetime(2013, 3, 31, tz="UTC")
-    expected_steps_data = [
-        {"first_name": "name6", "amount": 17782},
-        {"first_name": "name2", "amount": 11521},
-        {"first_name": "name3", "amount": 6380},
-        {"first_name": "name5", "amount": 111},
-    ]
-    colors = [
-        ("#42d4f4", "cyan"),
-        ("#3cb44b", "green"),
-        ("#f58231", "orange"),
-        ("#911eb4", "purple"),
-    ]
-    for d, (c_hex, c_name) in zip(expected_steps_data, colors):
-        d["taken_at"] = date
-        d["journey_id"] = 1
-        d["color_hex"] = c_hex
-        d["color_name"] = c_name
+    date = pendulum.Date(2013, 3, 31)
     return {
         "date": date,
-        "steps_data": expected_steps_data,
         "dist_today": 26845.5,
-        "dist_total": 26845.5,
+        "distance": 26845.5,
         "dist_remaining": 29016.651884,
         "address": "Address",
         "poi": "Poi",
         "img_url": "www.image",
         "map_url": "www.mapurl",
         "traversal_map_url": "www.tmap",
-        "body_reports": ["name2 veier 60 kg"],
         "finished": False,
     }
 
@@ -145,7 +133,7 @@ def test_list_journeys(
     mock_jwt_required, mock_jwt_identity, client: FlaskClient, conn: connection
 ):
     journey_id = insert_journey_data(conn)
-    date1 = pendulum.datetime(2013, 3, 31, tz="UTC")
+    date1 = pendulum.Date(2013, 3, 31)
     location1 = {
         "lat": 47.58633461507472,
         "lon": 40.69297732817553,
@@ -158,7 +146,7 @@ def test_list_journeys(
         "poi": "poi1",
     }
 
-    date2 = pendulum.datetime(2013, 4, 10, tz="UTC")
+    date2 = pendulum.Date(2013, 4, 10)
     location2 = {
         "lat": 47.58633461507472,
         "lon": 40.69297732817553,
@@ -178,12 +166,16 @@ def test_list_journeys(
 
 def test_detail_journey(client: FlaskClient, conn: connection):
     journey_id = insert_journey_data(conn)
-    health = MockHealth()
-    date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    steps_data, body_reports = example_activity_data()
+    g_info = example_gargling_info()
+    date = pendulum.Date(2013, 3, 31)
     journey.start_journey(conn, journey_id, date)
     with api_mocker():
-        journey.perform_daily_update(conn, health.activity, journey_id, date)
-        response = client.get(f"/detail_journey/{journey_id}")
+        location, *_, finished = journey.perform_daily_update(
+            conn, journey_id, date, steps_data, g_info
+        )
+    journey.store_update_data(conn, location, finished)
+    response = client.get(f"/detail_journey/{journey_id}")
     waypoints = response.json.pop("waypoints")
     length = len(waypoints) - 1
     assert waypoints[:length] == gps_data[:length]
@@ -231,7 +223,7 @@ def test_get_location(conn: connection):
 
 def test_store_get_most_recent_location(conn):
     journey_id = insert_journey_data(conn)
-    date1 = pendulum.datetime(2013, 3, 31, tz="UTC")
+    date1 = pendulum.Date(2013, 3, 31)
     location1 = {
         "lat": 47.58633461507472,
         "lon": 40.69297732817553,
@@ -244,7 +236,7 @@ def test_store_get_most_recent_location(conn):
         "poi": "poi1",
     }
 
-    date2 = pendulum.datetime(2013, 4, 10, tz="UTC")
+    date2 = pendulum.Date(2013, 4, 10)
     location2 = {
         "lat": 47.58633461507472,
         "lon": 40.69297732817553,
@@ -269,7 +261,7 @@ def test_store_get_most_recent_location(conn):
 
 def test_start_journey(conn):
     journey_id = insert_journey_data(conn)
-    date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    date = pendulum.Date(2013, 3, 31)
     journey.start_journey(conn, journey_id, date)
     ongoing = journey.queries.get_ongoing_journey(conn)
     assert dict(ongoing) == {
@@ -285,7 +277,7 @@ def test_start_journey(conn):
 def test_start_two_journeys_fails(conn):
     journey_id1 = insert_journey_data(conn)
     journey_id2 = insert_journey_data(conn)
-    date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    date = pendulum.Date(2013, 3, 31)
     journey.start_journey(conn, journey_id1, date)
     with pytest.raises(psycopg2.errors.UniqueViolation):
         journey.start_journey(conn, journey_id2, date)
@@ -293,48 +285,63 @@ def test_start_two_journeys_fails(conn):
 
 def test_store_steps(conn: connection):
     journey_id = insert_journey_data(conn)
-    date = pendulum.datetime(2013, 3, 31, tz="UTC")
-    mock_health = MockHealth()
-    data_in, _ = mock_health.activity(conn=None, date=None)
+    date = pendulum.Date(2013, 3, 31)
+    data_in, _ = example_activity_data()
     journey.store_steps(conn, data_in, journey_id, date)
     data_out = journey.queries.get_steps(conn, journey_id=journey_id)
     data_out = [dict(d) for d in data_out]
-    data_in.sort(key=itemgetter("first_name"))
-    data_out.sort(key=itemgetter("first_name"))
+    data_in.sort(key=itemgetter("gargling_id"))
+    data_out.sort(key=itemgetter("gargling_id"))
     assert len(data_in) == len(data_out)
     for d_in, d_out in zip(data_in, data_out):
-        d_out.pop("gargling_id")
+        d_out.pop("first_name")
         d_out.pop("color_hex")
         assert d_in == d_out
 
 
 def test_store_steps_twice_fails(conn: connection):
     journey_id = insert_journey_data(conn)
-    date = pendulum.datetime(2013, 3, 31, tz="UTC")
-    mock_health = MockHealth()
-    steps_data, _ = mock_health.activity(conn=None, date=None)
+    date = pendulum.Date(2013, 3, 31)
+    steps_data, _ = example_activity_data()
     journey.store_steps(conn, steps_data, journey_id, date)
     with pytest.raises(psycopg2.errors.UniqueViolation):
         journey.store_steps(conn, steps_data, journey_id, date)
 
 
 def test_daily_update(conn: connection):
-    health = MockHealth()
+    steps_data, body_reports = example_activity_data()
+    g_info = example_gargling_info()
     journey_id = insert_journey_data(conn)
-    date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    date = pendulum.Date(2013, 3, 31)
     journey.start_journey(conn, journey_id, date)
     with api_mocker():
-        data = journey.perform_daily_update(conn, health.activity, journey_id, date)
+        data = journey.perform_daily_update(conn, journey_id, date, steps_data, g_info)
     assert data is not None
+    location, distance_today, dist_remaining, finished = data
     expected = example_update_data()
-    assert data == expected
+    assert distance_today == expected.pop("dist_today")
+    assert dist_remaining == expected.pop("dist_remaining")
+    assert finished == expected.pop("finished")
+    expected["journey_id"] = 1
+    expected["lat"] = 47.445256107266275
+    expected["latest_waypoint"] = 12
+    expected["lon"] = 40.965460224508455
+    assert location == expected
 
 
 def test_format_response():
+    g_info = example_gargling_info()
     data = example_update_data()
+    steps_data, body_reports = example_activity_data()
     data["destination"] = "Destinasjon"
 
-    formatted = journey.format_response(n_day=8, **data)
+    formatted = journey.format_response(
+        n_day=8,
+        gargling_info=g_info,
+        steps_data=steps_data,
+        body_reports=body_reports,
+        **data,
+    )
     expected = {
         "text": "*Ekspedisjonsrapport 31.3.2013 - dag 8*: Vi gikk *26.8 km*!",
         "blocks": [
@@ -399,10 +406,18 @@ def test_format_response():
 
 def test_format_response_no_address():
     data = example_update_data()
+    steps_data, body_reports = example_activity_data()
+    g_info = example_gargling_info()
     data["destination"] = "Destinasjon"
 
     data["address"] = None
-    response = journey.format_response(n_day=8, **data)
+    response = journey.format_response(
+        n_day=8,
+        gargling_info=g_info,
+        steps_data=steps_data,
+        body_reports=body_reports,
+        **data,
+    )
     address_block = response["blocks"][4]
     expected_address = {
         "text": {"text": "Kveldens underholdning er Poi.", "type": "mrkdwn"},
@@ -416,10 +431,20 @@ def test_format_response_no_address():
 
 def test_format_response_nopoi():
     data = example_update_data()
+    steps_data, body_reports = example_activity_data()
+
+    g_info = example_gargling_info()
     data["destination"] = "Destinasjon"
 
     data["poi"] = None
-    response = journey.format_response(n_day=8, **data)
+
+    response = journey.format_response(
+        n_day=8,
+        gargling_info=g_info,
+        steps_data=steps_data,
+        body_reports=body_reports,
+        **data,
+    )
     address_block = response["blocks"][4]
     expected = {
         "type": "section",
@@ -430,28 +455,46 @@ def test_format_response_nopoi():
 
 def test_format_response_no_img_url():
     data = example_update_data()
+    steps_data, body_reports = example_activity_data()
+    g_info = example_gargling_info()
+
     data["destination"] = "Destinasjon"
 
     data["img_url"] = None
-    response = journey.format_response(n_day=8, **data)
+    response = journey.format_response(
+        n_day=8,
+        gargling_info=g_info,
+        steps_data=steps_data,
+        body_reports=body_reports,
+        **data,
+    )
     assert len(response["blocks"]) == 8
 
 
 def test_format_response_no_all():
     data = example_update_data()
+    steps_data, body_reports = example_activity_data()
+    g_info = example_gargling_info()
+
     data["destination"] = "Destinasjon"
 
     data["address"] = None
     data["poi"] = None
     data["img_url"] = None
     data["traversal_map_url"] = None
-    response = journey.format_response(n_day=8, **data)
+    response = journey.format_response(
+        n_day=8,
+        gargling_info=g_info,
+        steps_data=steps_data,
+        body_reports=body_reports,
+        **data,
+    )
     assert len(response["blocks"]) == 6
 
 
 def test_days_to_update_unstarted(conn):
     journey_id = insert_journey_data(conn)
-    date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    date = pendulum.Date(2013, 3, 31)
     journey.start_journey(conn, journey_id, date)
     next_date = date.add(days=1)
     itr = journey.days_to_update(conn, journey_id, next_date)
@@ -461,7 +504,7 @@ def test_days_to_update_unstarted(conn):
 
 def test_days_to_update_unstarted_two_days(conn):
     journey_id = insert_journey_data(conn)
-    date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    date = pendulum.Date(2013, 3, 31)
     journey.start_journey(conn, journey_id, date)
     next_date = date.add(days=2)
     itr = journey.days_to_update(conn, journey_id, next_date)
@@ -470,50 +513,61 @@ def test_days_to_update_unstarted_two_days(conn):
 
 
 def test_days_to_update(conn: connection):
-    health = MockHealth()
+    steps_data, body_reports = example_activity_data()
+    g_info = example_gargling_info()
     journey_id = insert_journey_data(conn)
-    start_date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    start_date = pendulum.Date(2013, 3, 31)
     journey.start_journey(conn, journey_id, start_date)
     with api_mocker():
-        journey.perform_daily_update(conn, health.activity, journey_id, start_date)
-
+        location, *_, finished = journey.perform_daily_update(
+            conn, journey_id, start_date, steps_data, g_info
+        )
+    journey.store_update_data(conn, location, finished)
     cur_date = start_date.add(days=2)
     itr = journey.days_to_update(conn, journey_id, cur_date)
     days = list(itr)
     assert days == [cur_date.subtract(days=1)]
 
 
-def test_journey_finished(conn: connection):
-    health = MockHealth()
+@patch("gargbot_3000.journey.health.activity")
+def test_journey_finished(mock_activity, conn: connection):
+    steps_data, body_reports = example_activity_data()
+    mock_activity.return_value = (steps_data, body_reports)
     journey_id = insert_journey_data(conn)
-    start_date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    start_date = pendulum.Date(2013, 3, 31)
     journey.start_journey(conn, journey_id, start_date)
+    g_info = example_gargling_info()
     with api_mocker():
-        journey.perform_daily_update(conn, health.activity, journey_id, start_date)
+        steps_data, body_reports = example_activity_data()
+        journey.perform_daily_update(conn, journey_id, start_date, steps_data, g_info)
         cur_date = start_date.add(days=4)
         data = []
         for date in journey.days_to_update(conn, journey_id, cur_date):
+            steps_data, body_reports = example_activity_data()
             datum = journey.perform_daily_update(
-                conn, health.activity, journey_id, date
+                conn, journey_id, date, steps_data, g_info
             )
-            data.append(datum)
-        last_loc = [datum for datum in data if datum is not None][-1]
-    assert last_loc["finished"]
+            if datum is None:
+                continue
+            location, *_, finished = datum
+            journey.store_update_data(conn, location, finished)
+            data.append(finished)
+        last_fin = data[-1]
+    assert last_fin is True
 
 
 @patch("gargbot_3000.journey.health.activity")
 def test_journey_main(
     mock_activity, conn: connection,
 ):
-
-    health = MockHealth()
-    mock_activity.return_value = health.activity(conn=None, date=None)
+    steps_data, body_reports = example_activity_data()
+    mock_activity.return_value = (steps_data, body_reports)
     journey_id = insert_journey_data(conn)
-    start_date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    start_date = pendulum.Date(2013, 3, 31)
     journey.start_journey(conn, journey_id, start_date)
-    pendulum.set_test_now(start_date.add(days=2))
+    now = start_date.add(days=2)
     with api_mocker():
-        dat = journey.main(conn)
+        dat = list(journey.main(conn, now))
     assert len(dat) == 2
     assert (
         dat[0]["blocks"][0]["text"]["text"] == "*Ekspedisjonsrapport 31.3.2013 - dag 1*"
@@ -525,14 +579,15 @@ def test_journey_main(
 
 @patch("gargbot_3000.journey.health.activity")
 def test_generate_all_maps(mock_activity, conn):
-    health = MockHealth()
-    mock_activity.return_value = health.activity(conn=None, date=None)
+    steps_data, body_reports = example_activity_data()
+    mock_activity.return_value = (steps_data, body_reports)
     journey_id = insert_journey_data(conn)
-    start_date = pendulum.datetime(2013, 3, 31, tz="UTC")
+    start_date = pendulum.Date(2013, 3, 31)
     journey.start_journey(conn, journey_id, start_date)
+    g_info = example_gargling_info()
     with api_mocker():
-        journey.perform_daily_update(conn, health.activity, journey_id, start_date)
+        journey.perform_daily_update(conn, journey_id, start_date, steps_data, g_info)
         cur_date = start_date.add(days=4)
         for date in journey.days_to_update(conn, journey_id, cur_date):
-            journey.perform_daily_update(conn, health.activity, journey_id, date)
+            journey.perform_daily_update(conn, journey_id, date, steps_data, g_info)
     journey.generate_all_maps(journey_id, conn, write=False)

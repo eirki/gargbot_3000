@@ -7,6 +7,7 @@ create table fitbit_token (
   enable_report boolean not null default false
 );
 
+
 create table withings_token (
   id int not null unique primary key,
   access_token text not null,
@@ -14,6 +15,7 @@ create table withings_token (
   expires_at int not null,
   enable_report boolean not null default false
 );
+
 
 create table polar_token (
   id int not null unique primary key,
@@ -23,20 +25,33 @@ create table polar_token (
   enable_report boolean default false
 );
 
+
 create table fitbit_token_gargling (
   fitbit_id text not null references fitbit_token(id),
   gargling_id smallint not null references gargling(id)
 );
+
 
 create table withings_token_gargling (
   withings_id int not null references withings_token(id),
   gargling_id smallint not null references gargling(id)
 );
 
+
 create table polar_token_gargling (
   polar_id int not null references polar_token(id),
   gargling_id smallint not null references gargling(id)
 );
+
+
+create table cached_step (
+  gargling_id smallint not null references gargling(id),
+  n_steps int not null,
+  taken_at date not null
+);
+
+
+create unique index on cached_step (gargling_id, taken_at);
 
 
 -- name: persist_token!
@@ -118,6 +133,7 @@ select
   fitbit.refresh_token,
   fitbit.expires_at,
   gargling.first_name,
+  gargling.id as gargling_id,
   'fitbit' as service
 from
   fitbit_token as fitbit
@@ -133,6 +149,7 @@ select
   withings.refresh_token,
   withings.expires_at :: float,
   gargling.first_name,
+  gargling.id as gargling_id,
   'withings' as service
 from
   withings_token as withings
@@ -148,14 +165,14 @@ select
   polar.refresh_token,
   polar.expires_at,
   gargling.first_name,
+  gargling.id as gargling_id,
   'polar' as service
 from
   polar_token as polar
   inner join polar_token_gargling on polar.id = polar_token_gargling.polar_id
   inner join gargling on polar_token_gargling.gargling_id = gargling.id
 where
-  polar.enable_report
-;
+  polar.enable_report;
 
 
 -- name: all_ids_nicks
@@ -164,3 +181,22 @@ select
   slack_nick
 from
   gargling;
+
+
+-- name: upsert_steps*!
+insert into
+  cached_step (gargling_id, n_steps, taken_at)
+values
+  (:gargling_id, :n_steps, :taken_at) on conflict (gargling_id, taken_at) do
+update
+set
+  n_steps = excluded.n_steps + cached_step.n_steps;
+
+
+-- name: cached_step_for_date^
+select
+  n_steps
+from
+  cached_step
+where
+  taken_at = :date and gargling_id = :id;

@@ -1,5 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
+from contextlib import contextmanager
 from unittest.mock import Mock, patch
 
 import arrow
@@ -43,6 +44,14 @@ fake_tokens = {
         ),
     ),
 }
+
+
+def returns_ctx_mng(return_value):
+    @contextmanager
+    def inner(*args, **kwargs):
+        yield return_value
+
+    return inner
 
 
 @pytest.mark.parametrize(*services)
@@ -157,7 +166,7 @@ def test_toggle_report(
 
 @patch.object(health, "WithingsApi")
 def test_withings_steps(mock_Withings: Mock, conn: connection):
-    test_date = pendulum.datetime(2020, 1, 2, 12)
+    test_date = pendulum.Date(2020, 1, 2)
     withings_instance1 = Mock()
     none_data = {
         "timezone": None,
@@ -203,7 +212,7 @@ def test_withings_steps(mock_Withings: Mock, conn: connection):
 
 @patch.object(health, "WithingsApi")
 def test_withings_steps_no_data(mock_Withings: Mock, conn: connection):
-    test_date = pendulum.datetime(2020, 1, 2, 12)
+    test_date = pendulum.Date(2020, 1, 2)
     withings_instance1 = Mock()
     none_data = {
         "timezone": None,
@@ -250,7 +259,7 @@ def test_withings_steps_no_data(mock_Withings: Mock, conn: connection):
 
 @patch.object(health, "FitbitApi")
 def test_fitbit_steps(mock_Fitbit: Mock, conn: connection):
-    test_date = pendulum.datetime(2020, 1, 2, 12)
+    test_date = pendulum.Date(2020, 1, 2)
     fitbit_instance1, fitbit_instance2 = Mock(), Mock()
     fitbit_instance1.time_series.return_value = {
         "activities-steps": [
@@ -278,7 +287,7 @@ def test_fitbit_steps(mock_Fitbit: Mock, conn: connection):
 
 @patch.object(health, "FitbitApi")
 def test_fitbit_steps_no_data(mock_Fitbit: Mock, conn: connection):
-    test_date = pendulum.datetime(2020, 1, 2, 12)
+    test_date = pendulum.Date(2020, 1, 2)
     fitbit_instance1, fitbit_instance2 = Mock(), Mock()
     fitbit_instance1.time_series.return_value = {"activities-steps": []}
     fitbit_instance2.time_series.return_value = {"activities-steps": []}
@@ -296,7 +305,7 @@ def test_fitbit_steps_no_data(mock_Fitbit: Mock, conn: connection):
 
 @patch.object(health, "FitbitApi")
 def test_fitbit_body(mock_Fitbit: Mock, conn: connection):
-    test_date = pendulum.datetime(2020, 1, 2, 12)
+    test_date = pendulum.Date(2020, 1, 2)
     fitbit_instance1, fitbit_instance2 = Mock(), Mock()
     fitbit_instance1.get_bodyweight.return_value = {
         "weight": [{"date": "2019-01-02", "time": "10:11:12", "weight": 50}]
@@ -334,7 +343,7 @@ def test_fitbit_body(mock_Fitbit: Mock, conn: connection):
 
 @patch.object(health, "FitbitApi")
 def test_fitbit_body_no_data(mock_Fitbit: Mock, conn: connection):
-    test_date = pendulum.datetime(2020, 1, 2, 12)
+    test_date = pendulum.Date(2020, 1, 2)
     fitbit_instance1, fitbit_instance2 = Mock(), Mock()
     fitbit_instance1.get_bodyweight.return_value = {"weight": []}
     fitbit_instance1.get_bodyfat.return_value = {"fat": []}
@@ -354,6 +363,84 @@ def test_fitbit_body_no_data(mock_Fitbit: Mock, conn: connection):
         {"elapsed": None, "fat": None, "weight": None},
     ]
     assert data == expected
+
+
+def test_polar_steps(conn: connection):
+    test_date = pendulum.Date(2020, 1, 2)
+    return_value0 = {
+        "activity-log": [
+            {"date": "2020-01-02", "active-steps": 1500},
+            {"date": "2020-01-02", "active-steps": 1500},
+        ]
+    }
+    tokens = health.queries.tokens(conn)
+    users = [
+        health.HealthUser.init(token) for token in tokens if token["service"] == "polar"
+    ]
+    assert len(users) == 1
+    user = users[0]
+    user._step_transaction = returns_ctx_mng(return_value0)  # type: ignore
+    steps = user.steps(test_date, conn)
+    assert steps == 3000
+
+
+def test_polar_steps_cached(conn: connection):
+    test_date = pendulum.Date(2020, 1, 2)
+    return_value0 = {"activity-log": [{"date": "2020-01-02", "active-steps": 1000}]}
+    tokens = health.queries.tokens(conn)
+    users = [
+        health.HealthUser.init(token) for token in tokens if token["service"] == "polar"
+    ]
+    assert len(users) == 1
+    user = users[0]
+    to_cache = [
+        {"taken_at": test_date, "n_steps": 1500, "gargling_id": user.gargling_id}
+    ]
+    health.queries.upsert_steps(conn, to_cache)
+    user._step_transaction = returns_ctx_mng(return_value0)  # type: ignore
+    steps = user.steps(test_date, conn)
+    assert steps == 2500
+
+
+def test_polar_steps_multiple_dates(conn: connection):
+    test_date = pendulum.Date(2020, 1, 2)
+    return_value0 = {
+        "activity-log": [
+            {"date": "2020-01-01", "active-steps": 1500},
+            {"date": "2020-01-02", "active-steps": 1501},
+            {"date": "2020-01-03", "active-steps": 1502},
+        ]
+    }
+    tokens = health.queries.tokens(conn)
+    users = [
+        health.HealthUser.init(token) for token in tokens if token["service"] == "polar"
+    ]
+    assert len(users) == 1
+    user = users[0]
+    user._step_transaction = returns_ctx_mng(return_value0)  # type: ignore
+    steps = user.steps(test_date, conn)
+    assert steps == 1501
+
+
+def test_polar_steps_future_cached(conn: connection):
+    test_date = pendulum.Date(2020, 1, 2)
+    return_value0 = {
+        "activity-log": [
+            {"date": "2020-01-02", "active-steps": 1501},
+            {"date": "2020-01-03", "active-steps": 1502},
+        ]
+    }
+    tokens = health.queries.tokens(conn)
+    users = [
+        health.HealthUser.init(token) for token in tokens if token["service"] == "polar"
+    ]
+    assert len(users) == 1
+    user = users[0]
+    user._step_transaction = returns_ctx_mng(return_value0)  # type: ignore
+    user.steps(test_date, conn)
+    future = test_date.add(days=1)
+    cached = health.queries.cached_step_for_date(conn, date=future, id=user.gargling_id)
+    assert cached["n_steps"] == 1502
 
 
 def test_body_reports0():

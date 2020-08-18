@@ -85,6 +85,9 @@ def generate_all_maps(journey_id, conn, write=True):
         date = location["date"].date()
         steps_data = steps_for_date[date]
         steps_data.sort(key=itemgetter("first_name"))
+        gargling_info = get_colors_names(
+            conn, ids=[gargling["gargling_id"] for gargling in steps_data]
+        )
         img = generate_traversal_map(
             conn=conn,
             journey_id=journey_id,
@@ -93,6 +96,7 @@ def generate_all_maps(journey_id, conn, write=True):
             current_lon=location["lon"],
             current_distance=location["distance"],
             steps_data=steps_data,
+            gargling_info=gargling_info,
         )
         if img is not None and write is True:
             with open((Path.cwd() / date.isoformat()).with_suffix((".jpg")), "wb") as f:
@@ -201,28 +205,26 @@ def parse_gpx(conn, journey_id, xml_data) -> None:
     queries.add_waypoints(conn, waypoints)
 
 
-def start_journey(conn: connection, journey_id: int, date: pendulum.DateTime) -> None:
+def start_journey(conn: connection, journey_id: int, date: pendulum.Date) -> None:
     queries.start_journey(conn, journey_id=journey_id, date=date)
 
 
-def store_steps(conn, steps, journey_id, date) -> None:
-    for step in steps:
-        step["taken_at"] = date
-        step["journey_id"] = journey_id
-    queries.add_steps(conn, steps)
-
-
-def get_colors(conn: connection, steps_data: t.List[dict]) -> None:
-    names = [gargling["first_name"] for gargling in steps_data]
-    colors = queries.get_colors(conn, names=names)
-    colors_d = {
-        gargling["first_name"]: (gargling["color_name"], gargling["color_hex"])
-        for gargling in colors
+def get_colors_names(conn: connection, ids: t.List[int]) -> t.Dict[int, dict]:
+    infos = queries.colors_names_for_ids(conn, ids=ids)
+    infodict = {
+        info["id"]: {
+            "first_name": info["first_name"],
+            "color_name": info["color_name"],
+            "color_hex": info["color_hex"],
+        }
+        for info in infos
     }
-    for gargling in steps_data:
-        color_name, color_hex = colors_d[gargling["first_name"]]
-        gargling["color_name"] = color_name
-        gargling["color_hex"] = color_hex
+    return infodict
+    infodict = {}
+    for info in infos:
+        gargling_id = info["id"]
+        del info["id"]
+        infodict[gargling_id] = dict(info)
 
 
 def address_for_location(lat, lon) -> t.Optional[str]:
@@ -401,11 +403,7 @@ def traversal_data(
             last_lon = current_lon
         gargling_coords.append((last_lon, last_lat))
         detailed_coords.append(
-            {
-                "color_hex": gargling["color_hex"],
-                "first_name": gargling["first_name"],
-                "coords": gargling_coords,
-            }
+            {"gargling_id": gargling["gargling_id"], "coords": gargling_coords}
         )
         starting_location = {"lat": last_lat, "lon": last_lon}
         start_dist = total_distance
@@ -413,7 +411,7 @@ def traversal_data(
     return old_coords, location_coordinates, overview_coords, detailed_coords
 
 
-def map_legend(gargling_coords: t.List[dict]) -> Image.Image:
+def map_legend(gargling_coords: t.List[dict], gargling_info) -> Image.Image:
     def trim(im):
         bg = Image.new(im.mode, im.size, im.getpixel((0, 0)))
         diff = ImageChops.difference(im, bg)
@@ -430,8 +428,8 @@ def map_legend(gargling_coords: t.List[dict]) -> Image.Image:
     font = ImageFont.truetype("Pillow/Tests/fonts/DejaVuSans.ttf", line_height)
     for i, gargling in enumerate(gargling_coords):
         current_line_height = (line_height + padding) * (i + 1)
-        color = gargling["color_hex"]
-        name = gargling["first_name"]
+        color = gargling_info[gargling["gargling_id"]]["color_hex"]
+        name = gargling_info[gargling["gargling_id"]]["first_name"]
         draw.text(
             xy=(0, current_line_height), text="—", fill=color, font=font,
         )
@@ -492,6 +490,7 @@ def generate_traversal_map(
     current_lon: float,
     current_distance: float,
     steps_data: t.List[dict],
+    gargling_info: t.Dict[int, dict],
 ) -> t.Optional[bytes]:
     old_coords, locations, overview_coords, detailed_coords = traversal_data(
         conn,
@@ -518,13 +517,12 @@ def generate_traversal_map(
     detailed_map.add_marker(CircleMarker(start, "black", 6))
     detailed_map.add_marker(CircleMarker(start, "grey", 4))
     for gargling in detailed_coords:
+        color = gargling_info[gargling["gargling_id"]]["color_hex"]
         detailed_map.add_line(Line(gargling["coords"], "grey", 4))
-        detailed_map.add_line(Line(gargling["coords"], gargling["color_hex"], 2))
+        detailed_map.add_line(Line(gargling["coords"], color, 2))
         detailed_map.add_marker(CircleMarker(gargling["coords"][-1], "black", 6))
-        detailed_map.add_marker(
-            CircleMarker(gargling["coords"][-1], gargling["color_hex"], 4)
-        )
-    legend = map_legend(detailed_coords)
+        detailed_map.add_marker(CircleMarker(gargling["coords"][-1], color, 4))
+    legend = map_legend(detailed_coords, gargling_info)
 
     overview_img = render_map(overview_map)
     detailed_img = render_map(detailed_map)
@@ -561,76 +559,66 @@ def most_recent_location(conn, journey_id) -> t.Optional[dict]:
     if loc is None:
         return None
     loc = dict(loc)
-    loc["date"] = pendulum.instance(loc["date"])
+    loc["date"] = pendulum.Date(loc["date"].year, loc["date"].month, loc["date"].day)
     return loc
 
 
 def perform_daily_update(
     conn: connection,
-    activity_func: t.Callable,
     journey_id: int,
-    date: pendulum.DateTime,
-) -> t.Optional[dict]:
+    date: pendulum.Date,
+    steps_data: t.List[dict],
+    gargling_info: t.Dict[int, dict],
+):
     journey = queries.get_journey(conn, journey_id=journey_id)
     if journey["finished_at"] is not None or journey["started_at"] is None:
         return None
-    steps_data, body_reports = activity_func(conn, date)
     steps_data.sort(key=itemgetter("amount"), reverse=True)
     steps_today = sum(data["amount"] for data in steps_data)
     if steps_today == 0:
         return None
-    store_steps(conn, steps_data, journey_id, date)
-    get_colors(conn, steps_data)
 
     last_location = most_recent_location(conn, journey_id)
     last_total_distance = last_location["distance"] if last_location else 0
 
     distance_today = steps_today * stride
     distance_total = distance_today + last_total_distance
+    dist_remaining = journey["distance"] - distance_total
     lat, lon, latest_waypoint_id, finished = get_location(
         conn, journey_id, distance_total
     )
     address, street_view_img, map_url, poi = data_for_location(lat, lon)
 
     traversal_map = generate_traversal_map(
-        conn, journey_id, last_location, lat, lon, distance_total, steps_data
+        conn,
+        journey_id,
+        last_location,
+        lat,
+        lon,
+        distance_total,
+        steps_data,
+        gargling_info,
     )
     img_url, traversal_map_url = upload_images(
         journey_id, latest_waypoint_id, street_view_img, traversal_map,
     )
-    queries.add_location(
-        conn,
-        journey_id=journey_id,
-        latest_waypoint=latest_waypoint_id,
-        lat=lat,
-        lon=lon,
-        distance=distance_total,
-        date=date,
-        address=address,
-        img_url=img_url,
-        map_url=map_url,
-        traversal_map_url=traversal_map_url,
-        poi=poi,
-    )
-    if finished:
-        queries.finish_journey(conn, journey_id=journey_id, date=date)
-    return {
+    location = {
+        "journey_id": journey_id,
+        "latest_waypoint": latest_waypoint_id,
+        "lat": lat,
+        "lon": lon,
+        "distance": distance_total,
         "date": date,
-        "steps_data": steps_data,
-        "dist_today": distance_today,
-        "dist_total": distance_total,
-        "dist_remaining": journey["distance"] - distance_total,
         "address": address,
-        "poi": poi,
         "img_url": img_url,
         "map_url": map_url,
         "traversal_map_url": traversal_map_url,
-        "body_reports": body_reports,
-        "finished": finished,
+        "poi": poi,
     }
+    return location, distance_today, dist_remaining, finished
 
 
-def days_to_update(conn, journey_id, date) -> t.Iterable[dt.datetime]:
+def days_to_update(conn, journey_id, date: pendulum.Date) -> t.Iterable[pendulum.Date]:
     journey = queries.get_journey(conn, journey_id=journey_id)
     start_loc = most_recent_location(conn, journey_id)
     if start_loc is None:
@@ -661,10 +649,10 @@ def round_meters(n: float) -> str:
 def format_response(
     destination: str,
     n_day: int,
-    date: pendulum.DateTime,
-    steps_data: dict,
+    date: pendulum.Date,
+    steps_data: list,
     dist_today: float,
-    dist_total: float,
+    distance: float,
     dist_remaining: float,
     address: t.Optional[str],
     poi: t.Optional[str],
@@ -673,6 +661,7 @@ def format_response(
     traversal_map_url: t.Optional[str],
     body_reports: t.Optional[t.List[str]],
     finished: bool,
+    gargling_info: t.Dict[int, dict],
 ) -> dict:
     blocks = []
     title_txt = (
@@ -684,22 +673,25 @@ def format_response(
 
     distance_summary = f"Vi gikk *{round_meters(dist_today)}*!"
     distance_txt = distance_summary + (
-        f" Nå har vi gått {round_meters(dist_total)} totalt på vår journey til {destination} -"
+        f" Nå har vi gått {round_meters(distance)} totalt på vår journey til {destination} -"
         f" vi har {round_meters(dist_remaining)} igjen til vi er framme."
     )
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": distance_txt}})
 
     steps_txt = "Steps taken:"
     for i, row in enumerate(steps_data):
+        color = gargling_info[row["gargling_id"]]["color_name"]
+        name = gargling_info[row["gargling_id"]]["first_name"]
+
         steps = row["amount"]
-        distance = round_meters(steps * stride)
+        g_distance = round_meters(steps * stride)
         if i == 0:
-            amount = f"*{steps}* ({distance}) :star:"
+            amount = f"*{steps}* ({g_distance}) :star:"
         elif i == len(steps_data) - 1:
-            amount = f"_{steps}_ ({distance})"
+            amount = f"_{steps}_ ({g_distance})"
         else:
-            amount = f"{steps} ({distance})"
-        desc = f"\n\t:dot-{row['color_name']}: {row['first_name']}: {amount}"
+            amount = f"{steps} ({g_distance})"
+        desc = f"\n\t:dot-{color}: {name}: {amount}"
         steps_txt += desc
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": steps_txt}})
 
@@ -741,29 +733,69 @@ def format_response(
     return response
 
 
-def main(conn) -> t.List[dict]:
+def store_update_data(conn, location_data, finished):
+    queries.add_location(conn, **location_data)
+    if finished:
+        queries.finish_journey(
+            conn, journey_id=location_data["journey_id"], date=location_data["date"]
+        )
+
+
+def store_steps(conn, steps, journey_id, date) -> None:
+    for step in steps:
+        step["taken_at"] = date
+        step["journey_id"] = journey_id
+    queries.add_steps(conn, steps)
+
+
+def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
     ongoing_journey = queries.get_ongoing_journey(conn)
     journey_id = ongoing_journey["id"]
     destination = ongoing_journey["destination"]
-    current_date = pendulum.now("UTC")
-    data = []
     try:
         for date in days_to_update(conn, journey_id, current_date):
-            datum = perform_daily_update(
+            log.info(f"Journey update for {date}")
+            with conn:
+                activity_data = health.activity(conn, date)
+                if not activity_data:
+                    continue
+                steps_data, body_reports = activity_data
+            gargling_info = get_colors_names(
+                conn, ids=[gargling["gargling_id"] for gargling in steps_data]
+            )
+            update_data = perform_daily_update(
                 conn=conn,
-                activity_func=health.activity,
                 journey_id=journey_id,
                 date=date,
+                steps_data=steps_data,
+                gargling_info=gargling_info,
             )
-            if datum:
-                n_day = (date - ongoing_journey["started_at"]).days + 1
-                formatted = format_response(
-                    destination=destination, n_day=n_day, **datum
-                )
-                data.append(formatted)
+            if not update_data:
+                continue
+            location, distance_today, dist_remaining, finished = update_data
+            n_day = (date - ongoing_journey["started_at"]).days + 1
+            formatted = format_response(
+                date=date,
+                destination=destination,
+                n_day=n_day,
+                steps_data=steps_data,
+                body_reports=body_reports,
+                dist_today=distance_today,
+                dist_remaining=dist_remaining,
+                finished=finished,
+                gargling_info=gargling_info,
+                distance=location["distance"],
+                address=location["address"],
+                poi=location["poi"],
+                img_url=location["img_url"],
+                map_url=location["map_url"],
+                traversal_map_url=location["traversal_map_url"],
+            )
+            yield formatted
+            with conn:
+                store_update_data(conn, location, finished)
+                store_steps(conn, steps_data, journey_id, date)
+
     except Exception as exc:
         log.exception(exc)
         return []
-    else:
-        conn.commit()
-        return data
