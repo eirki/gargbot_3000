@@ -236,8 +236,20 @@ def address_for_location(lat, lon) -> t.Optional[str]:
 
 
 def image_for_location(lat, lon) -> t.Optional[bytes]:
+    def encode_url(domain, endpoint, params):
+        params = params.copy()
+        url_to_sign = endpoint + urllib.parse.urlencode(params)
+        secret = config.google_api_secret
+        decoded_key = base64.urlsafe_b64decode(secret)
+        signature = hmac.new(decoded_key, url_to_sign.encode(), hashlib.sha1)
+        encoded_signature = base64.urlsafe_b64encode(signature.digest())
+        params["signature"] = encoded_signature.decode()
+        encoded_url = domain + endpoint + urllib.parse.urlencode(params)
+        return encoded_url
+
     domain = "https://maps.googleapis.com"
-    endpoint = "/maps/api/streetview?"
+    metadata_endpoint = "/maps/api/streetview/metadata?"
+    img_endpoint = "/maps/api/streetview?"
     params = {
         "size": "400x400",
         "location": f"{lat}, {lon}",
@@ -246,15 +258,20 @@ def image_for_location(lat, lon) -> t.Optional[bytes]:
         "pitch": 0,
         "key": config.google_api_key,
     }
-    url_to_sign = endpoint + urllib.parse.urlencode(params)
-    secret = config.google_api_secret
-    decoded_key = base64.urlsafe_b64decode(secret)
-    signature = hmac.new(decoded_key, url_to_sign.encode(), hashlib.sha1)
-    encoded_signature = base64.urlsafe_b64encode(signature.digest())
-    params["signature"] = encoded_signature.decode()
-    encoded_url = domain + endpoint + urllib.parse.urlencode(params)
+    metadata_url = encode_url(domain, metadata_endpoint, params)
     try:
-        response = requests.get(encoded_url)
+        response = requests.get(metadata_url)
+        metadata = response.json()
+        if metadata["status"] != "OK":
+            log.info(f"Metadata indicates no streetview image: {metadata}")
+            return None
+    except Exception:
+        log.error("Error downloading streetview image metadata", exc_info=True)
+        return None
+
+    img_url = encode_url(domain, img_endpoint, params)
+    try:
+        response = requests.get(img_url)
         data = response.content
     except Exception:
         log.error("Error downloading streetview image", exc_info=True)
