@@ -75,16 +75,14 @@ def generate_all_maps(journey_id, conn, write=True):
     all_steps.sort(key=itemgetter("taken_at"))
     steps_for_date = {
         date: list(steps)
-        for date, steps in itertools.groupby(
-            all_steps, lambda step: step["taken_at"].date()
-        )
+        for date, steps in itertools.groupby(all_steps, lambda step: step["taken_at"])
     }
     locations = queries.locations_for_journey(conn, journey_id=journey_id)
     last_location = None
     for location in locations:
-        date = location["date"].date()
+        date = location["date"]
         steps_data = steps_for_date[date]
-        steps_data.sort(key=itemgetter("first_name"))
+        steps_data.sort(key=itemgetter("amount"), reverse=True)
         gargling_info = get_colors_names(
             conn, ids=[gargling["gargling_id"] for gargling in steps_data]
         )
@@ -336,6 +334,53 @@ def data_for_location(
     return address, street_view_img, map_url, poi
 
 
+def get_detailed_coords(current_waypoints, last_location, steps_data, start_dist):
+    detailed_coords: t.List[dict] = []
+    waypoints_itr = iter(current_waypoints)
+    # starting location
+    latest_waypoint = (
+        last_location if last_location is not None else current_waypoints[0]
+    )
+    current_distance = start_dist
+    next_waypoint = None
+    for gargling in steps_data:
+        gargling_coords = []
+        gargling_coords.append((latest_waypoint["lon"], latest_waypoint["lat"],))
+        gargling_distance = gargling["amount"] * stride
+        current_distance += gargling_distance
+        while True:
+            if next_waypoint is None or next_waypoint["cum_dist"] < current_distance:
+                # next_waypoint from previous garglings has been passed
+                next_waypoint = next(waypoints_itr, None)
+                if next_waypoint is None:
+                    # this shouldn't really happen
+                    break
+
+            if next_waypoint["cum_dist"] < current_distance:
+                # next_waypoint passed by this gargling
+                gargling_coords.append((next_waypoint["lon"], next_waypoint["lat"]))
+                latest_waypoint = next_waypoint
+                continue
+            elif next_waypoint["cum_dist"] >= current_distance:
+                # next_waypoint will not be passed by this gargling
+                remaining_dist = current_distance - latest_waypoint["cum_dist"]
+                last_lat, last_lon = location_between_waypoints(
+                    latest_waypoint, next_waypoint, remaining_dist
+                )
+                gargling_coords.append((last_lon, last_lat))
+                # assign starting location for next gargling
+                latest_waypoint = {
+                    "lat": last_lat,
+                    "lon": last_lon,
+                    "cum_dist": current_distance,
+                }
+                break
+        detailed_coords.append(
+            {"gargling_id": gargling["gargling_id"], "coords": gargling_coords}
+        )
+    return detailed_coords
+
+
 def traversal_data(
     conn: connection,
     journey_id: int,
@@ -372,42 +417,15 @@ def traversal_data(
     current_waypoints = queries.waypoints_between_distances(
         conn, journey_id=journey_id, low=start_dist, high=current_distance
     )
+    current_waypoints.append(
+        {"lat": current_lat, "lon": current_lon, "cum_dist": current_distance}
+    )
     overview_coords.extend([(loc["lon"], loc["lat"]) for loc in current_waypoints])
     overview_coords.append((current_lon, current_lat))
 
-    detailed_coords: t.List[dict] = []
-    waypoints_itr = iter(current_waypoints)
-    starting_location = last_location
-    for gargling in steps_data:
-        gargling_coords = []
-        if starting_location is not None:
-            gargling_coords.append(
-                (starting_location["lon"], starting_location["lat"],)
-            )
-            latest_waypoint = starting_location
-        distance = gargling["amount"] * stride
-        total_distance = start_dist + distance
-        for waypoint in waypoints_itr:
-            if waypoint["cum_dist"] < total_distance:
-                gargling_coords.append((waypoint["lon"], waypoint["lat"]))
-                latest_waypoint = waypoint
-            else:
-                remaining_dist = total_distance - waypoint["cum_dist"]
-                last_lat, last_lon = location_between_waypoints(
-                    latest_waypoint, waypoint, remaining_dist
-                )
-                break
-        else:
-            # last waypoint for last gargling: no break
-            last_lat = current_lat
-            last_lon = current_lon
-        gargling_coords.append((last_lon, last_lat))
-        detailed_coords.append(
-            {"gargling_id": gargling["gargling_id"], "coords": gargling_coords}
-        )
-        starting_location = {"lat": last_lat, "lon": last_lon}
-        start_dist = total_distance
-
+    detailed_coords = get_detailed_coords(
+        current_waypoints, last_location, steps_data, start_dist
+    )
     return old_coords, location_coordinates, overview_coords, detailed_coords
 
 
