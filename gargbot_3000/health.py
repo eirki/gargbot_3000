@@ -434,7 +434,7 @@ def steps(
         try:
             steps = (
                 user.steps(date)
-                if user.service.name != "Polar"
+                if user.service.name != "polar"
                 else user.steps(date, conn)
             )
         except Exception:
