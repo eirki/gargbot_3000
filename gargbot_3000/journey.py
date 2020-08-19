@@ -251,9 +251,9 @@ def image_for_location(lat, lon) -> t.Optional[bytes]:
     metadata_endpoint = "/maps/api/streetview/metadata?"
     img_endpoint = "/maps/api/streetview?"
     params = {
-        "size": "400x400",
+        "size": "600x400",
         "location": f"{lat}, {lon}",
-        "fov": 80,
+        "fov": 120,
         "heading": 251.74,
         "pitch": 0,
         "key": config.google_api_key,
@@ -280,25 +280,27 @@ def image_for_location(lat, lon) -> t.Optional[bytes]:
 
 
 def map_url_for_location(lat, lon) -> str:
-    return f"https://www.google.com/maps/@?api=1&map_action=pano&fov=80&heading=251.74&pitch=0&viewpoint={lat}, {lon}"
+    # return f"https://www.google.com/maps/@?api=1&map_action=pano&fov=80&heading=251.74&pitch=0&viewpoint={lat}, {lon}"
     # return f"http://maps.google.com/maps?q=&layer=c&cbll={lat}, {lon}"
-    # return f"https://www.google.com/maps/search/?api=1&query={lat}, {lon}"
+    return f"https://www.google.com/maps/search/?api=1&query={lat}, {lon}"
 
 
 def poi_for_location(lat, lon) -> t.Optional[str]:
     try:
         google = googlemaps.Client(key=config.google_api_key)
-        details = google.places_nearby(location=(lat, lon), radius=1000)["results"]
+        details = google.places_nearby(location=(lat, lon), radius=5000)["results"]
     except Exception as exc:
         log.exception(exc)
         return None
     pois = [d for d in details if "point_of_interest" in d.get("types", [])]
     if not pois:
+        log.info("No point of interest")
         return None
     try:
         poi = next(p for p in pois if not poi_types.isdisjoint(p.get("types", [])))
         return poi["name"]
     except StopIteration:
+        log.info("No interesting point of interest")
         return None
 
 
@@ -754,7 +756,7 @@ def format_response(
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"<{map_url}|Se deg litt rundt da vel!>",
+                "text": f"<{map_url}|Ta en kikk på kartet da vel!>",
             },
         }
     )

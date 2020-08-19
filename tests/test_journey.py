@@ -386,7 +386,7 @@ def test_format_response():
             {"alt_text": "Address", "image_url": "www.image", "type": "image"},
             {
                 "text": {
-                    "text": "<www.mapurl|Se deg litt rundt da vel!>",
+                    "text": "<www.mapurl|Ta en kikk på kartet da vel!>",
                     "type": "mrkdwn",
                 },
                 "type": "section",
