@@ -305,7 +305,7 @@ class WithingsUser(HealthUser):
             credentials, refresh_cb=self.service.persist_token
         )
         self.first_name = token["first_name"]
-        self.gargling_id = token["first_name"]
+        self.gargling_id = token["gargling_id"]
 
     def steps(self, date: pendulum.Date, conn: None = None) -> t.Optional[int]:
         result = self.client.measure_get_activity(
@@ -337,7 +337,7 @@ class FitbitUser(HealthUser):
         )
         self.client: FitbitApi = client
         self.first_name = token["first_name"]
-        self.gargling_id = token["first_name"]
+        self.gargling_id = token["gargling_id"]
 
     def steps(self, date: pendulum.Date, conn: None = None) -> t.Optional[int]:
         data = self.client.time_series(
