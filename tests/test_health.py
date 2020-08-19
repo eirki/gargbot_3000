@@ -450,7 +450,7 @@ def test_body_reports0():
     ]
     report = health.body_details(data_in)
     expected = [
-        "name1 har ikke veid seg på *365* dager. Skjerpings! ",
+        # "name1 har ikke veid seg på *365* dager. Skjerpings! ",
         "name2 veier *100* kg. Body fat percentage er *10*",
     ]
     assert report == expected
@@ -470,8 +470,8 @@ def test_body_reports2():
         {"elapsed": 365, "weight": None, "fat": None, "first_name": "name1"},
     ]
     report = health.body_details(data_in)
-    expected = ["name1 har ikke veid seg på *365* dager. Skjerpings! "]
-    assert report == expected
+    # expected = ["name1 har ikke veid seg på *365* dager. Skjerpings! "]
+    assert report == []
 
 
 def test_body_reports3():

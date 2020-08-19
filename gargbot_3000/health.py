@@ -468,7 +468,7 @@ def body_details(body_data: t.List[dict]) -> t.Optional[list]:
     for datum in body_data:
         weight = datum["weight"]
         fat = datum["fat"]
-        elapsed = datum["elapsed"]
+        # elapsed = datum["elapsed"]
         name = datum["first_name"]
         user_report = None
         if weight is not None:
@@ -477,8 +477,8 @@ def body_details(body_data: t.List[dict]) -> t.Optional[list]:
                 user_report += f"Body fat percentage er *{fat}*"
         elif fat is not None:
             user_report = f"{name} sin body fat percentage er *{fat}*. "
-        elif elapsed is not None:
-            user_report = f"{name} har ikke veid seg på *{elapsed}* dager. Skjerpings! "
+        # elif elapsed is not None:
+        #     user_report = f"{name} har ikke veid seg på *{elapsed}* dager. Skjerpings! "
         if user_report is not None:
             user_reports.append(user_report)
     return user_reports
