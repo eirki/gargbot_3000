@@ -77,9 +77,12 @@ def send_congrats() -> None:
 
 def update_journey() -> None:
     current_date = pendulum.now()
-    if not isinstance(current_date, pendulum.Date):
-        # now function sometimes returns a date, not datetime??
+    try:
+        # now() function sometimes returns a date, not datetime??
+        current_date.hour
         current_date = current_date.date()
+    except AttributeError:
+        pass
     conn = database.connect()
     try:
         slack_client = SlackClient(config.slack_bot_user_token)
