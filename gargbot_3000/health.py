@@ -7,6 +7,7 @@ from operator import itemgetter
 import typing as t
 
 from accesslink import AccessLink as PolarApi
+from accesslink.endpoints.daily_activity_transaction import DailyActivityTransaction
 import aiosql
 from fitbit import Fitbit as FitbitApi
 from fitbit.api import FitbitOauth2Client
@@ -394,26 +395,29 @@ class PolarUser(HealthUser):
         self.user_id = token["id"]
         self.token = token["access_token"]
 
-    @contextmanager
-    def _step_transaction(self, date: pendulum.Date) -> t.Generator[dict, None, None]:
+    def _get_transaction(self) -> DailyActivityTransaction:
         trans = self.client.daily_activity.create_transaction(self.user_id, self.token)
-        activities = trans.list_activities()
-        yield activities
-        trans.commit()
+        return trans
 
     def steps(self, date: pendulum.Date, conn: connection = None) -> t.Optional[int]:
+        if conn is None:
+            raise Exception("No database connection available")
+        trans = self._get_transaction()
+        activities = trans.list_activities()
         steps_by_date: t.Dict[pendulum.Date, int] = defaultdict(int)
-        with self._step_transaction(date) as activities:
-            for activity in activities["activity-log"]:
-                steps_by_date[pendulum.parse(activity["date"]).date()] += activity[
-                    "active-steps"
-                ]
-            not_past = [
-                {"taken_at": sdate, "n_steps": steps, "gargling_id": self.gargling_id}
-                for sdate, steps in steps_by_date.items()
-                if sdate >= date
+        for activity in activities["activity-log"]:
+            summary = trans.get_activity_summary(activity)
+            steps_by_date[pendulum.parse(summary["date"]).date()] += summary[
+                "active-steps"
             ]
-            queries.upsert_steps(conn, not_past)
+        not_past = [
+            {"taken_at": sdate, "n_steps": steps, "gargling_id": self.gargling_id}
+            for sdate, steps in steps_by_date.items()
+            if sdate >= date
+        ]
+        queries.upsert_steps(conn, not_past)
+        conn.commit()
+        trans.commit()
         todays_data = queries.cached_step_for_date(conn, date=date, id=self.gargling_id)
         steps = todays_data["n_steps"] if todays_data is not None else 0
         return steps

@@ -1,6 +1,5 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
-from contextlib import contextmanager
 from unittest.mock import Mock, patch
 
 import arrow
@@ -46,10 +45,9 @@ fake_tokens = {
 }
 
 
-def returns_ctx_mng(return_value):
-    @contextmanager
+def returns_value(return_value):
     def inner(*args, **kwargs):
-        yield return_value
+        return return_value
 
     return inner
 
@@ -365,28 +363,42 @@ def test_fitbit_body_no_data(mock_Fitbit: Mock, conn: connection):
     assert data == expected
 
 
+class FakePolarTrans:
+    def __init__(self, activities):
+        self.activities = {i: act for i, act in enumerate(activities)}
+
+    def list_activities(self):
+        return {"activity-log": self.activities.keys()}
+
+    def get_activity_summary(self, activity):
+        return self.activities[activity]
+
+    def commit(self):
+        pass
+
+
 def test_polar_steps(conn: connection):
     test_date = pendulum.Date(2020, 1, 2)
-    return_value0 = {
-        "activity-log": [
+    tran = FakePolarTrans(
+        [
             {"date": "2020-01-02", "active-steps": 1500},
             {"date": "2020-01-02", "active-steps": 1500},
         ]
-    }
+    )
     tokens = health.queries.tokens(conn)
     users = [
         health.HealthUser.init(token) for token in tokens if token["service"] == "polar"
     ]
     assert len(users) == 1
     user = users[0]
-    user._step_transaction = returns_ctx_mng(return_value0)  # type: ignore
+    user._get_transaction = lambda: tran  # type: ignore
     steps = user.steps(test_date, conn)
     assert steps == 3000
 
 
 def test_polar_steps_cached(conn: connection):
     test_date = pendulum.Date(2020, 1, 2)
-    return_value0 = {"activity-log": [{"date": "2020-01-02", "active-steps": 1000}]}
+    tran = FakePolarTrans([{"date": "2020-01-02", "active-steps": 1000}])
     tokens = health.queries.tokens(conn)
     users = [
         health.HealthUser.init(token) for token in tokens if token["service"] == "polar"
@@ -397,46 +409,46 @@ def test_polar_steps_cached(conn: connection):
         {"taken_at": test_date, "n_steps": 1500, "gargling_id": user.gargling_id}
     ]
     health.queries.upsert_steps(conn, to_cache)
-    user._step_transaction = returns_ctx_mng(return_value0)  # type: ignore
+    user._get_transaction = lambda: tran  # type: ignore
     steps = user.steps(test_date, conn)
     assert steps == 2500
 
 
 def test_polar_steps_multiple_dates(conn: connection):
     test_date = pendulum.Date(2020, 1, 2)
-    return_value0 = {
-        "activity-log": [
+    tran = FakePolarTrans(
+        [
             {"date": "2020-01-01", "active-steps": 1500},
             {"date": "2020-01-02", "active-steps": 1501},
             {"date": "2020-01-03", "active-steps": 1502},
         ]
-    }
+    )
     tokens = health.queries.tokens(conn)
     users = [
         health.HealthUser.init(token) for token in tokens if token["service"] == "polar"
     ]
     assert len(users) == 1
     user = users[0]
-    user._step_transaction = returns_ctx_mng(return_value0)  # type: ignore
+    user._get_transaction = lambda: tran  # type: ignore
     steps = user.steps(test_date, conn)
     assert steps == 1501
 
 
 def test_polar_steps_future_cached(conn: connection):
     test_date = pendulum.Date(2020, 1, 2)
-    return_value0 = {
-        "activity-log": [
+    tran = FakePolarTrans(
+        [
             {"date": "2020-01-02", "active-steps": 1501},
             {"date": "2020-01-03", "active-steps": 1502},
         ]
-    }
+    )
     tokens = health.queries.tokens(conn)
     users = [
         health.HealthUser.init(token) for token in tokens if token["service"] == "polar"
     ]
     assert len(users) == 1
     user = users[0]
-    user._step_transaction = returns_ctx_mng(return_value0)  # type: ignore
+    user._get_transaction = lambda: tran  # type: ignore
     user.steps(test_date, conn)
     future = test_date.add(days=1)
     cached = health.queries.cached_step_for_date(conn, date=future, id=user.gargling_id)
