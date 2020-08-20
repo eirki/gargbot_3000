@@ -395,29 +395,33 @@ class PolarUser(HealthUser):
         self.user_id = token["id"]
         self.token = token["access_token"]
 
-    def _get_transaction(self) -> DailyActivityTransaction:
+    def _get_transaction(self) -> t.Optional[DailyActivityTransaction]:
         trans = self.client.daily_activity.create_transaction(self.user_id, self.token)
         return trans
 
     def steps(self, date: pendulum.Date, conn: connection = None) -> t.Optional[int]:
+        log.info("Getting polar steps")
         if conn is None:
             raise Exception("No database connection available")
         trans = self._get_transaction()
-        activities = trans.list_activities()
-        steps_by_date: t.Dict[pendulum.Date, int] = defaultdict(int)
-        for activity in activities["activity-log"]:
-            summary = trans.get_activity_summary(activity)
-            steps_by_date[pendulum.parse(summary["date"]).date()] += summary[
-                "active-steps"
+        if trans is not None:
+            activities = trans.list_activities()["activity-log"]
+            log.info(f"number of activities: {len(activities)}")
+            steps_by_date: t.Dict[pendulum.Date, int] = defaultdict(int)
+            for activity in activities:
+                summary = trans.get_activity_summary(activity)
+                summary_date = pendulum.parse(summary["date"]).date()
+                n_steps = summary["active-steps"]
+                log.info(f"n steps {summary_date}: {n_steps}")
+                steps_by_date[summary_date] += n_steps
+            not_past = [
+                {"taken_at": sdate, "n_steps": steps, "gargling_id": self.gargling_id}
+                for sdate, steps in steps_by_date.items()
+                if sdate >= date
             ]
-        not_past = [
-            {"taken_at": sdate, "n_steps": steps, "gargling_id": self.gargling_id}
-            for sdate, steps in steps_by_date.items()
-            if sdate >= date
-        ]
-        queries.upsert_steps(conn, not_past)
-        conn.commit()
-        trans.commit()
+            queries.upsert_steps(conn, not_past)
+            conn.commit()
+            trans.commit()
         todays_data = queries.cached_step_for_date(conn, date=date, id=self.gargling_id)
         steps = todays_data["n_steps"] if todays_data is not None else 0
         return steps

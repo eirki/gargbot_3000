@@ -30,6 +30,9 @@ class LoggingCursor(DictCursor):
         return super().execute(query, args)
 
     def executemany(self, query, args=None):
+        log.info(query)
+        if args:
+            log.info(args)
         return super().executemany(query, args)
 
 
