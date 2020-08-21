@@ -410,7 +410,8 @@ class PolarUser(HealthUser):
             steps_by_date: t.Dict[pendulum.Date, int] = defaultdict(int)
             for activity in activities:
                 summary = trans.get_activity_summary(activity)
-                summary_date = pendulum.parse(summary["date"]).date()
+                log.info(summary)
+                summary_date = pendulum.parse(summary["created"]).date()
                 n_steps = summary["active-steps"]
                 log.info(f"n steps {summary_date}: {n_steps}")
                 steps_by_date[summary_date] += n_steps

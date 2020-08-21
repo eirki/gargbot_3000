@@ -381,8 +381,8 @@ def test_polar_steps(conn: connection):
     test_date = pendulum.Date(2020, 1, 2)
     tran = FakePolarTrans(
         [
-            {"date": "2020-01-02", "active-steps": 1500},
-            {"date": "2020-01-02", "active-steps": 1500},
+            {"created": "2020-01-02T20:11:33.000Z", "active-steps": 1500},
+            {"created": "2020-01-02T20:11:33.000Z", "active-steps": 1500},
         ]
     )
     tokens = health.queries.tokens(conn)
@@ -398,7 +398,9 @@ def test_polar_steps(conn: connection):
 
 def test_polar_steps_cached(conn: connection):
     test_date = pendulum.Date(2020, 1, 2)
-    tran = FakePolarTrans([{"date": "2020-01-02", "active-steps": 1000}])
+    tran = FakePolarTrans(
+        [{"created": "2020-01-02T20:11:33.000Z", "active-steps": 1000}]
+    )
     tokens = health.queries.tokens(conn)
     users = [
         health.HealthUser.init(token) for token in tokens if token["service"] == "polar"
@@ -418,9 +420,9 @@ def test_polar_steps_multiple_dates(conn: connection):
     test_date = pendulum.Date(2020, 1, 2)
     tran = FakePolarTrans(
         [
-            {"date": "2020-01-01", "active-steps": 1500},
-            {"date": "2020-01-02", "active-steps": 1501},
-            {"date": "2020-01-03", "active-steps": 1502},
+            {"created": "2020-01-01T20:11:33.000Z", "active-steps": 1500},
+            {"created": "2020-01-02T20:11:33.000Z", "active-steps": 1501},
+            {"created": "2020-01-03T20:11:33.000Z", "active-steps": 1502},
         ]
     )
     tokens = health.queries.tokens(conn)
@@ -438,8 +440,8 @@ def test_polar_steps_future_cached(conn: connection):
     test_date = pendulum.Date(2020, 1, 2)
     tran = FakePolarTrans(
         [
-            {"date": "2020-01-02", "active-steps": 1501},
-            {"date": "2020-01-03", "active-steps": 1502},
+            {"created": "2020-01-02T20:11:33.000Z", "active-steps": 1501},
+            {"created": "2020-01-03T20:11:33.000Z", "active-steps": 1502},
         ]
     )
     tokens = health.queries.tokens(conn)
