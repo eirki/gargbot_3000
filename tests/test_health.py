@@ -465,7 +465,7 @@ def test_body_reports0():
     report = health.body_details(data_in)
     expected = [
         # "name1 har ikke veid seg på *365* dager. Skjerpings! ",
-        "name2 veier *100* kg. Body fat percentage er *10*",
+        "name2 veier *100* kg. Body fat percentage er *10*. ",
     ]
     assert report == expected
 

@@ -483,7 +483,7 @@ def body_details(body_data: t.List[dict]) -> t.Optional[list]:
         if weight is not None:
             user_report = f"{name} veier *{weight}* kg. "
             if fat is not None:
-                user_report += f"Body fat percentage er *{fat}*"
+                user_report += f"Body fat percentage er *{fat}*. "
         elif fat is not None:
             user_report = f"{name} sin body fat percentage er *{fat}*. "
         # elif elapsed is not None:
