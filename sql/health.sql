@@ -47,11 +47,11 @@ create table polar_token_gargling (
 create table cached_step (
   gargling_id smallint not null references gargling(id),
   n_steps int not null,
-  taken_at date not null
+  created_at timestamp not null
 );
 
 
-create unique index on cached_step (gargling_id, taken_at);
+create unique index on cached_step (gargling_id, date(created_at));
 
 
 -- name: persist_token!
@@ -185,12 +185,18 @@ from
 
 -- name: upsert_steps*!
 insert into
-  cached_step (gargling_id, n_steps, taken_at)
+  cached_step (gargling_id, n_steps, created_at)
 values
-  (:gargling_id, :n_steps, :taken_at) on conflict (gargling_id, taken_at) do
+  (:gargling_id, :n_steps, :created_at) on conflict (
+    gargling_id,
+    date(created_at)
+  ) do
 update
 set
-  n_steps = excluded.n_steps + cached_step.n_steps;
+  n_steps = case
+    when excluded.created_at > cached_step.created_at then excluded.n_steps
+    else cached_step.n_steps
+  end;
 
 
 -- name: cached_step_for_date^
@@ -199,4 +205,5 @@ select
 from
   cached_step
 where
-  taken_at = :date and gargling_id = :id;
+  date(created_at) = :date
+  and gargling_id = :id;

@@ -380,9 +380,50 @@ class FakePolarTrans:
 def test_polar_steps(conn: connection):
     test_date = pendulum.Date(2020, 1, 2)
     tran = FakePolarTrans(
+        [{"created": "2020-01-02T20:11:33.000Z", "active-steps": 1500}]
+    )
+    tokens = health.queries.tokens(conn)
+    users = [
+        health.HealthUser.init(token) for token in tokens if token["service"] == "polar"
+    ]
+    assert len(users) == 1
+    user = users[0]
+    user._get_transaction = lambda: tran  # type: ignore
+    steps = user.steps(test_date, conn)
+    assert steps == 1500
+
+
+def test_polar_steps_cached(conn: connection):
+    test_date = pendulum.Date(2020, 1, 2)
+    tokens = health.queries.tokens(conn)
+    users = [
+        health.HealthUser.init(token) for token in tokens if token["service"] == "polar"
+    ]
+    assert len(users) == 1
+    user = users[0]
+    to_cache = [
+        {
+            "created_at": "2020-01-02T12:11:33.000Z",
+            "n_steps": 1500,
+            "gargling_id": user.gargling_id,
+        }
+    ]
+    health.queries.upsert_steps(conn, to_cache)
+    tran = FakePolarTrans(
+        [{"created": "2020-01-02T20:11:33.000Z", "active-steps": 1000}]
+    )
+    user._get_transaction = lambda: tran  # type: ignore
+    steps = user.steps(test_date, conn)
+    assert steps == 1000
+
+
+def test_polar_steps_multiple_dates(conn: connection):
+    test_date = pendulum.Date(2020, 1, 2)
+    tran = FakePolarTrans(
         [
-            {"created": "2020-01-02T20:11:33.000Z", "active-steps": 1500},
-            {"created": "2020-01-02T20:11:33.000Z", "active-steps": 1500},
+            {"created": "2020-01-01T20:11:33.000Z", "active-steps": 1500},
+            {"created": "2020-01-02T20:11:33.000Z", "active-steps": 1501},
+            {"created": "2020-01-03T20:11:33.000Z", "active-steps": 1502},
         ]
     )
     tokens = health.queries.tokens(conn)
@@ -393,36 +434,15 @@ def test_polar_steps(conn: connection):
     user = users[0]
     user._get_transaction = lambda: tran  # type: ignore
     steps = user.steps(test_date, conn)
-    assert steps == 3000
+    assert steps == 1501
 
 
-def test_polar_steps_cached(conn: connection):
-    test_date = pendulum.Date(2020, 1, 2)
-    tran = FakePolarTrans(
-        [{"created": "2020-01-02T20:11:33.000Z", "active-steps": 1000}]
-    )
-    tokens = health.queries.tokens(conn)
-    users = [
-        health.HealthUser.init(token) for token in tokens if token["service"] == "polar"
-    ]
-    assert len(users) == 1
-    user = users[0]
-    to_cache = [
-        {"taken_at": test_date, "n_steps": 1500, "gargling_id": user.gargling_id}
-    ]
-    health.queries.upsert_steps(conn, to_cache)
-    user._get_transaction = lambda: tran  # type: ignore
-    steps = user.steps(test_date, conn)
-    assert steps == 2500
-
-
-def test_polar_steps_multiple_dates(conn: connection):
+def test_polar_steps_multiple_same_date(conn: connection):
     test_date = pendulum.Date(2020, 1, 2)
     tran = FakePolarTrans(
         [
-            {"created": "2020-01-01T20:11:33.000Z", "active-steps": 1500},
+            {"created": "2020-01-02T16:11:33.000Z", "active-steps": 1499},
             {"created": "2020-01-02T20:11:33.000Z", "active-steps": 1501},
-            {"created": "2020-01-03T20:11:33.000Z", "active-steps": 1502},
         ]
     )
     tokens = health.queries.tokens(conn)

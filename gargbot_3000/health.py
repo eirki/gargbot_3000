@@ -407,19 +407,26 @@ class PolarUser(HealthUser):
         if trans is not None:
             activities = trans.list_activities()["activity-log"]
             log.info(f"number of activities: {len(activities)}")
-            steps_by_date: t.Dict[pendulum.Date, int] = defaultdict(int)
+            steps_by_date: t.Dict[pendulum.Date, list] = defaultdict(list)
             for activity in activities:
                 summary = trans.get_activity_summary(activity)
                 log.info(summary)
-                summary_date = pendulum.parse(summary["created"]).date()
+                created_at = pendulum.parse(summary["created"])
                 n_steps = summary["active-steps"]
-                log.info(f"n steps {summary_date}: {n_steps}")
-                steps_by_date[summary_date] += n_steps
-            not_past = [
-                {"taken_at": sdate, "n_steps": steps, "gargling_id": self.gargling_id}
-                for sdate, steps in steps_by_date.items()
-                if sdate >= date
-            ]
+                log.info(f"n steps {created_at}: {n_steps}")
+                steps_by_date[created_at.date()].append(
+                    {"n_steps": n_steps, "created_at": created_at}
+                )
+
+            not_past: t.List[dict] = []
+            for activity_date, activity_list in steps_by_date.items():
+                activity_list.sort(key=itemgetter("created_at"))
+                last_synced = activity_list[-1]
+                if last_synced["created_at"].date() < date:
+                    continue
+                last_synced["gargling_id"] = self.gargling_id
+                log.info(f"last_synced, {activity_date}: {last_synced}")
+                not_past.append(last_synced)
             queries.upsert_steps(conn, not_past)
             conn.commit()
             trans.commit()
