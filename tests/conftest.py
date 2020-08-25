@@ -1,4 +1,4 @@
-#! /usr/bin/env python3.6
+#! /usr/bin/env python3
 # coding: utf-8
 from collections import namedtuple
 from dataclasses import asdict, dataclass
@@ -221,7 +221,7 @@ def populate_congrats_table(conn: connection) -> None:
 def populate_health_table(conn: connection) -> None:
     health.queries.create_schema(conn)
     for health_user in health_users:
-        service = health.HealthService.init(health_user.service)
+        service = health.init_service(health_user.service)
         service.persist_token(health_user.token(), conn)
 
         health.queries.match_ids(

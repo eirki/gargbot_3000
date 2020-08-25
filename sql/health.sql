@@ -128,12 +128,12 @@ where
 
 -- name: tokens
 select
-  fitbit.id,
+  gargling.id as gargling_id,
+  gargling.first_name,
+  fitbit.id as service_user_id,
   fitbit.access_token,
   fitbit.refresh_token,
   fitbit.expires_at,
-  gargling.first_name,
-  gargling.id as gargling_id,
   'fitbit' as service
 from
   fitbit_token as fitbit
@@ -144,12 +144,12 @@ where
 union
 all
 select
-  withings.id :: text,
+  gargling.id as gargling_id,
+  gargling.first_name,
+  withings.id :: text as service_user_id,
   withings.access_token,
   withings.refresh_token,
   withings.expires_at :: float,
-  gargling.first_name,
-  gargling.id as gargling_id,
   'withings' as service
 from
   withings_token as withings
@@ -160,12 +160,12 @@ where
 union
 all
 select
-  polar.id :: text,
+  gargling.id as gargling_id,
+  gargling.first_name,
+  polar.id :: text as service_user_id,
   polar.access_token,
   polar.refresh_token,
   polar.expires_at,
-  gargling.first_name,
-  gargling.id as gargling_id,
   'polar' as service
 from
   polar_token as polar

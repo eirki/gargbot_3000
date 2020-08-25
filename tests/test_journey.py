@@ -2,9 +2,8 @@
 # coding: utf-8
 from contextlib import contextmanager
 from operator import itemgetter
-import random
 import typing as t
-from unittest.mock import DEFAULT, Mock, patch
+from unittest.mock import DEFAULT, patch
 
 from PIL import Image
 from flask.testing import FlaskClient

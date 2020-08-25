@@ -1,26 +1,20 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
 import base64
-import datetime as dt
 import hashlib
 import hmac
 from io import BytesIO
 import itertools
 from operator import itemgetter
-import os
 from pathlib import Path
-import random
 import typing as t
-import urllib
-import urllib.parse as urlparse
+import urllib.parse
 
 from PIL import Image, ImageChops, ImageDraw, ImageFont
 import aiosql
-from dotenv import load_dotenv
 from dropbox import Dropbox
 from flask import Blueprint, Response, current_app, jsonify, request
 from flask_jwt_extended import jwt_required
-import geopy
 from geopy.geocoders import Nominatim
 import googlemaps
 import gpxpy
@@ -29,7 +23,7 @@ from psycopg2.extensions import connection
 import requests
 from staticmap import CircleMarker, Line, StaticMap
 
-from gargbot_3000 import config, database, health
+from gargbot_3000 import config, health
 from gargbot_3000.logger import log
 
 stride = 0.75
