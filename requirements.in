@@ -25,5 +25,8 @@ flask-jwt-extended
 gpxpy
 geopy
 googlemaps
+google-api-python-client
+google-auth-oauthlib
+google-auth
 schedule
 staticmap

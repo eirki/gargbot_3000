@@ -1,12 +1,90 @@
 #! /usr/bin/env python3
 # coding: utf-8
+from unittest.mock import patch
+
 import arrow
+from flask import testing
 import pendulum
 from psycopg2.extensions import connection
-from withings_api.common import MeasureGetActivityActivity, MeasureGetActivityResponse
+from withings_api.common import (
+    Credentials,
+    MeasureGetActivityActivity,
+    MeasureGetActivityResponse,
+)
 
 from gargbot_3000.health import queries
 from gargbot_3000.health.withings import WithingsUser
+from tests import conftest
+
+
+@patch("gargbot_3000.health.get_jwt_identity")
+@patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
+def test_auth_not_registered(
+    mock_jwt_required, mock_jwt_identity, client: testing.FlaskClient
+):
+    user = conftest.users[5]
+    mock_jwt_identity.return_value = user.id
+    response = client.get("withings/auth")
+    assert response.status_code == 200
+    assert response.json["auth_url"].startswith(
+        "https://account.withings.com/oauth2_user/authorize2"
+    )
+
+
+@patch("gargbot_3000.health.get_jwt_identity")
+@patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
+def test_auth_is_registered(
+    mock_jwt_required, mock_jwt_identity, client: testing.FlaskClient
+):
+    user = conftest.health_users[4]
+    mock_jwt_identity.return_value = user.gargling_id
+    response = client.get("withings/auth")
+    assert response.status_code == 200
+    assert "report_enabled" in response.json
+
+
+@patch("gargbot_3000.health.get_jwt_identity")
+@patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
+def test_handle_redirect(
+    mock_jwt_required, mock_jwt_identity, client: testing.FlaskClient, conn: connection,
+):
+    user = conftest.users[7]
+    fake_id = 1234
+    fake_token = Credentials(
+        userid=1234,
+        access_token="das234ldkjføalsd234fj",
+        refresh_token="f31a3slne34wlk3j4d34s3fl4kjshf",
+        token_expiry=1573921366,
+        client_id="withings_client_id",
+        consumer_secret="withings_consumer_secret",
+        token_type="Bearer",
+    )
+
+    mock_jwt_identity.return_value = user.id
+    with patch("gargbot_3000.health.withings.WithingsService.token") as mock_handler:
+        mock_handler.return_value = fake_id, fake_token
+        response = client.get("/withings/redirect", query_string={"code": "123"})
+    assert response.status_code == 200
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id, access_token, refresh_token, expires_at "
+            f"FROM withings_token where id = %(fake_user_id)s",
+            {"fake_user_id": fake_id},
+        )
+        data = cursor.fetchone()
+    assert data["id"] == fake_token.userid
+    assert data["access_token"] == fake_token.access_token
+    assert data["refresh_token"] == fake_token.refresh_token
+    assert data["expires_at"] == fake_token.token_expiry
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT gargling_id "
+            f"FROM withings_token_gargling where withings_id = %(fake_user_id)s",
+            {"fake_user_id": fake_id},
+        )
+        data = cursor.fetchone()
+    assert data["gargling_id"] == user.id
+
 
 unused_measures = [
     "timezone",

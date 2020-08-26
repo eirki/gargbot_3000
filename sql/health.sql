@@ -26,6 +26,16 @@ create table polar_token (
 );
 
 
+create table googlefit_token (
+  id serial primary key,
+  access_token text not null,
+  refresh_token text not null,
+  expires_at int not null,
+  token_uri text not null,
+  enable_report boolean default false
+);
+
+
 create table fitbit_token_gargling (
   fitbit_id text not null references fitbit_token(id),
   gargling_id smallint not null references gargling(id)
@@ -44,6 +54,12 @@ create table polar_token_gargling (
 );
 
 
+create table googlefit_token_gargling (
+  googlefit_id int not null references googlefit_token(id),
+  gargling_id smallint not null references gargling(id)
+);
+
+
 create table cached_step (
   gargling_id smallint not null references gargling(id),
   n_steps int not null,
@@ -56,7 +72,11 @@ create unique index on cached_step (gargling_id, date(created_at));
 
 -- name: persist_token!
 insert into
-  /*{{ {"fitbit": "fitbit_token", "withings": "withings_token", "polar": "polar_token"}[service] }}*/
+  /*{{ {
+   "fitbit": "fitbit_token",
+   "withings": "withings_token",
+   "polar": "polar_token",
+   }[service] }}*/
   (
     id,
     access_token,
@@ -79,32 +99,91 @@ set
   );
 
 
+-- name: insert_googlefit_token<!
+insert into
+  googlefit_token (
+    access_token,
+    refresh_token,
+    expires_at,
+    token_uri
+  )
+values
+  (
+    :access_token,
+    :refresh_token,
+    :expires_at,
+    :token_uri
+  ) returning id;
+
+
+-- name: update_googlefit_token!
+update
+  googlefit_token
+set
+  access_token = :access_token,
+  refresh_token = :refresh_token,
+  expires_at = :expires_at,
+  token_uri = :token_uri
+where
+  id = :id;
+
+
 --name: toggle_report!
 update
-  /*{{ {"fitbit": "fitbit_token", "withings": "withings_token", "polar": "polar_token"}[service] }}*/
+  /*{{ {
+   "fitbit": "fitbit_token",
+   "withings": "withings_token",
+   "polar": "polar_token",
+   "googlefit": "googlefit_token",
+   }[service] }}*/
   as service_token
 set
   enable_report = :enable_
 from
-  /*{{ {"fitbit": "fitbit_token_gargling", "withings": "withings_token_gargling", "polar": "polar_token_gargling"}[service] }}*/
+  /*{{ {
+   "fitbit": "fitbit_token_gargling",
+   "withings": "withings_token_gargling",
+   "polar": "polar_token_gargling",
+   "googlefit": "googlefit_token_gargling",
+   }[service] }}*/
   as service_token_gargling
 where
   service_token.id = service_token_gargling.
-  /*{{ {"fitbit": "fitbit_id", "withings": "withings_id", "polar": "polar_id"}[service] }}*/
+  /*{{ {
+   "fitbit": "fitbit_id",
+   "withings": "withings_id",
+   "polar": "polar_id",
+   "googlefit": "googlefit_id",
+   }[service] }}*/
   and service_token_gargling.gargling_id = :gargling_id;
 
 
 -- name: match_ids!
 delete from
-  /*{{ {"fitbit": "fitbit_token_gargling", "withings": "withings_token_gargling", "polar": "polar_token_gargling"}[service] }}*/
+  /*{{ {
+   "fitbit": "fitbit_token_gargling",
+   "withings": "withings_token_gargling",
+   "polar": "polar_token_gargling",
+   "googlefit": "googlefit_token_gargling",
+   }[service] }}*/
 where
   gargling_id = :gargling_id;
 
 
 insert into
-  /*{{ {"fitbit": "fitbit_token_gargling", "withings": "withings_token_gargling", "polar": "polar_token_gargling"}[service] }}*/
+  /*{{ {
+   "fitbit": "fitbit_token_gargling",
+   "withings": "withings_token_gargling",
+   "polar": "polar_token_gargling",
+   "googlefit": "googlefit_token_gargling"
+   }[service] }}*/
   (
-    /*{{ {"fitbit": "fitbit_id", "withings": "withings_id", "polar": "polar_id"}[service] }}*/
+    /*{{ {
+     "fitbit": "fitbit_id",
+     "withings": "withings_id",
+     "polar": "polar_id",
+     "googlefit": "googlefit_id",
+     }[service] }}*/
 ,
     gargling_id
   )
@@ -112,16 +191,51 @@ values
   (:service_user_id, :gargling_id);
 
 
+-- name: service_user_id_for_gargling_id^
+select
+  /*{{ {
+   "fitbit": "fitbit_id",
+   "withings": "withings_id",
+   "polar": "polar_id",
+   "googlefit": "googlefit_id",
+   }[service] }}*/
+  as service_user_id
+from
+  /*{{ {
+   "fitbit": "fitbit_token_gargling",
+   "withings": "withings_token_gargling",
+   "polar": "polar_token_gargling",
+   "googlefit": "googlefit_token_gargling",
+   }[service] }}*/
+where
+  gargling_id = :gargling_id;
+
+
 -- name: is_registered^
 select
   service_token.enable_report
 from
-  /*{{ {"fitbit": "fitbit_token", "withings": "withings_token", "polar": "polar_token"}[service] }}*/
+  /*{{ {
+   "fitbit": "fitbit_token",
+   "withings": "withings_token",
+   "polar": "polar_token",
+   "googlefit": "googlefit_token",
+   }[service] }}*/
   as service_token
   inner join
-  /*{{ {"fitbit": "fitbit_token_gargling", "withings": "withings_token_gargling", "polar": "polar_token_gargling"}[service] }}*/
+  /*{{ {
+   "fitbit": "fitbit_token_gargling",
+   "withings": "withings_token_gargling",
+   "polar": "polar_token_gargling",
+   "googlefit": "googlefit_token_gargling",
+   }[service] }}*/
   as service_token_gargling on service_token.id = service_token_gargling.
-  /*{{ {"fitbit": "fitbit_id", "withings": "withings_id", "polar": "polar_id"}[service] }}*/
+  /*{{ {
+   "fitbit": "fitbit_id",
+   "withings": "withings_id",
+   "polar": "polar_id",
+   "googlefit": "googlefit_id",
+   }[service] }}*/
 where
   service_token_gargling.gargling_id = :gargling_id;
 
@@ -134,6 +248,7 @@ select
   fitbit.access_token,
   fitbit.refresh_token,
   fitbit.expires_at,
+  null as token_uri,
   'fitbit' as service
 from
   fitbit_token as fitbit
@@ -150,6 +265,7 @@ select
   withings.access_token,
   withings.refresh_token,
   withings.expires_at :: float,
+  null as token_uri,
   'withings' as service
 from
   withings_token as withings
@@ -166,13 +282,31 @@ select
   polar.access_token,
   polar.refresh_token,
   polar.expires_at,
+  null as token_uri,
   'polar' as service
 from
   polar_token as polar
   inner join polar_token_gargling on polar.id = polar_token_gargling.polar_id
   inner join gargling on polar_token_gargling.gargling_id = gargling.id
 where
-  polar.enable_report;
+  polar.enable_report
+union
+all
+select
+  gargling.id as gargling_id,
+  gargling.first_name,
+  googlefit.id :: text as service_user_id,
+  googlefit.access_token,
+  googlefit.refresh_token,
+  googlefit.expires_at,
+  googlefit.token_uri,
+  'googlefit' as service
+from
+  googlefit_token as googlefit
+  inner join googlefit_token_gargling on googlefit.id = googlefit_token_gargling.googlefit_id
+  inner join gargling on googlefit_token_gargling.gargling_id = gargling.id
+where
+  googlefit.enable_report;
 
 
 -- name: all_ids_nicks
@@ -187,10 +321,7 @@ from
 insert into
   cached_step (gargling_id, n_steps, created_at)
 values
-  (:gargling_id, :n_steps, :created_at) on conflict (
-    gargling_id,
-    date(created_at)
-  ) do
+  (:gargling_id, :n_steps, :created_at) on conflict (gargling_id, date(created_at)) do
 update
 set
   n_steps = case

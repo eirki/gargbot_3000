@@ -1,4 +1,4 @@
-#! /usr/bin/env python3.6
+#! /usr/bin/env python3
 # coding: utf-8
 from operator import itemgetter
 import typing as t
@@ -64,6 +64,7 @@ class FitbitUser(HealthUser):
         refresh_token: str,
         expires_at: int,
         service_user_id: None,
+        token_uri: None = None,
     ):
         super().__init__(gargling_id, first_name)
         self.client = FitbitApi(

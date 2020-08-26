@@ -7,10 +7,12 @@ from pathlib import Path
 import typing as t
 
 from flask import testing
+from google.oauth2.credentials import Credentials as GooglefitCredentials
+import pendulum
 from psycopg2.extensions import connection
 from psycopg2.extras import DictCursor, RealDictCursor
 import pytest
-from withings_api.common import Credentials
+from withings_api.common import Credentials as WithingsCredentials
 
 from gargbot_3000 import (
     commands,
@@ -23,6 +25,7 @@ from gargbot_3000 import (
     quotes,
     server,
 )
+from gargbot_3000.health.googlefit import GooglefitService
 
 age = 28
 byear = dt.datetime.now(config.tz).year - age
@@ -130,7 +133,7 @@ congrats = [
 @dataclass
 class HealthUser:
     service: str
-    service_user_id: t.Union[str, int]
+    service_user_id: t.Union[str, int, None]
     gargling_id: t.Optional[int]
     access_token: str
     refresh_token: t.Optional[str]
@@ -139,7 +142,7 @@ class HealthUser:
 
     def token(self):
         if self.service=="withings":
-            return Credentials(
+            return WithingsCredentials(
                 userid=self.service_user_id,
                 access_token=self.access_token,
                 refresh_token=self.refresh_token,
@@ -160,12 +163,24 @@ class HealthUser:
                 "x_user_id": self.service_user_id,
                 "access_token": self.access_token,
             }
+        elif self.service=="googlefit":
+            cred =  GooglefitCredentials(
+                token=self.access_token,
+                refresh_token=self.refresh_token,
+                client_id=config.googlefit_client_id,
+                client_secret=config.googlefit_client_secret,
+                token_uri="token_uri"
+            )
+            cred.expiry = pendulum.from_timestamp(self.expires_at)
+            return cred
+        else:
+            raise Exception(f"No token for service: {self.service}")
 
 
 health_users = [
     HealthUser("fitbit", "fitbit_id2", 2, "access_token2", "refresh_token2", 1573921366.6757, True),
-    HealthUser("fitbit", "fitbit_id3", 3, "access_token3", "refresh_token3", 1573921366.6757),
-    HealthUser("fitbit", "fitbit_id11", 11, "access_token11", "refresh_token11", 1573921366.6757),
+    HealthUser("googlefit", None, 3, "access_token3", "refresh_token3", 1573921366.6757, True),
+    HealthUser("googlefit", None, 11, "access_token11", "refresh_token11", 1573921366.6757),
     HealthUser("fitbit", "fitbit_id5", 5, "access_token5", "refresh_token5", 1573921366.6757, True),
     HealthUser("withings", 106, 6, "access_token6", "refresh_token6", 1579111429, True),
     HealthUser("withings", 107, 7, "access_token7", "refresh_token7", 1579111429),
@@ -222,8 +237,11 @@ def populate_health_table(conn: connection) -> None:
     health.queries.create_schema(conn)
     for health_user in health_users:
         service = health.init_service(health_user.service)
-        service.persist_token(health_user.token(), conn)
-
+        if not isinstance(service, GooglefitService):
+            service.persist_token(health_user.token(), conn)
+        else:
+            service_user_id = service.insert_token(health_user.token(), conn)
+            health_user.service_user_id = service_user_id
         health.queries.match_ids(
             conn,
             service_user_id=health_user.service_user_id,

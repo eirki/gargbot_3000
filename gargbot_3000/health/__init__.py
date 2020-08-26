@@ -1,4 +1,4 @@
-#! /usr/bin/env python3.6
+#! /usr/bin/env python3
 # coding: utf-8
 import typing as t
 
@@ -10,6 +10,7 @@ import withings_api
 
 from gargbot_3000.health.base import HealthService, HealthUser, queries
 from gargbot_3000.health.fitbit_ import FitbitService, FitbitUser
+from gargbot_3000.health.googlefit import GooglefitService, GooglefitUser
 from gargbot_3000.health.polar import PolarService, PolarUser
 from gargbot_3000.health.withings import WithingsService, WithingsUser
 from gargbot_3000.logger import log
@@ -22,6 +23,7 @@ blueprint = Blueprint("health", __name__)
 def init_service(service_name: str) -> HealthService:
     services: t.Dict[str, t.Type[HealthService]] = {
         "fitbit": FitbitService,
+        "googlefit": GooglefitService,
         "polar": PolarService,
         "withings": WithingsService,
     }
@@ -32,6 +34,7 @@ def init_service(service_name: str) -> HealthService:
 def init_user(token: dict) -> HealthUser:
     services: t.Dict[str, t.Type[HealthUser]] = {
         "fitbit": FitbitUser,
+        "googlefit": GooglefitUser,
         "polar": PolarUser,
         "withings": WithingsUser,
     }
@@ -77,13 +80,29 @@ def handle_redirect(service_name: str):
     service = init_service(service_name)
     service_user_id, token = service.token(code)
     with current_app.pool.get_connection() as conn:
-        service.persist_token(token, conn)
-        queries.match_ids(
-            conn,
-            gargling_id=gargling_id,
-            service_user_id=service_user_id,
-            service=service.name,
-        )
+        if (
+            isinstance(service, GooglefitService)
+            and queries.is_registered(
+                conn, gargling_id=gargling_id, service=GooglefitService.name
+            )
+            is not None
+        ):
+
+            service_user_id_ = queries.service_user_id_for_gargling_id(
+                conn, gargling_id=gargling_id, service=GooglefitService.name
+            )["service_user_id"]
+            service.update_token(service_user_id_, token, conn)
+        else:
+            if isinstance(service, GooglefitService):
+                service_user_id = service.insert_token(token, conn)
+            else:
+                service.persist_token(token, conn)
+            queries.match_ids(
+                conn,
+                gargling_id=gargling_id,
+                service_user_id=service_user_id,
+                service=service.name,
+            )
         conn.commit()
     return Response(status=200)
 

@@ -1,4 +1,4 @@
-#! /usr/bin/env python3.6
+#! /usr/bin/env python3
 # coding: utf-8
 import os
 from pathlib import Path
@@ -60,6 +60,13 @@ withings_redirect_uri = os.environ["withings_redirect_uri"]
 polar_client_id = os.environ["polar_client_id"]
 polar_client_secret = os.environ["polar_client_secret"]
 polar_redirect_uri = os.environ["polar_redirect_uri"]
+
+googlefit_client_id = os.environ["googlefit_client_id"]
+googlefit_client_secret = os.environ["googlefit_client_secret"]
+googlefit_redirect_uri = os.environ["googlefit_redirect_uri"]
+googlefit_redirect_uri = "http://localhost:5000/googlefit"
+googlefit_javascript_origins = os.environ["googlefit_javascript_origins"]
+googlefit_javascript_origins = "http://localhost:5000"
 
 google_api_key = os.environ["google_api_key"]
 google_api_secret = os.environ["google_api_secret"]

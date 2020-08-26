@@ -48,11 +48,10 @@ class HealthService(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def token(cls, code: str) -> t.Tuple[service_user_id_type, token_type]:
+    def token(cls, code: str) -> t.Tuple[t.Optional[service_user_id_type], token_type]:
         pass
 
     @staticmethod
-    @abstractmethod
     def persist_token(token, conn) -> None:
         pass
 
