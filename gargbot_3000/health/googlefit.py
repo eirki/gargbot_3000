@@ -16,6 +16,7 @@ from gargbot_3000.health.base import (
     connection_context,
     queries,
 )
+from gargbot_3000.logger import log
 
 scopes = ["https://www.googleapis.com/auth/fitness.activity.read"]
 
@@ -118,12 +119,11 @@ class GooglefitUser(HealthUser):
         steps_datasource = (
             "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps"
         )
-        ONE_DAY_MS = 86400000
         start_dt = pendulum.datetime(date.year, date.month, date.day).in_timezone(
             config.tz
         )
-        start_ms = int(start_dt.format("x"))
-        end_ms = start_ms + ONE_DAY_MS
+        start_ms = start_dt.timestamp() * 1000
+        end_ms = start_dt.add(days=1).timestamp() * 1000
         data = (
             self.client.users()
             .dataset()
@@ -136,15 +136,18 @@ class GooglefitUser(HealthUser):
                             "dataSourceId": steps_datasource,
                         }
                     ],
-                    "bucketByTime": {"durationMillis": ONE_DAY_MS},
+                    "bucketByTime": {
+                        "durationMillis": pendulum.duration(days=1).in_seconds() * 1000
+                    },
                     "startTimeMillis": start_ms,
                     "endTimeMillis": end_ms,
                 },
             )
             .execute()
         )
+        log.info(data)
         try:
-            return data["bucket"][0]["dataset"][0]["point"]
+            return data["bucket"][0]["dataset"][0]["point"][0]["value"][0]["intVal"]
         except IndexError:
             return None
         # for bucket in data["bucket"]:
