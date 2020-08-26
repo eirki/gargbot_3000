@@ -94,20 +94,22 @@ class PolarUser(HealthUser):
             for activity in activities:
                 summary = trans.get_activity_summary(activity)
                 log.info(summary)
+                taken_at = pendulum.parse(summary["date"]).date()
                 created_at = pendulum.parse(summary["created"])
+
                 n_steps = summary["active-steps"]
                 log.info(f"n steps {created_at}: {n_steps}")
-                steps_by_date[created_at.date()].append(
+                steps_by_date[taken_at].append(
                     {"n_steps": n_steps, "created_at": created_at}
                 )
-
             not_past: t.List[dict] = []
             for activity_date, activity_list in steps_by_date.items():
                 activity_list.sort(key=itemgetter("created_at"))
                 last_synced = activity_list[-1]
-                if last_synced["created_at"].date() < date:
+                if activity_date < date:
                     continue
                 last_synced["gargling_id"] = self.gargling_id
+                last_synced["taken_at"] = activity_date
                 log.info(f"last_synced, {activity_date}: {last_synced}")
                 not_past.append(last_synced)
             queries.upsert_steps(conn, not_past)

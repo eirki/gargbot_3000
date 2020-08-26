@@ -32,7 +32,13 @@ class FakePolarTrans:
 def test_polar_steps(conn: connection):
     test_date = pendulum.Date(2020, 1, 2)
     tran = FakePolarTrans(
-        [{"created": "2020-01-02T20:11:33.000Z", "active-steps": 1500}]
+        [
+            {
+                "date": "2020-01-02",
+                "created": "2020-01-02T20:11:33.000Z",
+                "active-steps": 1500,
+            }
+        ]
     )
     user = polar_user(conn)
     user._get_transaction = lambda: tran  # type: ignore
@@ -45,27 +51,46 @@ def test_polar_steps_cached(conn: connection):
     user = polar_user(conn)
     to_cache = [
         {
-            "created_at": "2020-01-02T12:11:33.000Z",
-            "n_steps": 1500,
+            "taken_at": pendulum.Date(2020, 1, 2),
+            "created_at": pendulum.datetime(2020, 1, 2, 0, 0, 0),
+            "n_steps": 1000,
             "gargling_id": user.gargling_id,
         }
     ]
     queries.upsert_steps(conn, to_cache)
     tran = FakePolarTrans(
-        [{"created": "2020-01-02T20:11:33.000Z", "active-steps": 1000}]
+        [
+            {
+                "date": "2020-01-02",
+                "created": "2020-01-02T20:11:33.000Z",
+                "active-steps": 1500,
+            }
+        ]
     )
     user._get_transaction = lambda: tran  # type: ignore
     steps = user.steps(test_date, conn)
-    assert steps == 1000
+    assert steps == 1500
 
 
 def test_polar_steps_multiple_dates(conn: connection):
     test_date = pendulum.Date(2020, 1, 2)
     tran = FakePolarTrans(
         [
-            {"created": "2020-01-01T20:11:33.000Z", "active-steps": 1500},
-            {"created": "2020-01-02T20:11:33.000Z", "active-steps": 1501},
-            {"created": "2020-01-03T20:11:33.000Z", "active-steps": 1502},
+            {
+                "date": "2020-01-01",
+                "created": "2020-01-01T20:11:33.000Z",
+                "active-steps": 1500,
+            },
+            {
+                "date": "2020-01-02",
+                "created": "2020-01-02T20:11:33.000Z",
+                "active-steps": 1501,
+            },
+            {
+                "date": "2020-01-03",
+                "created": "2020-01-03T20:11:33.000Z",
+                "active-steps": 1502,
+            },
         ]
     )
     user = polar_user(conn)
@@ -78,8 +103,43 @@ def test_polar_steps_multiple_same_date(conn: connection):
     test_date = pendulum.Date(2020, 1, 2)
     tran = FakePolarTrans(
         [
-            {"created": "2020-01-02T16:11:33.000Z", "active-steps": 1499},
-            {"created": "2020-01-02T20:11:33.000Z", "active-steps": 1501},
+            {
+                "date": "2020-01-02",
+                "created": "2020-01-02T16:11:33.000Z",
+                "active-steps": 1499,
+            },
+            {
+                "date": "2020-01-02",
+                "created": "2020-01-02T20:11:33.000Z",
+                "active-steps": 1501,
+            },
+        ]
+    )
+    user = polar_user(conn)
+    user._get_transaction = lambda: tran  # type: ignore
+    steps = user.steps(test_date, conn)
+    assert steps == 1501
+
+
+def test_polar_steps_multiple_same_date_different_created(conn: connection):
+    test_date = pendulum.Date(2020, 1, 2)
+    tran = FakePolarTrans(
+        [
+            {
+                "date": "2020-01-02",
+                "created": "2020-01-02T16:11:33.000Z",
+                "active-steps": 1499,
+            },
+            {
+                "date": "2020-01-02",
+                "created": "2020-01-02T20:11:33.000Z",
+                "active-steps": 1501,
+            },
+            {
+                "date": "2020-01-03",
+                "created": "2020-01-02T23:11:33.000Z",
+                "active-steps": 1504,
+            },
         ]
     )
     user = polar_user(conn)
@@ -92,8 +152,16 @@ def test_polar_steps_future_cached(conn: connection):
     test_date = pendulum.Date(2020, 1, 2)
     tran = FakePolarTrans(
         [
-            {"created": "2020-01-02T20:11:33.000Z", "active-steps": 1501},
-            {"created": "2020-01-03T20:11:33.000Z", "active-steps": 1502},
+            {
+                "date": "2020-01-02",
+                "created": "2020-01-02T20:11:33.000Z",
+                "active-steps": 1501,
+            },
+            {
+                "date": "2020-01-03",
+                "created": "2020-01-03T20:11:33.000Z",
+                "active-steps": 1502,
+            },
         ]
     )
     user = polar_user(conn)

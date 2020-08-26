@@ -62,11 +62,12 @@ create table googlefit_token_gargling (
 create table cached_step (
   gargling_id smallint not null references gargling(id),
   n_steps int not null,
-  created_at timestamp not null
+  created_at timestamp not null,
+  taken_at date not null
 );
 
 
-create unique index on cached_step (gargling_id, date(created_at));
+create unique index on cached_step (gargling_id, taken_at);
 
 
 -- name: persist_token!
@@ -311,9 +312,9 @@ from
 
 -- name: upsert_steps*!
 insert into
-  cached_step (gargling_id, n_steps, created_at)
+  cached_step (gargling_id, n_steps, created_at, taken_at)
 values
-  (:gargling_id, :n_steps, :created_at) on conflict (gargling_id, date(created_at)) do
+  (:gargling_id, :n_steps, :created_at, :taken_at) on conflict (gargling_id, taken_at) do
 update
 set
   n_steps = case
@@ -328,5 +329,5 @@ select
 from
   cached_step
 where
-  date(created_at) = :date
+  taken_at = :date
   and gargling_id = :id;
