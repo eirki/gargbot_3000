@@ -104,12 +104,12 @@ class GooglefitUser(HealthUser):
             token_uri=config.googlefit_token_uri,
         )
         credentials.expiry = pendulum.from_timestamp(expires_at).naive()
-        if not credentials.valid:
-            raise Exception("Invalid credentials")
         if credentials.expired:
             request = google.auth.transport.requests.Request()
             credentials.refresh(request)
             self.service.update_token(service_user_id, credentials)
+        if not credentials.valid:
+            raise Exception("Invalid credentials")
         self.client = build(
             "fitness", "v1", credentials=credentials, cache_discovery=False
         )
