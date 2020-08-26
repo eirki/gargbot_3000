@@ -29,9 +29,8 @@ create table polar_token (
 create table googlefit_token (
   id serial primary key,
   access_token text not null,
-  refresh_token text not null,
+  refresh_token text,
   expires_at int not null,
-  token_uri text not null,
   enable_report boolean default false
 );
 
@@ -104,15 +103,13 @@ insert into
   googlefit_token (
     access_token,
     refresh_token,
-    expires_at,
-    token_uri
+    expires_at
   )
 values
   (
     :access_token,
     :refresh_token,
-    :expires_at,
-    :token_uri
+    :expires_at
   ) returning id;
 
 
@@ -122,8 +119,7 @@ update
 set
   access_token = :access_token,
   refresh_token = :refresh_token,
-  expires_at = :expires_at,
-  token_uri = :token_uri
+  expires_at = :expires_at
 where
   id = :id;
 
@@ -248,7 +244,6 @@ select
   fitbit.access_token,
   fitbit.refresh_token,
   fitbit.expires_at,
-  null as token_uri,
   'fitbit' as service
 from
   fitbit_token as fitbit
@@ -265,7 +260,6 @@ select
   withings.access_token,
   withings.refresh_token,
   withings.expires_at :: float,
-  null as token_uri,
   'withings' as service
 from
   withings_token as withings
@@ -282,7 +276,6 @@ select
   polar.access_token,
   polar.refresh_token,
   polar.expires_at,
-  null as token_uri,
   'polar' as service
 from
   polar_token as polar
@@ -299,7 +292,6 @@ select
   googlefit.access_token,
   googlefit.refresh_token,
   googlefit.expires_at,
-  googlefit.token_uri,
   'googlefit' as service
 from
   googlefit_token as googlefit

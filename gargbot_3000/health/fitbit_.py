@@ -64,7 +64,6 @@ class FitbitUser(HealthUser):
         refresh_token: str,
         expires_at: int,
         service_user_id: None,
-        token_uri: None = None,
     ):
         super().__init__(gargling_id, first_name)
         self.client = FitbitApi(

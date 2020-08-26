@@ -48,7 +48,7 @@ def test_handle_redirect_reregister(
         refresh_token=user.refresh_token,
         client_id=config.googlefit_client_id,
         client_secret=config.googlefit_client_secret,
-        token_uri="token_uri",
+        token_uri=config.googlefit_token_uri,
     )
     fake_token.expiry = pendulum.datetime(2013, 3, 31, 0, 0, 0)
     mock_jwt_identity.return_value = user.gargling_id
@@ -65,7 +65,6 @@ def test_handle_redirect_reregister(
     assert data["access_token"] == fake_token.token
     assert data["refresh_token"] == fake_token.refresh_token
     assert pendulum.from_timestamp((data["expires_at"])) == fake_token.expiry
-    assert data["token_uri"] == fake_token.token_uri
     with conn.cursor() as cursor:
         cursor.execute(
             "SELECT gargling_id "

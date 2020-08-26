@@ -73,7 +73,6 @@ class WithingsUser(HealthUser):
         access_token: str,
         refresh_token: str,
         expires_at: int,
-        token_uri: None = None,
     ):
         super().__init__(gargling_id, first_name)
         credentials = Credentials(

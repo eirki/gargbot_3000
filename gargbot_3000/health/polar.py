@@ -70,7 +70,6 @@ class PolarUser(HealthUser):
         access_token: str,
         refresh_token: None,
         expires_at: None,
-        token_uri: None = None,
     ):
         super().__init__(gargling_id, first_name)
         self.client = PolarApi(

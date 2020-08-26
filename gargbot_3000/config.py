@@ -65,6 +65,11 @@ googlefit_client_id = os.environ["googlefit_client_id"]
 googlefit_client_secret = os.environ["googlefit_client_secret"]
 googlefit_redirect_uri = os.environ["googlefit_redirect_uri"]
 googlefit_javascript_origins = os.environ["googlefit_javascript_origins"]
+googlefit_auth_uri = os.environ["googlefit_auth_uri"]
+googlefit_token_uri = os.environ["googlefit_token_uri"]
+googlefit_auth_provider_x509_cert_url = os.environ[
+    "googlefit_auth_provider_x509_cert_url"
+]
 
 google_api_key = os.environ["google_api_key"]
 google_api_secret = os.environ["google_api_secret"]

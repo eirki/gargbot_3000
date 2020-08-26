@@ -28,9 +28,9 @@ class GooglefitService(HealthService):
             "web": {
                 "client_id": config.googlefit_client_id,
                 "project_id": "scripts-140708",
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "auth_uri": config.googlefit_auth_uri,
+                "token_uri": config.googlefit_token_uri,
+                "auth_provider_x509_cert_url": config.googlefit_auth_provider_x509_cert_url,
                 "client_secret": config.googlefit_client_secret,
                 "redirect_uris": [config.googlefit_redirect_uri],
                 "javascript_origins": [config.googlefit_javascript_origins],
@@ -60,7 +60,6 @@ class GooglefitService(HealthService):
                 conn,
                 access_token=credentials.token,
                 refresh_token=credentials.refresh_token,
-                token_uri=credentials.token_uri,
                 expires_at=credentials.expiry.timestamp(),
             )
             conn.commit()
@@ -79,7 +78,6 @@ class GooglefitService(HealthService):
                 access_token=credentials.token,
                 refresh_token=credentials.refresh_token,
                 expires_at=credentials.expiry.timestamp(),
-                token_uri=credentials.token_uri,
             )
             conn.commit()
 
@@ -103,8 +101,9 @@ class GooglefitUser(HealthUser):
             client_id=config.googlefit_client_id,
             client_secret=config.googlefit_client_secret,
             scopes=scopes,
+            token_uri=config.googlefit_token_uri,
         )
-        credentials.expiry = pendulum.from_timestamp(expires_at)
+        credentials.expiry = pendulum.from_timestamp(expires_at).naive()
         if not credentials.valid:
             raise Exception("Invalid credentials")
         if credentials.expired:
@@ -120,7 +119,7 @@ class GooglefitUser(HealthUser):
             "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps"
         )
         ONE_DAY_MS = 86400000
-        start_dt = pendulum.DateTime(date.year, date.month, date.day).in_timezone(
+        start_dt = pendulum.datetime(date.year, date.month, date.day).in_timezone(
             config.tz
         )
         start_ms = int(start_dt.format("x"))
