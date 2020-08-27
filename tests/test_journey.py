@@ -98,6 +98,7 @@ def example_update_data() -> dict:
         "distance": 26845.5,
         "dist_remaining": 29016.651884,
         "address": "Address",
+        "country": "Country",
         "poi": "Poi",
         "img_url": "www.image",
         "map_url": "www.mapurl",
@@ -117,7 +118,7 @@ def api_mocker():
         render_map=DEFAULT,
         upload_images=DEFAULT,
     ) as mocks:
-        mocks["address_for_location"].return_value = "Address"
+        mocks["address_for_location"].return_value = "Address", "Country"
         mocks["image_for_location"].return_value = b"image"
         mocks["map_url_for_location"].return_value = "www.mapurl"
         mocks["poi_for_location"].return_value = "Poi"
@@ -139,6 +140,7 @@ def test_list_journeys(
         "distance": 300,
         "latest_waypoint": 2,
         "address": "address1",
+        "country": "Country1",
         "img_url": "image1",
         "map_url": "map_url1",
         "traversal_map_url": "tmap_url1",
@@ -152,6 +154,7 @@ def test_list_journeys(
         "distance": 301,
         "latest_waypoint": 3,
         "address": "address2",
+        "country": "Country2",
         "img_url": "image2",
         "map_url": "map_url2",
         "traversal_map_url": "tmap_url2",
@@ -170,9 +173,9 @@ def test_detail_journey(client: FlaskClient, conn: connection):
     date = pendulum.Date(2013, 3, 31)
     journey.start_journey(conn, journey_id, date)
     with api_mocker():
-        location, *_, finished = journey.perform_daily_update(
-            conn, journey_id, date, steps_data, g_info
-        )
+        data = journey.perform_daily_update(conn, journey_id, date, steps_data, g_info)
+    assert data is not None
+    location, *_, finished = data
     journey.store_update_data(conn, location, finished)
     response = client.get(f"/detail_journey/{journey_id}")
     waypoints = response.json.pop("waypoints")
@@ -229,6 +232,7 @@ def test_store_get_most_recent_location(conn):
         "distance": 300,
         "latest_waypoint": 2,
         "address": "address1",
+        "country": "Country1",
         "img_url": "image1",
         "map_url": "map_url1",
         "traversal_map_url": "tmap_url1",
@@ -242,6 +246,7 @@ def test_store_get_most_recent_location(conn):
         "distance": 301,
         "latest_waypoint": 3,
         "address": "address2",
+        "country": "Country2",
         "img_url": "image2",
         "map_url": "map_url2",
         "traversal_map_url": "tmap_url2",
@@ -316,7 +321,7 @@ def test_daily_update(conn: connection):
     with api_mocker():
         data = journey.perform_daily_update(conn, journey_id, date, steps_data, g_info)
     assert data is not None
-    location, distance_today, dist_remaining, finished = data
+    location, distance_today, dist_remaining, new_country, finished = data
     expected = example_update_data()
     assert distance_today == expected.pop("dist_today")
     assert dist_remaining == expected.pop("dist_remaining")
@@ -376,8 +381,10 @@ def test_format_response():
             {"alt_text": "Breakdown!", "image_url": "www.tmap", "type": "image"},
             {
                 "text": {
-                    "text": "Vi har nå kommet til Address. Kveldens "
-                    "underholdning er Poi.",
+                    "text": (
+                        "Velkommen til Country! :confetti_ball: Vi har nå "
+                        "kommet til Address. Kveldens underholdning er Poi."
+                    ),
                     "type": "mrkdwn",
                 },
                 "type": "section",
@@ -403,6 +410,32 @@ def test_format_response():
     assert formatted["text"] == expected["text"]
 
 
+def test_format_response_no_address_no_country():
+    data = example_update_data()
+    steps_data, body_reports = example_activity_data()
+    g_info = example_gargling_info()
+    data["destination"] = "Destinasjon"
+
+    data["address"] = None
+    data["country"] = None
+    response = journey.format_response(
+        n_day=8,
+        gargling_info=g_info,
+        steps_data=steps_data,
+        body_reports=body_reports,
+        **data,
+    )
+    address_block = response["blocks"][4]
+    expected_address = {
+        "text": {"text": "Kveldens underholdning er Poi.", "type": "mrkdwn"},
+        "type": "section",
+    }
+    img_block = response["blocks"][5]
+    expected_img = {"alt_text": "Check it!", "image_url": "www.image", "type": "image"}
+    assert address_block == expected_address
+    assert img_block == expected_img
+
+
 def test_format_response_no_address():
     data = example_update_data()
     steps_data, body_reports = example_activity_data()
@@ -419,11 +452,42 @@ def test_format_response_no_address():
     )
     address_block = response["blocks"][4]
     expected_address = {
-        "text": {"text": "Kveldens underholdning er Poi.", "type": "mrkdwn"},
+        "text": {
+            "text": "Velkommen til Country! :confetti_ball: Kveldens underholdning er Poi.",
+            "type": "mrkdwn",
+        },
         "type": "section",
     }
     img_block = response["blocks"][5]
     expected_img = {"alt_text": "Check it!", "image_url": "www.image", "type": "image"}
+    assert address_block == expected_address
+    assert img_block == expected_img
+
+
+def test_format_response_no_country():
+    data = example_update_data()
+    steps_data, body_reports = example_activity_data()
+    g_info = example_gargling_info()
+    data["destination"] = "Destinasjon"
+
+    data["country"] = None
+    response = journey.format_response(
+        n_day=8,
+        gargling_info=g_info,
+        steps_data=steps_data,
+        body_reports=body_reports,
+        **data,
+    )
+    address_block = response["blocks"][4]
+    expected_address = {
+        "text": {
+            "text": "Vi har nå kommet til Address. Kveldens underholdning er Poi.",
+            "type": "mrkdwn",
+        },
+        "type": "section",
+    }
+    img_block = response["blocks"][5]
+    expected_img = {"alt_text": "Address", "image_url": "www.image", "type": "image"}
     assert address_block == expected_address
     assert img_block == expected_img
 
@@ -447,7 +511,10 @@ def test_format_response_nopoi():
     address_block = response["blocks"][4]
     expected = {
         "type": "section",
-        "text": {"type": "mrkdwn", "text": "Vi har nå kommet til Address. "},
+        "text": {
+            "type": "mrkdwn",
+            "text": "Velkommen til Country! :confetti_ball: Vi har nå kommet til Address. ",
+        },
     }
     assert address_block == expected
 
@@ -478,6 +545,7 @@ def test_format_response_no_all():
     data["destination"] = "Destinasjon"
 
     data["address"] = None
+    data["country"] = None
     data["poi"] = None
     data["img_url"] = None
     data["traversal_map_url"] = None
@@ -518,9 +586,11 @@ def test_days_to_update(conn: connection):
     start_date = pendulum.Date(2013, 3, 31)
     journey.start_journey(conn, journey_id, start_date)
     with api_mocker():
-        location, *_, finished = journey.perform_daily_update(
+        data = journey.perform_daily_update(
             conn, journey_id, start_date, steps_data, g_info
         )
+    assert data is not None
+    location, *_, finished = data
     journey.store_update_data(conn, location, finished)
     cur_date = start_date.add(days=2)
     itr = journey.days_to_update(conn, journey_id, cur_date)

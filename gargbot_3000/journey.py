@@ -219,14 +219,16 @@ def get_colors_names(conn: connection, ids: t.List[int]) -> t.Dict[int, dict]:
         infodict[gargling_id] = dict(info)
 
 
-def address_for_location(lat, lon) -> t.Optional[str]:
+def address_for_location(lat, lon) -> t.Tuple[t.Optional[str], t.Optional[str]]:
     geolocator = Nominatim(user_agent=config.bot_name)
     try:
-        location = geolocator.reverse(f"{lat}, {lon}")
-        return location.address
+        location = geolocator.reverse(f"{lat}, {lon}", language="no")
+        address = location.address
+        country = location.raw.get("address", {}).get("country")
+        return address, country
     except Exception:
         log.error("Error getting address for location", exc_info=True)
-        return None
+        return None, None
 
 
 def image_for_location(lat, lon) -> t.Optional[bytes]:
@@ -338,13 +340,13 @@ def get_location(conn, journey_id, distance) -> t.Tuple[float, float, int, bool]
 def data_for_location(
     lat: float, lon: float
 ) -> t.Tuple[
-    t.Optional[str], t.Optional[bytes], str, t.Optional[str],
+    t.Optional[str], t.Optional[str], t.Optional[bytes], str, t.Optional[str],
 ]:
-    address = address_for_location(lat, lon)
+    address, country = address_for_location(lat, lon)
     street_view_img = image_for_location(lat, lon)
     map_url = map_url_for_location(lat, lon)
     poi = poi_for_location(lat, lon)
-    return address, street_view_img, map_url, poi
+    return address, country, street_view_img, map_url, poi
 
 
 def get_detailed_coords(current_waypoints, last_location, steps_data, start_dist):
@@ -600,7 +602,7 @@ def perform_daily_update(
     date: pendulum.Date,
     steps_data: t.List[dict],
     gargling_info: t.Dict[int, dict],
-):
+) -> t.Optional[t.Tuple[dict, float, float, bool, bool]]:
     journey = queries.get_journey(conn, journey_id=journey_id)
     if journey["finished_at"] is not None or journey["started_at"] is None:
         return None
@@ -618,7 +620,13 @@ def perform_daily_update(
     lat, lon, latest_waypoint_id, finished = get_location(
         conn, journey_id, distance_total
     )
-    address, street_view_img, map_url, poi = data_for_location(lat, lon)
+    address, country, street_view_img, map_url, poi = data_for_location(lat, lon)
+
+    new_country = (
+        country != last_location["country"]
+        if last_location and None not in (country, last_location["country"])
+        else False
+    )
 
     traversal_map = generate_traversal_map(
         conn,
@@ -641,12 +649,13 @@ def perform_daily_update(
         "distance": distance_total,
         "date": date,
         "address": address,
+        "country": country,
         "img_url": img_url,
         "map_url": map_url,
         "traversal_map_url": traversal_map_url,
         "poi": poi,
     }
-    return location, distance_today, dist_remaining, finished
+    return location, distance_today, dist_remaining, new_country, finished
 
 
 def days_to_update(conn, journey_id, date: pendulum.Date) -> t.Iterable[pendulum.Date]:
@@ -686,6 +695,7 @@ def format_response(
     distance: float,
     dist_remaining: float,
     address: t.Optional[str],
+    country: t.Optional[str],
     poi: t.Optional[str],
     img_url: t.Optional[str],
     map_url: str,
@@ -732,6 +742,8 @@ def format_response(
         )
 
     location_txt = ""
+    if country is not None:
+        location_txt += f"Velkommen til {country}! :confetti_ball: "
     if address is not None:
         location_txt += f"Vi har nå kommet til {address}. "
     if poi is not None:
@@ -803,7 +815,13 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
             )
             if not update_data:
                 continue
-            location, distance_today, dist_remaining, finished = update_data
+            (
+                location,
+                distance_today,
+                dist_remaining,
+                new_country,
+                finished,
+            ) = update_data
             n_day = (date - ongoing_journey["started_at"]).days + 1
             formatted = format_response(
                 date=date,
@@ -817,6 +835,7 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
                 gargling_info=gargling_info,
                 distance=location["distance"],
                 address=location["address"],
+                country=location["country"] if new_country else None,
                 poi=location["poi"],
                 img_url=location["img_url"],
                 map_url=location["map_url"],
