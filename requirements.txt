@@ -39,7 +39,7 @@ migra[pg]==1.0.1575954682
 oauthlib==3.1.0           # via requests-oauthlib
 pathlib==1.0.1            # via sqlbag
 pendulum==2.0.5
-pillow==6.2.1
+pillow==7.2.0
 polar-accesslink==0.0.5
 protobuf==3.13.0          # via google-api-core, googleapis-common-protos
 psycopg2-binary==2.8.4
