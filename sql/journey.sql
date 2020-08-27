@@ -19,7 +19,7 @@ create table waypoint (
     journey_id smallint not null references journey(id),
     lat double precision not null,
     lon double precision not null,
-    cum_dist float not null
+    distance float not null
 );
 
 
@@ -157,13 +157,13 @@ select
     *,
     (
         select
-            cum_dist
+            distance
         from
             waypoint
         where
             journey_id = :journey_id
         order by
-            cum_dist desc
+            distance desc
         fetch first
             row only
     ) as distance
@@ -175,9 +175,9 @@ where
 
 -- name: add_waypoints*!
 insert into
-    waypoint (journey_id, lat, lon, cum_dist)
+    waypoint (journey_id, lat, lon, distance)
 values
-    (:journey_id, :lat, :lon, :cum_dist);
+    (:journey_id, :lat, :lon, :distance);
 
 
 -- name: waypoints_for_journey
@@ -193,17 +193,17 @@ where
 select
     lat,
     lon,
-    cum_dist
+    distance
 from
     waypoint
 where
     journey_id = :journey_id
     and (
-        cum_dist between :low
+        distance between :low
         and :high
     )
 order by
-    cum_dist;
+    distance;
 
 
 -- name: get_waypoint_for_distance^
@@ -213,9 +213,9 @@ from
     waypoint
 where
     journey_id = :journey_id
-    and :distance > cum_dist
+    and :distance > distance
 order by
-    cum_dist desc
+    distance desc
 fetch first
     row only;
 

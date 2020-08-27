@@ -112,7 +112,7 @@ def detail_journey(journey_id):
             {
                 "lat": most_recent["lat"],
                 "lon": most_recent["lon"],
-                "cum_dist": most_recent["distance"],
+                "distance": most_recent["distance"],
             }
         )
     return jsonify(waypoints=waypoints, **dict(j))
@@ -190,7 +190,7 @@ def parse_gpx(conn, journey_id, xml_data) -> None:
             "journey_id": journey_id,
             "lat": waypoint.latitude,
             "lon": waypoint.longitude,
-            "cum_dist": cumulative_distance,
+            "distance": cumulative_distance,
         }
         waypoints.append(data)
         prev_waypoint = waypoint
@@ -328,7 +328,7 @@ def get_location(conn, journey_id, distance) -> t.Tuple[float, float, int, bool]
         current_lon = latest_waypoint["lon"]
     else:
         finished = False
-        remaining_dist = distance - latest_waypoint["cum_dist"]
+        remaining_dist = distance - latest_waypoint["distance"]
         current_lat, current_lon = location_between_waypoints(
             latest_waypoint, next_waypoint, remaining_dist
         )
@@ -362,21 +362,21 @@ def get_detailed_coords(current_waypoints, last_location, steps_data, start_dist
         gargling_distance = gargling["amount"] * stride
         current_distance += gargling_distance
         while True:
-            if next_waypoint is None or next_waypoint["cum_dist"] < current_distance:
+            if next_waypoint is None or next_waypoint["distance"] < current_distance:
                 # next_waypoint from previous garglings has been passed
                 next_waypoint = next(waypoints_itr, None)
                 if next_waypoint is None:
                     # this shouldn't really happen
                     break
 
-            if next_waypoint["cum_dist"] < current_distance:
+            if next_waypoint["distance"] < current_distance:
                 # next_waypoint passed by this gargling
                 gargling_coords.append((next_waypoint["lon"], next_waypoint["lat"]))
                 latest_waypoint = next_waypoint
                 continue
-            elif next_waypoint["cum_dist"] >= current_distance:
+            elif next_waypoint["distance"] >= current_distance:
                 # next_waypoint will not be passed by this gargling
-                remaining_dist = current_distance - latest_waypoint["cum_dist"]
+                remaining_dist = current_distance - latest_waypoint["distance"]
                 last_lat, last_lon = location_between_waypoints(
                     latest_waypoint, next_waypoint, remaining_dist
                 )
@@ -385,7 +385,7 @@ def get_detailed_coords(current_waypoints, last_location, steps_data, start_dist
                 latest_waypoint = {
                     "lat": last_lat,
                     "lon": last_lon,
-                    "cum_dist": current_distance,
+                    "distance": current_distance,
                 }
                 break
         detailed_coords.append(
@@ -431,7 +431,7 @@ def traversal_data(
         conn, journey_id=journey_id, low=start_dist, high=current_distance
     )
     current_waypoints.append(
-        {"lat": current_lat, "lon": current_lon, "cum_dist": current_distance}
+        {"lat": current_lat, "lon": current_lon, "distance": current_distance}
     )
     overview_coords.extend([(loc["lon"], loc["lat"]) for loc in current_waypoints])
     overview_coords.append((current_lon, current_lat))
