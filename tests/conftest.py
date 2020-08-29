@@ -130,63 +130,6 @@ congrats = [
     Congrat("Test sentence5"),
 ]
 
-@dataclass
-class HealthUser:
-    service: str
-    service_user_id: t.Union[str, int, None]
-    gargling_id: t.Optional[int]
-    access_token: str
-    refresh_token: t.Optional[str]
-    expires_at: t.Union[float, int, None]
-    enable_report: bool = False
-
-    def token(self):
-        if self.service=="withings":
-            return WithingsCredentials(
-                userid=self.service_user_id,
-                access_token=self.access_token,
-                refresh_token=self.refresh_token,
-                token_expiry=self.expires_at,
-                client_id=config.withings_client_id,
-                consumer_secret=config.withings_consumer_secret,
-                token_type="Bearer",
-            )
-        elif self.service=="fitbit":
-            return {
-                "user_id": self.service_user_id,
-                "access_token": self.access_token,
-                "refresh_token": self.refresh_token,
-                "expires_at": self.expires_at,
-            }
-        elif self.service=="polar":
-            return {
-                "x_user_id": self.service_user_id,
-                "access_token": self.access_token,
-            }
-        elif self.service=="googlefit":
-            cred =  GooglefitCredentials(
-                token=self.access_token,
-                refresh_token=self.refresh_token,
-                client_id=config.googlefit_client_id,
-                client_secret=config.googlefit_client_secret,
-                token_uri="token_uri"
-            )
-            cred.expiry = pendulum.from_timestamp(self.expires_at)
-            return cred
-        else:
-            raise Exception(f"No token for service: {self.service}")
-
-
-health_users = [
-    HealthUser("fitbit", "fitbit_id2", 2, "access_token2", "refresh_token2", 1573921366.6757, True),
-    HealthUser("googlefit", None, 3, "access_token3", "refresh_token3", 1573921366.6757, True),
-    HealthUser("googlefit", None, 11, "access_token11", "refresh_token11", 1573921366.6757),
-    HealthUser("fitbit", "fitbit_id5", 5, "access_token5", "refresh_token5", 1573921366.6757, True),
-    HealthUser("withings", 106, 6, "access_token6", "refresh_token6", 1579111429, True),
-    HealthUser("withings", 107, 7, "access_token7", "refresh_token7", 1579111429),
-    HealthUser("polar", 109, 9, "access_token9", None, None),
-    HealthUser("polar", 1010, 10, "access_token10", None, None, True),
-]
 # fmt: on
 
 
@@ -198,13 +141,11 @@ class MockDropbox:
 
 
 def populate_user_table(conn: connection) -> None:
-    commands.queries.create_schema(conn)
     user_dicts = [asdict(user) for user in users]
     commands.queries.add_users(conn, user_dicts)
 
 
 def populate_pics_table(conn: connection) -> None:
-    pictures.queries.create_schema(conn)
     for pic in pics:
         pic_id = pictures.queries.add_picture(
             conn, path=pic.path, topic=pic.topic, taken_at=pic.taken_at
@@ -218,57 +159,31 @@ def populate_pics_table(conn: connection) -> None:
 
 
 def populate_quotes_table(conn: connection) -> None:
-    quotes.forum_queries.create_schema(conn)
     post_dicts = [asdict(post) for post in forum_posts]
     quotes.forum_queries.add_posts(conn, post_dicts)
 
-    quotes.msn_queries.create_schema(conn)
     message_dicts = [asdict(message) for message in messages]
     quotes.msn_queries.add_messages(conn, message_dicts)
 
 
 def populate_congrats_table(conn: connection) -> None:
-    greetings.queries.create_schema(conn)
     congrat_dicts = [asdict(congrat) for congrat in congrats]
     greetings.queries.add_congrats(conn, congrat_dicts)
 
 
-def populate_health_table(conn: connection) -> None:
-    health.queries.create_schema(conn)
-    for health_user in health_users:
-        service = health.init_service(health_user.service)
-        if not isinstance(service, GooglefitService):
-            service.persist_token(health_user.token(), conn)
-        else:
-            service_user_id = service.insert_token(health_user.token(), conn)
-            health_user.service_user_id = service_user_id
-        health.queries.match_ids(
-            conn,
-            service_user_id=health_user.service_user_id,
-            gargling_id=health_user.gargling_id,
-            service=service.name,
-        )
-        if health_user.enable_report:
-            health.queries.toggle_report(
-                conn,
-                enable_=True,
-                gargling_id=health_user.gargling_id,
-                service=service.name,
-            )
-
-
-def populate_journey_table(conn: connection) -> None:
-    journey.queries.create_schema(conn)
-
-
 @pytest.fixture()
 def conn(postgresql: connection):
+    commands.queries.create_schema(postgresql)
+    pictures.queries.create_schema(postgresql)
+    quotes.forum_queries.create_schema(postgresql)
+    quotes.msn_queries.create_schema(postgresql)
+    greetings.queries.create_schema(postgresql)
+    health.queries.create_schema(postgresql)
+    journey.queries.create_schema(postgresql)
     populate_user_table(postgresql)
     populate_pics_table(postgresql)
     populate_quotes_table(postgresql)
     populate_congrats_table(postgresql)
-    populate_health_table(postgresql)
-    populate_journey_table(postgresql)
     postgresql.cursor_factory = DictCursor
     postgresql.commit()
     yield postgresql

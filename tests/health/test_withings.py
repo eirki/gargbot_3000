@@ -12,9 +12,73 @@ from withings_api.common import (
     MeasureGetActivityResponse,
 )
 
+from gargbot_3000 import config
 from gargbot_3000.health import queries
-from gargbot_3000.health.withings import WithingsUser
+from gargbot_3000.health.withings import WithingsService, WithingsUser
 from tests import conftest
+
+
+def withings_user(conn) -> WithingsUser:
+    user = conftest.users[0]
+    withings_user = register_user(user, conn, enable_report=True)
+    return withings_user
+
+
+def fake_token(user) -> Credentials:
+    return Credentials(
+        userid=user.id + 1000,
+        access_token=f"access_token{user.id}",
+        refresh_token=f"refresh_token{user.id}",
+        token_expiry=1573921366,
+        client_id=config.withings_client_id,
+        consumer_secret=config.withings_consumer_secret,
+        token_type="Bearer",
+    )
+
+
+def register_user(user, conn: connection, enable_report=False) -> WithingsUser:
+    token = fake_token(user)
+    WithingsService.persist_token(token, conn)
+    queries.match_ids(
+        conn, service_user_id=token.userid, gargling_id=user.id, service="withings",
+    )
+    if enable_report:
+        queries.toggle_report(
+            conn, enable_=True, gargling_id=user.id, service="withings"
+        )
+    withings_user = WithingsUser(
+        gargling_id=user.id,
+        first_name=user.first_name,
+        access_token=token.access_token,
+        refresh_token=token.refresh_token,
+        expires_at=token.token_expiry,
+        service_user_id=token.userid,
+    )
+    return withings_user
+
+
+def test_persist_token(conn: connection):
+    user = conftest.users[0]
+    register_user(user, conn)
+    with conn.cursor() as cur:
+        cur.execute("select * from withings_token")
+        tokens = cur.fetchall()
+        cur.execute("select * from withings_token_gargling")
+        matched = cur.fetchall()
+    assert len(tokens) == 1
+    token = dict(tokens[0])
+    exp = {
+        "id": 1002,
+        "access_token": "access_token2",
+        "refresh_token": "refresh_token2",
+        "expires_at": 1573921366,
+        "enable_report": False,
+    }
+    assert token == exp
+    assert len(matched) == 1
+    match = dict(matched[0])
+    exp = {"withings_id": 1002, "gargling_id": 2}
+    assert match == exp
 
 
 @patch("gargbot_3000.health.get_jwt_identity")
@@ -34,10 +98,11 @@ def test_auth_not_registered(
 @patch("gargbot_3000.health.get_jwt_identity")
 @patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
 def test_auth_is_registered(
-    mock_jwt_required, mock_jwt_identity, client: testing.FlaskClient
+    mock_jwt_required, mock_jwt_identity, client: testing.FlaskClient, conn: connection
 ):
-    user = conftest.health_users[4]
-    mock_jwt_identity.return_value = user.gargling_id
+    user = conftest.users[0]
+    register_user(user, conn)
+    mock_jwt_identity.return_value = user.id
     response = client.get("withings/auth")
     assert response.status_code == 200
     assert "report_enabled" in response.json
@@ -109,17 +174,8 @@ unused_measures = [
 ]
 
 
-def withings_user(conn):
-    tokens = queries.tokens(conn)
-    tokens = [dict(token) for token in tokens]
-    users = [
-        WithingsUser(**token) for token in tokens if token.pop("service") == "withings"
-    ]
-    assert len(users) == 1
-    return users[0]
-
-
 def test_withings_steps(conn: connection):
+    user = withings_user(conn)
     test_date = pendulum.Date(2020, 1, 2)
     none_data = {measure: None for measure in unused_measures}
     n_steps = 6620
@@ -130,13 +186,13 @@ def test_withings_steps(conn: connection):
         more=False,
         offset=0,
     )
-    user = withings_user(conn)
-    user._steps_api_call = lambda date: return_value
+    user._steps_api_call = lambda date: return_value  # type: ignore
     steps = user.steps(test_date)
     assert steps == n_steps
 
 
 def test_withings_steps_no_data(conn: connection):
+    user = withings_user(conn)
     test_date = pendulum.Date(2020, 1, 2)
     none_data = {measure: None for measure in unused_measures}
 
@@ -149,7 +205,6 @@ def test_withings_steps_no_data(conn: connection):
         more=False,
         offset=0,
     )
-    user = withings_user(conn)
-    user._steps_api_call = lambda date: return_value
+    user._steps_api_call = lambda date: return_value  # type: ignore
     steps = user.steps(test_date)
     assert steps is None

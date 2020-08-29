@@ -7,9 +7,18 @@ from psycopg2.extensions import connection
 import pytest
 
 from gargbot_3000 import health
+from gargbot_3000.health import fitbit_, googlefit, polar, withings
 from tests import conftest
+from tests.health import test_fitbit, test_googlefit, test_polar, test_withings
 
-services = ("service", ["withings", "fitbit"])
+modules = {
+    "fitbit": (fitbit_, test_fitbit),
+    "googlefit": (googlefit, test_googlefit),
+    "polar": (polar, test_polar),
+    "withings": (withings, test_withings),
+}
+services = ("service", ["withings", "fitbit", "googlefit", "polar"])
+services = ("service", ["withings", "fitbit", "googlefit", "polar"])
 
 
 @pytest.mark.parametrize(*services)
@@ -24,29 +33,19 @@ def test_toggle_report(
     client: testing.FlaskClient,
     conn: connection,
 ):
-    offset = 0 if not enable else 1
-    user = {
-        "fitbit": conftest.health_users[0 + offset],
-        "withings": conftest.health_users[4 + offset],
-    }[service]
-    data = health.queries.is_registered(
-        conn, gargling_id=user.gargling_id, service=service
-    )
-    if service == "fitbit" and enable is True:
-        return
-        # FIXME
-    assert user.enable_report is not enable
+    user = conftest.users[0]
+    module, test_module = modules[service]
+    test_module.register_user(user, conn, enable_report=not enable)
+    data = health.queries.is_registered(conn, gargling_id=user.id, service=service)
     assert data["enable_report"] is not enable
 
-    mock_jwt_identity.return_value = user.gargling_id
+    mock_jwt_identity.return_value = user.id
     response = client.post(
         "/toggle_report", json={"service": service, "enable": enable}
     )
     assert response.status_code == 200
 
-    data = health.queries.is_registered(
-        conn, gargling_id=user.gargling_id, service=service
-    )
+    data = health.queries.is_registered(conn, gargling_id=user.id, service=service)
     assert data["enable_report"] is enable
 
 

@@ -54,7 +54,8 @@ class GooglefitService(HealthService):
 
     @staticmethod
     def insert_token(
-        credentials: Credentials, conn: t.Optional[connection] = None,
+        credentials: Credentials,
+        conn: t.Optional[connection] = None,
     ) -> int:
         with connection_context(conn) as conn:
             service_user_id = queries.insert_googlefit_token(
@@ -115,16 +116,8 @@ class GooglefitUser(HealthUser):
             "fitness", "v1", credentials=credentials, cache_discovery=False
         )
 
-    def steps(self, date: pendulum.Date, conn: None = None) -> t.Optional[int]:
-        steps_datasource = (
-            "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps"
-        )
-        start_dt = pendulum.datetime(date.year, date.month, date.day).in_timezone(
-            config.tz
-        )
-        start_ms = start_dt.timestamp() * 1000
-        end_ms = start_dt.add(days=1).timestamp() * 1000
-        data = (
+    def _steps_api_call(self, start_ms: int, end_ms: int) -> dict:
+        return (
             self.client.users()
             .dataset()
             .aggregate(
@@ -133,7 +126,7 @@ class GooglefitUser(HealthUser):
                     "aggregateBy": [
                         {
                             "dataTypeName": "com.google.step_count.delta",
-                            "dataSourceId": steps_datasource,
+                            "dataSourceId": "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps",
                         }
                     ],
                     "bucketByTime": {
@@ -145,29 +138,19 @@ class GooglefitUser(HealthUser):
             )
             .execute()
         )
+
+    def steps(self, date: pendulum.Date, conn: None = None) -> t.Optional[int]:
+        start_dt = pendulum.datetime(date.year, date.month, date.day).in_timezone(
+            config.tz
+        )
+        start_ms = start_dt.timestamp() * 1000
+        end_ms = start_dt.add(days=1).timestamp() * 1000
+        data = self._steps_api_call(start_ms, end_ms)
         log.info(data)
         try:
             return data["bucket"][0]["dataset"][0]["point"][0]["value"][0]["intVal"]
         except IndexError:
             return None
-        # for bucket in data["bucket"]:
-        #     for dataset in bucket["dataset"]:
-        #         for point in dataset["point"]:
-        #             val = point["intVal"]
-        # {
-        #     "bucket": [
-        #         {
-        #             "startTimeMillis": "1598220000000",
-        #             "endTimeMillis": "1598306400000",
-        #             "dataset": [
-        #                 {
-        #                     "dataSourceId": "derived:com.google.step_count.delta:com.google.android.gms:aggregated",
-        #                     "point": [],
-        #                 }
-        #             ],
-        #         }
-        #     ]
-        # }
 
     def body(self, date: pendulum.Date):
         pass
