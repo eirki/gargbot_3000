@@ -2,6 +2,7 @@
 # coding: utf-8
 from contextlib import contextmanager
 import datetime as dt
+import logging
 import os
 from pathlib import Path
 import re
@@ -202,11 +203,16 @@ def migrate() -> None:
     queries = aiosql.from_path("sql/migrations.sql", "psycopg2")
     queries.migrations(conn)
     conn.commit()
+    previous_level = logging.root.manager.disable  # type: ignore
+    logging.disable(logging.CRITICAL)
     remaining_diffs = get_migrations()
     remaining_diffs.set_safety(False)
     remaining_diffs.add_all_changes()
+    logging.disable(previous_level)
     if remaining_diffs.statements:
         log.info(remaining_diffs.sql)
+    else:
+        log.info("Migrations up to date")
 
 
 class MSN:
