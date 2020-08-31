@@ -356,7 +356,5 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
             with conn:
                 store_update_data(conn, location, finished)
                 store_steps(conn, steps_data, journey_id, date)
-
-    except ZeroDivisionError as exc:
-        log.exception(exc)
-        return []
+    except Exception:
+        log.error(f"Error in journey.main", exc_info=True)
