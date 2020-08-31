@@ -100,9 +100,9 @@ def example_update_data() -> dict:
         "address": "Address",
         "country": "Country",
         "poi": "Poi",
-        "img_url": "www.image",
+        "photo_url": "www.image",
         "map_url": "www.mapurl",
-        "traversal_map_url": "www.tmap",
+        "map_img_url": "www.tmap",
         "finished": False,
     }
 
@@ -112,16 +112,16 @@ def api_mocker():
     with patch.multiple(
         "gargbot_3000.journey",
         address_for_location=DEFAULT,
-        image_for_location=DEFAULT,
+        street_view_for_location=DEFAULT,
         map_url_for_location=DEFAULT,
         poi_for_location=DEFAULT,
         render_map=DEFAULT,
         upload_images=DEFAULT,
     ) as mocks:
         mocks["address_for_location"].return_value = "Address", "Country"
-        mocks["image_for_location"].return_value = b"image"
+        mocks["street_view_for_location"].return_value = b"image"
         mocks["map_url_for_location"].return_value = "www.mapurl"
-        mocks["poi_for_location"].return_value = "Poi"
+        mocks["poi_for_location"].return_value = "Poi", b"photo"
         mocks["render_map"].return_value = Image.new("RGB", (500, 300))
         mocks["upload_images"].return_value = "www.image", "www.tmap"
         yield
@@ -141,9 +141,9 @@ def test_list_journeys(
         "latest_waypoint": 2,
         "address": "address1",
         "country": "Country1",
-        "img_url": "image1",
+        "photo_url": "image1",
         "map_url": "map_url1",
-        "traversal_map_url": "tmap_url1",
+        "map_img_url": "tmap_url1",
         "poi": "poi1",
     }
 
@@ -155,9 +155,9 @@ def test_list_journeys(
         "latest_waypoint": 3,
         "address": "address2",
         "country": "Country2",
-        "img_url": "image2",
+        "photo_url": "image2",
         "map_url": "map_url2",
-        "traversal_map_url": "tmap_url2",
+        "map_img_url": "tmap_url2",
         "poi": "poi2",
     }
     journey.queries.add_location(conn, journey_id=journey_id, date=date1, **location1)
@@ -233,9 +233,9 @@ def test_store_get_most_recent_location(conn):
         "latest_waypoint": 2,
         "address": "address1",
         "country": "Country1",
-        "img_url": "image1",
+        "photo_url": "image1",
         "map_url": "map_url1",
-        "traversal_map_url": "tmap_url1",
+        "map_img_url": "tmap_url1",
         "poi": "poi1",
     }
 
@@ -247,9 +247,9 @@ def test_store_get_most_recent_location(conn):
         "latest_waypoint": 3,
         "address": "address2",
         "country": "Country2",
-        "img_url": "image2",
+        "photo_url": "image2",
         "map_url": "map_url2",
-        "traversal_map_url": "tmap_url2",
+        "map_img_url": "tmap_url2",
         "poi": "poi2",
     }
 
@@ -519,14 +519,14 @@ def test_format_response_nopoi():
     assert address_block == expected
 
 
-def test_format_response_no_img_url():
+def test_format_response_no_photo_url():
     data = example_update_data()
     steps_data, body_reports = example_activity_data()
     g_info = example_gargling_info()
 
     data["destination"] = "Destinasjon"
 
-    data["img_url"] = None
+    data["photo_url"] = None
     response = journey.format_response(
         n_day=8,
         gargling_info=g_info,
@@ -547,8 +547,8 @@ def test_format_response_no_all():
     data["address"] = None
     data["country"] = None
     data["poi"] = None
-    data["img_url"] = None
-    data["traversal_map_url"] = None
+    data["photo_url"] = None
+    data["map_img_url"] = None
     response = journey.format_response(
         n_day=8,
         gargling_info=g_info,

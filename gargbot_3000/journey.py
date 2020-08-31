@@ -231,7 +231,7 @@ def address_for_location(lat, lon) -> t.Tuple[t.Optional[str], t.Optional[str]]:
         return None, None
 
 
-def image_for_location(lat, lon) -> t.Optional[bytes]:
+def street_view_for_location(lat, lon) -> t.Optional[bytes]:
     def encode_url(domain, endpoint, params):
         params = params.copy()
         url_to_sign = endpoint + urllib.parse.urlencode(params)
@@ -265,9 +265,9 @@ def image_for_location(lat, lon) -> t.Optional[bytes]:
         log.error("Error downloading streetview image metadata", exc_info=True)
         return None
 
-    img_url = encode_url(domain, img_endpoint, params)
+    photo_url = encode_url(domain, img_endpoint, params)
     try:
-        response = requests.get(img_url)
+        response = requests.get(photo_url)
         data = response.content
     except Exception:
         log.error("Error downloading streetview image", exc_info=True)
@@ -281,23 +281,32 @@ def map_url_for_location(lat, lon) -> str:
     return f"https://www.google.com/maps/search/?api=1&query={lat}, {lon}"
 
 
-def poi_for_location(lat, lon) -> t.Optional[str]:
+def poi_for_location(lat, lon) -> t.Tuple[t.Optional[str], t.Optional[bytes]]:
     try:
-        google = googlemaps.Client(key=config.google_api_key)
-        details = google.places_nearby(location=(lat, lon), radius=5000)["results"]
-    except Exception as exc:
-        log.exception(exc)
-        return None
-    pois = [d for d in details if "point_of_interest" in d.get("types", [])]
-    if not pois:
-        log.info("No point of interest")
-        return None
-    try:
-        poi = next(p for p in pois if not poi_types.isdisjoint(p.get("types", [])))
-        return poi["name"]
-    except StopIteration:
+        gmaps = googlemaps.Client(key=config.google_api_key)
+        places = gmaps.places_nearby(location=(lat, lon), radius=5000)["results"]
+    except Exception:
+        log.error("Error getting location data", exc_info=True)
+        return None, None
+    place = next(
+        (p for p in places if not poi_types.isdisjoint(p.get("types", []))), None
+    )
+    if not place:
         log.info("No interesting point of interest")
-        return None
+        return None, None
+    name = place["name"]
+    try:
+        photo_data = next(p for p in place["photos"] if p["width"] >= 1000)
+        ref = photo_data["photo_reference"]
+        photo_itr = gmaps.places_photo(ref, max_width=2000)
+        photo = b"".join([chunk for chunk in photo_itr if chunk])
+    except StopIteration:
+        log.info("No poi photo big enough")
+        return name, None
+    except Exception:
+        log.error("Error getting poi photo", exc_info=True)
+        return name, None
+    return name, photo
 
 
 def location_between_waypoints(
@@ -343,10 +352,11 @@ def data_for_location(
     t.Optional[str], t.Optional[str], t.Optional[bytes], str, t.Optional[str],
 ]:
     address, country = address_for_location(lat, lon)
-    street_view_img = image_for_location(lat, lon)
+    poi, photo = poi_for_location(lat, lon)
+    if photo is None:
+        photo = street_view_for_location(lat, lon)
     map_url = map_url_for_location(lat, lon)
-    poi = poi_for_location(lat, lon)
-    return address, country, street_view_img, map_url, poi
+    return address, country, photo, map_url, poi
 
 
 def get_detailed_coords(current_waypoints, last_location, steps_data, start_dist):
@@ -566,7 +576,7 @@ def generate_traversal_map(
 def upload_images(
     journey_id: int,
     waypoint_id: int,
-    street_view_img: t.Optional[bytes],
+    photo: t.Optional[bytes],
     traversal_map: t.Optional[bytes],
 ) -> t.Tuple[t.Optional[str], t.Optional[str]]:
     dbx = Dropbox(config.dropbox_token)
@@ -576,15 +586,15 @@ def upload_images(
         try:
             uploaded = dbx.files_upload(f=data, path=path.as_posix(), autorename=True)
         except Exception:
-            log.error("Error uploading streetview image", exc_info=True)
+            log.error(f"Error uploading {name} image", exc_info=True)
             return None
         shared = dbx.sharing_create_shared_link(uploaded.path_display)
         url = shared.url.replace("?dl=0", "?raw=1")
         return url
 
-    sw_url = upload(street_view_img, name="street_view") if street_view_img else None
-    traversal_map_url = upload(traversal_map, name="map") if traversal_map else None
-    return sw_url, traversal_map_url
+    photo_url = upload(photo, name="photo") if photo else None
+    map_img_url = upload(traversal_map, name="map") if traversal_map else None
+    return photo_url, map_img_url
 
 
 def most_recent_location(conn, journey_id) -> t.Optional[dict]:
@@ -620,7 +630,7 @@ def perform_daily_update(
     lat, lon, latest_waypoint_id, finished = get_location(
         conn, journey_id, distance_total
     )
-    address, country, street_view_img, map_url, poi = data_for_location(lat, lon)
+    address, country, photo, map_url, poi = data_for_location(lat, lon)
 
     new_country = (
         country != last_location["country"]
@@ -638,8 +648,8 @@ def perform_daily_update(
         steps_data,
         gargling_info,
     )
-    img_url, traversal_map_url = upload_images(
-        journey_id, latest_waypoint_id, street_view_img, traversal_map,
+    photo_url, map_img_url = upload_images(
+        journey_id, latest_waypoint_id, photo, traversal_map,
     )
     location = {
         "journey_id": journey_id,
@@ -650,9 +660,9 @@ def perform_daily_update(
         "date": date,
         "address": address,
         "country": country,
-        "img_url": img_url,
+        "photo_url": photo_url,
         "map_url": map_url,
-        "traversal_map_url": traversal_map_url,
+        "map_img_url": map_img_url,
         "poi": poi,
     }
     return location, distance_today, dist_remaining, new_country, finished
@@ -697,9 +707,9 @@ def format_response(
     address: t.Optional[str],
     country: t.Optional[str],
     poi: t.Optional[str],
-    img_url: t.Optional[str],
+    photo_url: t.Optional[str],
     map_url: str,
-    traversal_map_url: t.Optional[str],
+    map_img_url: t.Optional[str],
     body_reports: t.Optional[t.List[str]],
     finished: bool,
     gargling_info: t.Dict[int, dict],
@@ -736,9 +746,9 @@ def format_response(
         steps_txt += desc
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": steps_txt}})
 
-    if traversal_map_url is not None:
+    if map_img_url is not None:
         blocks.append(
-            {"type": "image", "image_url": traversal_map_url, "alt_text": "Breakdown!"}
+            {"type": "image", "image_url": map_img_url, "alt_text": "Breakdown!"}
         )
 
     location_txt = ""
@@ -753,9 +763,9 @@ def format_response(
             {"type": "section", "text": {"type": "mrkdwn", "text": location_txt}}
         )
 
-    if img_url is not None:
+    if photo_url is not None:
         alt_text = address if address is not None else "Check it!"
-        blocks.append({"type": "image", "image_url": img_url, "alt_text": alt_text})
+        blocks.append({"type": "image", "image_url": photo_url, "alt_text": alt_text})
 
     blocks.append(
         {
@@ -837,9 +847,9 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
                 address=location["address"],
                 country=location["country"] if new_country else None,
                 poi=location["poi"],
-                img_url=location["img_url"],
+                photo_url=location["photo_url"],
                 map_url=location["map_url"],
-                traversal_map_url=location["traversal_map_url"],
+                map_img_url=location["map_img_url"],
             )
             yield formatted
             with conn:
