@@ -5,6 +5,7 @@ from operator import itemgetter
 import typing as t
 from unittest.mock import patch
 
+from PIL import Image
 from flask.testing import FlaskClient
 import pendulum
 import psycopg2
@@ -660,5 +661,15 @@ def test_generate_all_maps(mock_activity, conn):
         journey.perform_daily_update(conn, journey_id, start_date, steps_data, g_info)
         cur_date = start_date.add(days=4)
         for date in journey.days_to_update(conn, journey_id, cur_date):
-            journey.perform_daily_update(conn, journey_id, date, steps_data, g_info)
-    mapping.generate_all_maps(journey_id, conn, write=False)
+            steps_data, body_reports = example_activity_data()
+            datum = journey.perform_daily_update(
+                conn, journey_id, date, steps_data, g_info
+            )
+            if datum is None:
+                continue
+            location, *_, finished = datum
+            journey.store_update_data(conn, location, finished)
+            journey.store_steps(conn, steps_data, journey_id, date)
+    with patch("gargbot_3000.journey.mapping.render_map") as maps:
+        maps.return_value = Image.new("RGB", (1000, 600), (255, 255, 255))
+        mapping.generate_all_maps(journey_id, conn, write=False)
