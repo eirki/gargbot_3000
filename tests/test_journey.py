@@ -3,16 +3,15 @@
 from contextlib import contextmanager
 from operator import itemgetter
 import typing as t
-from unittest.mock import DEFAULT, patch
+from unittest.mock import patch
 
-from PIL import Image
 from flask.testing import FlaskClient
 import pendulum
 import psycopg2
 from psycopg2.extensions import connection
 import pytest
 
-from gargbot_3000 import journey
+from gargbot_3000.journey import journey, mapping
 
 xml = """<?xml version="1.0" encoding="UTF-8" standalone="no" ?><gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" creator="Graphhopper version f738fdfc4371477dfe39f433b7802f9f6348627a" version="1.1" xmlns:gh="https://graphhopper.com/public/schema/gpx/1.1">
 <trk><name>GraphHopper Track</name><trkseg>
@@ -109,25 +108,22 @@ def example_update_data() -> dict:
 
 @contextmanager
 def api_mocker():
-    with patch.multiple(
-        "gargbot_3000.journey",
-        address_for_location=DEFAULT,
-        street_view_for_location=DEFAULT,
-        map_url_for_location=DEFAULT,
-        poi_for_location=DEFAULT,
-        render_map=DEFAULT,
-        upload_images=DEFAULT,
-    ) as mocks:
-        mocks["address_for_location"].return_value = "Address", "Country"
-        mocks["street_view_for_location"].return_value = b"image"
-        mocks["map_url_for_location"].return_value = "www.mapurl"
-        mocks["poi_for_location"].return_value = "Poi", b"photo"
-        mocks["render_map"].return_value = Image.new("RGB", (500, 300))
-        mocks["upload_images"].return_value = "www.image", "www.tmap"
+    with patch("gargbot_3000.journey.location_apis.main") as apis, patch(
+        "gargbot_3000.journey.mapping.main"
+    ) as maps, patch("gargbot_3000.journey.journey.upload_images") as upload:
+        apis.return_value = (
+            "Address",
+            "Country",
+            b"photo",
+            "www.mapurl",
+            "Poi",
+        )
+        maps.return_value = b"map"
+        upload.return_value = "www.image", "www.tmap"
         yield
 
 
-@patch("gargbot_3000.health.get_jwt_identity")
+@patch("gargbot_3000.health.health.get_jwt_identity")
 @patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
 def test_list_journeys(
     mock_jwt_required, mock_jwt_identity, client: FlaskClient, conn: connection
@@ -171,7 +167,7 @@ def test_detail_journey(client: FlaskClient, conn: connection):
     steps_data, body_reports = example_activity_data()
     g_info = example_gargling_info()
     date = pendulum.Date(2013, 3, 31)
-    journey.start_journey(conn, journey_id, date)
+    journey.queries.start_journey(conn, journey_id=journey_id, date=date)
     with api_mocker():
         data = journey.perform_daily_update(conn, journey_id, date, steps_data, g_info)
     assert data is not None
@@ -212,9 +208,9 @@ def test_parse_xml(conn):
     assert len(data) == 14
 
 
-def test_get_location(conn: connection):
+def test_coordinates_for_distance(conn: connection):
     journey_id = insert_journey_data(conn)
-    lat, lon, latest_waypoint, finished = journey.get_location(
+    lat, lon, latest_waypoint, finished = journey.coordinates_for_distance(
         conn, journey_id, distance=300
     )
     assert lat == pytest.approx(47.58633461507472)
@@ -260,7 +256,7 @@ def test_store_get_most_recent_location(conn):
 def test_start_journey(conn):
     journey_id = insert_journey_data(conn)
     date = pendulum.Date(2013, 3, 31)
-    journey.start_journey(conn, journey_id, date)
+    journey.queries.start_journey(conn, journey_id=journey_id, date=date)
     ongoing = journey.queries.get_ongoing_journey(conn)
     assert dict(ongoing) == {
         "id": journey_id,
@@ -276,9 +272,9 @@ def test_start_two_journeys_fails(conn):
     journey_id1 = insert_journey_data(conn)
     journey_id2 = insert_journey_data(conn)
     date = pendulum.Date(2013, 3, 31)
-    journey.start_journey(conn, journey_id1, date)
+    journey.queries.start_journey(conn, journey_id=journey_id1, date=date)
     with pytest.raises(psycopg2.errors.UniqueViolation):
-        journey.start_journey(conn, journey_id2, date)
+        journey.queries.start_journey(conn, journey_id=journey_id2, date=date)
 
 
 def test_store_steps(conn: connection):
@@ -311,7 +307,7 @@ def test_daily_update(conn: connection):
     g_info = example_gargling_info()
     journey_id = insert_journey_data(conn)
     date = pendulum.Date(2013, 3, 31)
-    journey.start_journey(conn, journey_id, date)
+    journey.queries.start_journey(conn, journey_id=journey_id, date=date)
     with api_mocker():
         data = journey.perform_daily_update(conn, journey_id, date, steps_data, g_info)
     assert data is not None
@@ -568,7 +564,7 @@ def test_format_response_no_all():
 def test_days_to_update_unstarted(conn):
     journey_id = insert_journey_data(conn)
     date = pendulum.Date(2013, 3, 31)
-    journey.start_journey(conn, journey_id, date)
+    journey.queries.start_journey(conn, journey_id=journey_id, date=date)
     next_date = date.add(days=1)
     itr = journey.days_to_update(conn, journey_id, next_date)
     days = list(itr)
@@ -578,7 +574,7 @@ def test_days_to_update_unstarted(conn):
 def test_days_to_update_unstarted_two_days(conn):
     journey_id = insert_journey_data(conn)
     date = pendulum.Date(2013, 3, 31)
-    journey.start_journey(conn, journey_id, date)
+    journey.queries.start_journey(conn, journey_id=journey_id, date=date)
     next_date = date.add(days=2)
     itr = journey.days_to_update(conn, journey_id, next_date)
     days = list(itr)
@@ -590,7 +586,7 @@ def test_days_to_update(conn: connection):
     g_info = example_gargling_info()
     journey_id = insert_journey_data(conn)
     start_date = pendulum.Date(2013, 3, 31)
-    journey.start_journey(conn, journey_id, start_date)
+    journey.queries.start_journey(conn, journey_id=journey_id, date=start_date)
     with api_mocker():
         data = journey.perform_daily_update(
             conn, journey_id, start_date, steps_data, g_info
@@ -604,13 +600,13 @@ def test_days_to_update(conn: connection):
     assert days == [cur_date.subtract(days=1)]
 
 
-@patch("gargbot_3000.journey.health.activity")
+@patch("gargbot_3000.health.activity")
 def test_journey_finished(mock_activity, conn: connection):
     steps_data, body_reports = example_activity_data()
     mock_activity.return_value = (steps_data, body_reports)
     journey_id = insert_journey_data(conn)
     start_date = pendulum.Date(2013, 3, 31)
-    journey.start_journey(conn, journey_id, start_date)
+    journey.queries.start_journey(conn, journey_id=journey_id, date=start_date)
     g_info = example_gargling_info()
     with api_mocker():
         steps_data, body_reports = example_activity_data()
@@ -631,7 +627,7 @@ def test_journey_finished(mock_activity, conn: connection):
     assert last_fin is True
 
 
-@patch("gargbot_3000.journey.health.activity")
+@patch("gargbot_3000.health.activity")
 def test_journey_main(
     mock_activity, conn: connection,
 ):
@@ -639,7 +635,7 @@ def test_journey_main(
     mock_activity.return_value = (steps_data, body_reports)
     journey_id = insert_journey_data(conn)
     start_date = pendulum.Date(2013, 3, 31)
-    journey.start_journey(conn, journey_id, start_date)
+    journey.queries.start_journey(conn, journey_id=journey_id, date=start_date)
     now = start_date.add(days=2)
     with api_mocker():
         dat = list(journey.main(conn, now))
@@ -652,17 +648,17 @@ def test_journey_main(
     )
 
 
-@patch("gargbot_3000.journey.health.activity")
+@patch("gargbot_3000.health.activity")
 def test_generate_all_maps(mock_activity, conn):
     steps_data, body_reports = example_activity_data()
     mock_activity.return_value = (steps_data, body_reports)
     journey_id = insert_journey_data(conn)
     start_date = pendulum.Date(2013, 3, 31)
-    journey.start_journey(conn, journey_id, start_date)
+    journey.queries.start_journey(conn, journey_id=journey_id, date=start_date)
     g_info = example_gargling_info()
     with api_mocker():
         journey.perform_daily_update(conn, journey_id, start_date, steps_data, g_info)
         cur_date = start_date.add(days=4)
         for date in journey.days_to_update(conn, journey_id, cur_date):
             journey.perform_daily_update(conn, journey_id, date, steps_data, g_info)
-    journey.generate_all_maps(journey_id, conn, write=False)
+    mapping.generate_all_maps(journey_id, conn, write=False)

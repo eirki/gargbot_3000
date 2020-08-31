@@ -1,8 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
 from dataclasses import dataclass
-import itertools
-from operator import attrgetter
 import sys
 import time
 import typing as t
