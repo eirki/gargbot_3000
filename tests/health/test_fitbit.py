@@ -64,7 +64,7 @@ def test_persist_token(conn: connection):
     assert match == exp
 
 
-@patch("gargbot_3000.health.get_jwt_identity")
+@patch("gargbot_3000.health.health.get_jwt_identity")
 @patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
 def test_auth_not_registered(
     mock_jwt_required, mock_jwt_identity, client: testing.FlaskClient
@@ -78,7 +78,7 @@ def test_auth_not_registered(
     )
 
 
-@patch("gargbot_3000.health.get_jwt_identity")
+@patch("gargbot_3000.health.health.get_jwt_identity")
 @patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
 def test_auth_is_registered(
     mock_jwt_required, mock_jwt_identity, client: testing.FlaskClient, conn: connection,
@@ -91,7 +91,7 @@ def test_auth_is_registered(
     assert "report_enabled" in response.json
 
 
-@patch("gargbot_3000.health.get_jwt_identity")
+@patch("gargbot_3000.health.health.get_jwt_identity")
 @patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
 def test_handle_redirect(
     mock_jwt_required, mock_jwt_identity, client: testing.FlaskClient, conn: connection,

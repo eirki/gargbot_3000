@@ -12,15 +12,10 @@ from withings_api.common import (
 )
 
 from gargbot_3000 import config
-from gargbot_3000.health.base import (
-    HealthService,
-    HealthUser,
-    connection_context,
-    queries,
-)
+from gargbot_3000.health.common import connection_context, queries
 
 
-class WithingsService(HealthService):
+class WithingsService:
     name = "withings"
 
     def __init__(self):
@@ -62,7 +57,7 @@ class WithingsService(HealthService):
             conn.commit()
 
 
-class WithingsUser(HealthUser):
+class WithingsUser:
     service = WithingsService
 
     def __init__(
@@ -74,7 +69,8 @@ class WithingsUser(HealthUser):
         refresh_token: str,
         expires_at: int,
     ):
-        super().__init__(gargling_id, first_name)
+        self.gargling_id = gargling_id
+        self.first_name = first_name
         credentials = Credentials(
             userid=service_user_id,
             access_token=access_token,
@@ -95,7 +91,7 @@ class WithingsUser(HealthUser):
             enddateymd=date.add(days=1),
         )
 
-    def steps(self, date: pendulum.Date, conn: None = None) -> t.Optional[int]:
+    def steps(self, date: pendulum.Date) -> t.Optional[int]:
         result = self._steps_api_call(date)
         entry = next(
             (act for act in result.activities if act.date.day == date.day), None,

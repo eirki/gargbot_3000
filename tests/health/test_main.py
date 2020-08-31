@@ -23,7 +23,7 @@ services = ("service", ["withings", "fitbit", "googlefit", "polar"])
 
 @pytest.mark.parametrize(*services)
 @pytest.mark.parametrize("enable", [True, False])
-@patch("gargbot_3000.health.get_jwt_identity")
+@patch("gargbot_3000.health.health.get_jwt_identity")
 @patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
 def test_toggle_report(
     mock_jwt_required,
@@ -54,7 +54,7 @@ def test_body_reports0():
         {"elapsed": 365, "weight": None, "fat": None, "first_name": "name1"},
         {"elapsed": None, "weight": 100, "fat": 10, "first_name": "name2"},
     ]
-    report = health.body_details(data_in)
+    report = health.health.body_details(data_in)
     expected = [
         # "name1 har ikke veid seg på *365* dager. Skjerpings! ",
         "name2 veier *100* kg. Body fat percentage er *10*. ",
@@ -67,7 +67,7 @@ def test_body_reports1():
         {"elapsed": None, "weight": None, "fat": None, "first_name": "name1"},
         {"elapsed": None, "weight": None, "fat": None, "first_name": "name2"},
     ]
-    report = health.body_details(data_in)
+    report = health.health.body_details(data_in)
     assert report == []
 
 
@@ -75,7 +75,7 @@ def test_body_reports2():
     data_in = [
         {"elapsed": 365, "weight": None, "fat": None, "first_name": "name1"},
     ]
-    report = health.body_details(data_in)
+    report = health.health.body_details(data_in)
     # expected = ["name1 har ikke veid seg på *365* dager. Skjerpings! "]
     assert report == []
 
@@ -84,7 +84,7 @@ def test_body_reports3():
     data_in = [
         {"elapsed": None, "weight": 100, "fat": None, "first_name": "name1"},
     ]
-    report = health.body_details(data_in)
+    report = health.health.body_details(data_in)
     expected = ["name1 veier *100* kg. "]
     assert report == expected
 
@@ -93,6 +93,6 @@ def test_body_reports4():
     data_in = [
         {"elapsed": None, "weight": None, "fat": 10, "first_name": "name1"},
     ]
-    report = health.body_details(data_in)
+    report = health.health.body_details(data_in)
     expected = ["name1 sin body fat percentage er *10*. "]
     assert report == expected

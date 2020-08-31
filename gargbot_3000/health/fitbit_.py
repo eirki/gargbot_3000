@@ -9,15 +9,10 @@ import pendulum
 from psycopg2.extensions import connection
 
 from gargbot_3000 import config
-from gargbot_3000.health.base import (
-    HealthService,
-    HealthUser,
-    connection_context,
-    queries,
-)
+from gargbot_3000.health.common import connection_context, queries
 
 
-class FitbitService(HealthService):
+class FitbitService:
     name = "fitbit"
 
     def __init__(self):
@@ -53,7 +48,7 @@ class FitbitService(HealthService):
             conn.commit()
 
 
-class FitbitUser(HealthUser):
+class FitbitUser:
     service = FitbitService
 
     def __init__(
@@ -65,7 +60,8 @@ class FitbitUser(HealthUser):
         expires_at: int,
         service_user_id: None,
     ):
-        super().__init__(gargling_id, first_name)
+        self.gargling_id = gargling_id
+        self.first_name = first_name
         self.client = FitbitApi(
             config.fitbit_client_id,
             config.fitbit_client_secret,
@@ -81,7 +77,7 @@ class FitbitUser(HealthUser):
             resource="activities/steps", base_date=date, period="1d"
         )
 
-    def steps(self, date: pendulum.Date, conn: None = None) -> t.Optional[int]:
+    def steps(self, date: pendulum.Date) -> t.Optional[int]:
         data = self._steps_api_call(date)
         if not data["activities-steps"]:
             return None

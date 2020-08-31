@@ -11,16 +11,11 @@ from psycopg2.extensions import connection
 import requests
 
 from gargbot_3000 import config
-from gargbot_3000.health.base import (
-    HealthService,
-    HealthUser,
-    connection_context,
-    queries,
-)
+from gargbot_3000.health.common import connection_context, queries
 from gargbot_3000.logger import log
 
 
-class PolarService(HealthService):
+class PolarService:
     name = "polar"
 
     def __init__(self):
@@ -59,7 +54,7 @@ class PolarService(HealthService):
             conn.commit()
 
 
-class PolarUser(HealthUser):
+class PolarUser:
     service = PolarService
 
     def __init__(
@@ -71,7 +66,8 @@ class PolarUser(HealthUser):
         refresh_token: None,
         expires_at: None,
     ):
-        super().__init__(gargling_id, first_name)
+        self.gargling_id = gargling_id
+        self.first_name = first_name
         self.client = PolarApi(
             client_id=config.polar_client_id, client_secret=config.polar_client_secret
         )
@@ -82,10 +78,8 @@ class PolarUser(HealthUser):
         trans = self.client.daily_activity.create_transaction(self.user_id, self.token)
         return trans
 
-    def steps(self, date: pendulum.Date, conn: connection = None) -> t.Optional[int]:
+    def steps(self, date: pendulum.Date, conn: connection) -> t.Optional[int]:
         log.info("Getting polar steps")
-        if conn is None:
-            raise Exception("No database connection available")
         trans = self._get_transaction()
         if trans is not None:
             activities = trans.list_activities()["activity-log"]

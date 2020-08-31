@@ -10,18 +10,13 @@ import pendulum
 from psycopg2.extensions import connection
 
 from gargbot_3000 import config
-from gargbot_3000.health.base import (
-    HealthService,
-    HealthUser,
-    connection_context,
-    queries,
-)
+from gargbot_3000.health.common import connection_context, queries
 from gargbot_3000.logger import log
 
 scopes = ["https://www.googleapis.com/auth/fitness.activity.read"]
 
 
-class GooglefitService(HealthService):
+class GooglefitService:
     name = "googlefit"
 
     def __init__(self):
@@ -54,8 +49,7 @@ class GooglefitService(HealthService):
 
     @staticmethod
     def insert_token(
-        credentials: Credentials,
-        conn: t.Optional[connection] = None,
+        credentials: Credentials, conn: t.Optional[connection] = None,
     ) -> int:
         with connection_context(conn) as conn:
             service_user_id = queries.insert_googlefit_token(
@@ -84,7 +78,7 @@ class GooglefitService(HealthService):
             conn.commit()
 
 
-class GooglefitUser(HealthUser):
+class GooglefitUser:
     service = GooglefitService
 
     def __init__(
@@ -96,7 +90,8 @@ class GooglefitUser(HealthUser):
         refresh_token: str,
         expires_at: float,
     ):
-        super().__init__(gargling_id, first_name)
+        self.gargling_id = gargling_id
+        self.first_name = first_name
         credentials = Credentials(
             token=access_token,
             refresh_token=refresh_token,
@@ -139,7 +134,7 @@ class GooglefitUser(HealthUser):
             .execute()
         )
 
-    def steps(self, date: pendulum.Date, conn: None = None) -> t.Optional[int]:
+    def steps(self, date: pendulum.Date) -> t.Optional[int]:
         start_dt = pendulum.datetime(date.year, date.month, date.day).in_timezone(
             config.tz
         )
