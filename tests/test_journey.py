@@ -233,9 +233,6 @@ def test_store_get_most_recent_location(conn):
         "latest_waypoint": 2,
         "address": "address1",
         "country": "Country1",
-        "photo_url": "image1",
-        "map_url": "map_url1",
-        "map_img_url": "tmap_url1",
         "poi": "poi1",
     }
 
@@ -247,9 +244,6 @@ def test_store_get_most_recent_location(conn):
         "latest_waypoint": 3,
         "address": "address2",
         "country": "Country2",
-        "photo_url": "image2",
-        "map_url": "map_url2",
-        "map_img_url": "tmap_url2",
         "poi": "poi2",
     }
 
@@ -321,10 +315,22 @@ def test_daily_update(conn: connection):
     with api_mocker():
         data = journey.perform_daily_update(conn, journey_id, date, steps_data, g_info)
     assert data is not None
-    location, distance_today, dist_remaining, new_country, finished = data
+    (
+        location,
+        distance_today,
+        dist_remaining,
+        photo_url,
+        map_url,
+        map_img_url,
+        new_country,
+        finished,
+    ) = data
     expected = example_update_data()
     assert distance_today == expected.pop("dist_today")
     assert dist_remaining == expected.pop("dist_remaining")
+    assert photo_url == expected.pop("photo_url")
+    assert map_url == expected.pop("map_url")
+    assert map_img_url == expected.pop("map_img_url")
     assert finished == expected.pop("finished")
     expected["journey_id"] = 1
     expected["lat"] = 47.445256107266275

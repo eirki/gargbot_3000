@@ -43,9 +43,6 @@ create table location (
     date date not null,
     address text,
     country text,
-    photo_url text,
-    map_url text not null,
-    map_img_url text,
     poi text
 );
 
@@ -242,9 +239,6 @@ insert into
         date,
         address,
         country,
-        photo_url,
-        map_url,
-        map_img_url,
         poi
     )
 values
@@ -257,9 +251,6 @@ values
         :date,
         :address,
         :country,
-        :photo_url,
-        :map_url,
-        :map_img_url,
         :poi
     );
 

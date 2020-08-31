@@ -575,14 +575,14 @@ def generate_traversal_map(
 
 def upload_images(
     journey_id: int,
-    waypoint_id: int,
+    date: pendulum.Date,
     photo: t.Optional[bytes],
     traversal_map: t.Optional[bytes],
 ) -> t.Tuple[t.Optional[str], t.Optional[str]]:
     dbx = Dropbox(config.dropbox_token)
 
     def upload(data: bytes, name: str) -> t.Optional[str]:
-        path = config.dbx_journey_folder / f"{journey_id}_{waypoint_id}_{name}.jpg"
+        path = config.dbx_journey_folder / f"{journey_id}_{date}_{name}.jpg"
         try:
             uploaded = dbx.files_upload(f=data, path=path.as_posix(), autorename=True)
         except Exception:
@@ -612,7 +612,9 @@ def perform_daily_update(
     date: pendulum.Date,
     steps_data: t.List[dict],
     gargling_info: t.Dict[int, dict],
-) -> t.Optional[t.Tuple[dict, float, float, bool, bool]]:
+) -> t.Optional[
+    t.Tuple[dict, float, float, t.Optional[str], str, t.Optional[str], bool, bool]
+]:
     journey = queries.get_journey(conn, journey_id=journey_id)
     if journey["finished_at"] is not None or journey["started_at"] is None:
         return None
@@ -648,9 +650,7 @@ def perform_daily_update(
         steps_data,
         gargling_info,
     )
-    photo_url, map_img_url = upload_images(
-        journey_id, latest_waypoint_id, photo, traversal_map,
-    )
+    photo_url, map_img_url = upload_images(journey_id, date, photo, traversal_map,)
     location = {
         "journey_id": journey_id,
         "latest_waypoint": latest_waypoint_id,
@@ -660,12 +660,18 @@ def perform_daily_update(
         "date": date,
         "address": address,
         "country": country,
-        "photo_url": photo_url,
-        "map_url": map_url,
-        "map_img_url": map_img_url,
         "poi": poi,
     }
-    return location, distance_today, dist_remaining, new_country, finished
+    return (
+        location,
+        distance_today,
+        dist_remaining,
+        photo_url,
+        map_url,
+        map_img_url,
+        new_country,
+        finished,
+    )
 
 
 def days_to_update(conn, journey_id, date: pendulum.Date) -> t.Iterable[pendulum.Date]:
@@ -829,6 +835,9 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
                 location,
                 distance_today,
                 dist_remaining,
+                photo_url,
+                map_url,
+                map_img_url,
                 new_country,
                 finished,
             ) = update_data
@@ -847,9 +856,9 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
                 address=location["address"],
                 country=location["country"] if new_country else None,
                 poi=location["poi"],
-                photo_url=location["photo_url"],
-                map_url=location["map_url"],
-                map_img_url=location["map_img_url"],
+                photo_url=photo_url,
+                map_url=map_url,
+                map_img_url=map_img_url,
             )
             yield formatted
             with conn:
