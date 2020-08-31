@@ -349,7 +349,7 @@ def test_format_response():
         **data,
     )
     expected = {
-        "text": "*Ekspedisjonsrapport 31.3.2013 - dag 8*: Vi gikk *26.8 km*!",
+        "text": "Ekspedisjonsrapport 31.3.2013 - dag 8: Vi gikk 26.8 km!",
         "blocks": [
             {
                 "text": {

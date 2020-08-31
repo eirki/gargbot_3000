@@ -277,7 +277,10 @@ def format_response(
         body_txt = "Also: " + "".join(body_reports)
         blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": body_txt}})
 
-    response = {"text": f"{title_txt}: {distance_summary}", "blocks": blocks}
+    response = {
+        "text": f"{title_txt}: {distance_summary}".replace("*", ""),
+        "blocks": blocks,
+    }
     return response
 
 
