@@ -12,6 +12,7 @@ import pendulum
 from psycopg2.extensions import connection
 from psycopg2.extras import DictCursor, RealDictCursor
 import pytest
+from urllib3.connectionpool import HTTPConnectionPool
 from withings_api.common import Credentials as WithingsCredentials
 
 from gargbot_3000 import (
@@ -213,3 +214,22 @@ class MockPool(database.ConnectionPool):
 def client(conn) -> t.Generator[testing.FlaskClient, None, None]:
     server.app.pool = MockPool(conn)
     yield server.app.test_client()
+
+
+@pytest.fixture(autouse=True)
+def no_http_requests(monkeypatch):
+    """https://blog.jerrycodes.com/no-http-requests/"""
+    allowed_hosts = {"localhost"}
+    original_urlopen = HTTPConnectionPool.urlopen
+
+    def urlopen_mock(self, method, url, *args, **kwargs):
+        if self.host in allowed_hosts:
+            return original_urlopen(self, method, url, *args, **kwargs)
+
+        raise RuntimeError(
+            f"The test was about to {method} {self.scheme}://{self.host}{url}"
+        )
+
+    monkeypatch.setattr(
+        "urllib3.connectionpool.HTTPConnectionPool.urlopen", urlopen_mock
+    )
