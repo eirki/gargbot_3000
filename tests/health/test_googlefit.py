@@ -39,11 +39,18 @@ def register_user(user, conn: connection, enable_report=False) -> GooglefitUser:
     token = fake_token(user)
     service_user_id = GooglefitService.insert_token(token, conn)
     queries.match_ids(
-        conn, service_user_id=service_user_id, gargling_id=user.id, service="googlefit",
+        conn,
+        service_user_id=service_user_id,
+        gargling_id=user.id,
+        token_gargling_table="googlefit_token_gargling",
     )
     if enable_report:
         queries.toggle_report(
-            conn, enable_=True, gargling_id=user.id, service="googlefit"
+            conn,
+            enable_=True,
+            gargling_id=user.id,
+            token_table="googlefit_token",
+            token_gargling_table="googlefit_token_gargling",
         )
     googlefit_user = GooglefitUser(
         gargling_id=user.id,
@@ -76,7 +83,7 @@ def test_persist_token(conn: connection):
     assert token == exp
     assert len(matched) == 1
     match = dict(matched[0])
-    id2 = match.pop("googlefit_id")
+    id2 = match.pop("service_user_id")
     exp = {"gargling_id": 2}
     assert match == exp
     assert id1 == id2
@@ -118,7 +125,9 @@ def test_handle_redirect_reregister(
     h_user = register_user(user, conn)
     token = fake_token(user)
     service_user_id = queries.service_user_id_for_gargling_id(
-        conn, gargling_id=user.id, service=GooglefitService.name
+        conn,
+        gargling_id=user.id,
+        token_gargling_table=f"{GooglefitService.name}_token_gargling",
     )["service_user_id"]
     mock_jwt_identity.return_value = h_user.gargling_id
     with patch("gargbot_3000.health.googlefit.GooglefitService.token") as mock_handler:
@@ -137,7 +146,7 @@ def test_handle_redirect_reregister(
     with conn.cursor() as cursor:
         cursor.execute(
             "SELECT gargling_id "
-            f"FROM googlefit_token_gargling where googlefit_id = %(fake_user_id)s",
+            f"FROM googlefit_token_gargling where service_user_id = %(fake_user_id)s",
             {"fake_user_id": service_user_id},
         )
         data = cursor.fetchone()

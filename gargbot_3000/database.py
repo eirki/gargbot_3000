@@ -16,6 +16,7 @@ import dropbox
 import jinja2
 import migra
 import psycopg2
+from psycopg2 import sql
 from psycopg2.extensions import connection
 from psycopg2.extras import DictCursor
 from psycopg2.pool import ThreadedConnectionPool
@@ -102,6 +103,65 @@ def connect() -> connection:
     log.info("Connecting to db")
     conn = psycopg2.connect(database=config.db_name, **credentials)
     return conn
+
+
+class SqlFormatAdapter(PsycoPG2Adapter):
+    @classmethod
+    def render_template(cls, template: str, parameters: dict) -> str:
+        if not parameters:
+            return template
+        ident_params = {
+            key: sql.Identifier(val) if isinstance(val, str) else val
+            for key, val in parameters.items()
+        }
+        query = sql.SQL(template).format(**ident_params)
+        return query
+
+    @classmethod
+    def select(
+        cls, conn, _query_name, template: str, parameters: dict, record_class=None
+    ):
+        query = cls.render_template(template, parameters)
+        return super().select(
+            conn, _query_name, query, parameters, record_class=record_class
+        )
+
+    @classmethod
+    def select_one(
+        cls, conn, _query_name, template: str, parameters: dict, record_class=None
+    ):
+        query = cls.render_template(template, parameters)
+        return super().select_one(
+            conn, _query_name, query, parameters, record_class=record_class
+        )
+
+    @classmethod
+    @contextmanager
+    def select_cursor(cls, conn, _query_name, template: str, parameters: dict):
+        query = cls.render_template(template, parameters)
+        return super().select_cursor(conn, _query_name, query, parameters)
+
+    @classmethod
+    def insert_update_delete(cls, conn, _query_name, template: str, parameters: dict):
+        query = cls.render_template(template, parameters)
+        return super().insert_update_delete(conn, _query_name, query, parameters)
+
+    @classmethod
+    def insert_update_delete_many(
+        cls, conn, _query_name, template: str, parmeters: t.List[dict]
+    ):
+        query = cls.render_template(template, parmeters[0] if parmeters else {})
+        return super().insert_update_delete_many(conn, _query_name, query, parmeters)
+
+    @classmethod
+    def insert_returning(cls, conn, _query_name, template: str, parameters: dict):
+        query = cls.render_template(template, parameters)
+        return super().insert_returning(conn, _query_name, query, parameters)
+
+    @classmethod
+    def execute_script(cls, conn, template: str):
+        query = cls.render_template(template, parameters={})
+        return super().execute_script(conn, query)
 
 
 class JinjaSqlAdapter(PsycoPG2Adapter):

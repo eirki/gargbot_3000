@@ -17,8 +17,7 @@ modules = {
     "polar": (polar, test_polar),
     "withings": (withings, test_withings),
 }
-services = ("service", ["withings", "fitbit", "googlefit", "polar"])
-services = ("service", ["withings", "fitbit", "googlefit", "polar"])
+services = ("service_name", ["withings", "fitbit", "googlefit", "polar"])
 
 
 @pytest.mark.parametrize(*services)
@@ -28,24 +27,34 @@ services = ("service", ["withings", "fitbit", "googlefit", "polar"])
 def test_toggle_report(
     mock_jwt_required,
     mock_jwt_identity,
-    service: str,
+    service_name: str,
     enable: bool,
     client: testing.FlaskClient,
     conn: connection,
 ):
     user = conftest.users[0]
-    module, test_module = modules[service]
+    module, test_module = modules[service_name]
     test_module.register_user(user, conn, enable_report=not enable)
-    data = health.queries.is_registered(conn, gargling_id=user.id, service=service)
+    data = health.queries.is_registered(
+        conn,
+        gargling_id=user.id,
+        token_table=f"{service_name}_token",
+        token_gargling_table=f"{service_name}_token_gargling",
+    )
     assert data["enable_report"] is not enable
 
     mock_jwt_identity.return_value = user.id
     response = client.post(
-        "/toggle_report", json={"service": service, "enable": enable}
+        "/toggle_report", json={"service": service_name, "enable": enable}
     )
     assert response.status_code == 200
 
-    data = health.queries.is_registered(conn, gargling_id=user.id, service=service)
+    data = health.queries.is_registered(
+        conn,
+        gargling_id=user.id,
+        token_table=f"{service_name}_token",
+        token_gargling_table=f"{service_name}_token_gargling",
+    )
     assert data["enable_report"] is enable
 
 
@@ -96,3 +105,19 @@ def test_body_reports4():
     report = health.health.body_details(data_in)
     expected = ["name1 sin body fat percentage er *10*. "]
     assert report == expected
+
+
+def test_main(conn):
+    import aiosql
+    from gargbot_3000 import database
+
+    sql_text = """-- name: thing
+    select
+        gargling.{col}
+    from
+        {table}
+        ;"""
+    queries = aiosql.from_str(sql_text, driver_adapter=database.SqlFormatAdapter)
+    data = queries.thing(conn, table="gargling", col="first_name")
+    print(data)
+    # 1 / 0

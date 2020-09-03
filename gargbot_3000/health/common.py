@@ -9,7 +9,7 @@ from psycopg2.extensions import connection
 
 from gargbot_3000 import database
 
-queries = aiosql.from_path("sql/health.sql", driver_adapter=database.JinjaSqlAdapter)
+queries = aiosql.from_path("sql/health.sql", driver_adapter=database.SqlFormatAdapter)
 
 
 @contextmanager

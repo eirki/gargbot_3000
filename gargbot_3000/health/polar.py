@@ -49,7 +49,7 @@ class PolarService:
                 access_token=token["access_token"],
                 refresh_token=None,
                 expires_at=None,
-                service="polar",
+                token_table="polar_token",
             )
             conn.commit()
 

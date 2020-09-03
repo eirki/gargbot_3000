@@ -55,7 +55,10 @@ def authorize(service_name: str):
     log.info(f"gargling_id: {gargling_id}")
     with current_app.pool.get_connection() as conn:
         data = queries.is_registered(
-            conn, gargling_id=gargling_id, service=service_name
+            conn,
+            gargling_id=gargling_id,
+            token_table=f"{service_name}_token",
+            token_gargling_table=f"{service_name}_token_gargling",
         )
     if data is None:
         log.info("not registered")
@@ -86,13 +89,17 @@ def handle_redirect(service_name: str):
         if (
             isinstance(service, GooglefitService)
             and queries.is_registered(
-                conn, gargling_id=gargling_id, service=GooglefitService.name
+                conn,
+                gargling_id=gargling_id,
+                token_table=f"{service.name}_token",
+                token_gargling_table=f"{service.name}_token_gargling",
             )
             is not None
         ):
-
             service_user_id_ = queries.service_user_id_for_gargling_id(
-                conn, gargling_id=gargling_id, service=GooglefitService.name
+                conn,
+                gargling_id=gargling_id,
+                token_gargling_table=f"{service.name}_token_gargling",
             )["service_user_id"]
             service.update_token(service_user_id_, token, conn)
         else:
@@ -104,7 +111,7 @@ def handle_redirect(service_name: str):
                 conn,
                 gargling_id=gargling_id,
                 service_user_id=service_user_id,
-                service=service.name,
+                token_gargling_table=f"{service.name}_token_gargling",
             )
         conn.commit()
     return Response(status=200)
@@ -119,7 +126,11 @@ def toggle_report():
     enable = content["enable"]
     with current_app.pool.get_connection() as conn:
         queries.toggle_report(
-            conn, enable_=enable, gargling_id=gargling_id, service=service.name
+            conn,
+            enable_=enable,
+            gargling_id=gargling_id,
+            token_table=f"{service.name}_token",
+            token_gargling_table=f"{service.name}_token_gargling",
         )
         conn.commit()
     return Response(status=200)

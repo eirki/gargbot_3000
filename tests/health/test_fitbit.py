@@ -25,10 +25,19 @@ def register_user(user, conn: connection, enable_report=False) -> FitbitUser:
     token = fake_token(user)
     FitbitService.persist_token(token, conn)
     queries.match_ids(
-        conn, service_user_id=token["user_id"], gargling_id=user.id, service="fitbit",
+        conn,
+        service_user_id=token["user_id"],
+        gargling_id=user.id,
+        token_gargling_table="fitbit_token_gargling",
     )
     if enable_report:
-        queries.toggle_report(conn, enable_=True, gargling_id=user.id, service="fitbit")
+        queries.toggle_report(
+            conn,
+            enable_=True,
+            gargling_id=user.id,
+            token_table="fitbit_token",
+            token_gargling_table="fitbit_token_gargling",
+        )
     fitbit_user = FitbitUser(
         gargling_id=user.id,
         first_name=user.first_name,
@@ -60,7 +69,7 @@ def test_persist_token(conn: connection):
     assert token == exp
     assert len(matched) == 1
     match = dict(matched[0])
-    exp = {"fitbit_id": "fitbit_id2", "gargling_id": 2}
+    exp = {"service_user_id": "fitbit_id2", "gargling_id": 2}
     assert match == exp
 
 
@@ -116,7 +125,7 @@ def test_handle_redirect(
     assert data["expires_at"] == token["expires_at"]
     with conn.cursor() as cursor:
         cursor.execute(
-            "SELECT * FROM fitbit_token_gargling where fitbit_id = %(fake_user_id)s",
+            "SELECT * FROM fitbit_token_gargling where service_user_id = %(fake_user_id)s",
             {"fake_user_id": fake_id},
         )
         data = cursor.fetchone()

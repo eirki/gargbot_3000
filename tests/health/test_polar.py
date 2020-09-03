@@ -22,10 +22,19 @@ def register_user(user, conn: connection, enable_report=False) -> PolarUser:
     token = fake_token(user)
     PolarService.persist_token(token, conn)
     queries.match_ids(
-        conn, service_user_id=token["x_user_id"], gargling_id=user.id, service="polar",
+        conn,
+        service_user_id=token["x_user_id"],
+        gargling_id=user.id,
+        token_gargling_table="polar_token_gargling",
     )
     if enable_report:
-        queries.toggle_report(conn, enable_=True, gargling_id=user.id, service="polar")
+        queries.toggle_report(
+            conn,
+            enable_=True,
+            gargling_id=user.id,
+            token_table="polar_token",
+            token_gargling_table="polar_token_gargling",
+        )
     polar_user = PolarUser(
         gargling_id=user.id,
         first_name=user.first_name,
@@ -57,7 +66,7 @@ def test_persist_token(conn: connection):
     assert token == exp
     assert len(matched) == 1
     match = dict(matched[0])
-    exp = {"polar_id": user.id * 1000, "gargling_id": 2}
+    exp = {"service_user_id": user.id * 1000, "gargling_id": 2}
     assert match == exp
 
 
@@ -111,7 +120,7 @@ def test_handle_redirect(
     assert data["access_token"] == token["access_token"]
     with conn.cursor() as cursor:
         cursor.execute(
-            "SELECT * FROM polar_token_gargling where polar_id = %(fake_user_id)s",
+            "SELECT * FROM polar_token_gargling where service_user_id = %(fake_user_id)s",
             {"fake_user_id": fake_id},
         )
         data = cursor.fetchone()

@@ -40,11 +40,18 @@ def register_user(user, conn: connection, enable_report=False) -> WithingsUser:
     token = fake_token(user)
     WithingsService.persist_token(token, conn)
     queries.match_ids(
-        conn, service_user_id=token.userid, gargling_id=user.id, service="withings",
+        conn,
+        service_user_id=token.userid,
+        gargling_id=user.id,
+        token_gargling_table="withings_token_gargling",
     )
     if enable_report:
         queries.toggle_report(
-            conn, enable_=True, gargling_id=user.id, service="withings"
+            conn,
+            enable_=True,
+            gargling_id=user.id,
+            token_table="withings_token",
+            token_gargling_table="withings_token_gargling",
         )
     withings_user = WithingsUser(
         gargling_id=user.id,
@@ -77,7 +84,7 @@ def test_persist_token(conn: connection):
     assert token == exp
     assert len(matched) == 1
     match = dict(matched[0])
-    exp = {"withings_id": 1002, "gargling_id": 2}
+    exp = {"service_user_id": 1002, "gargling_id": 2}
     assert match == exp
 
 
@@ -144,7 +151,7 @@ def test_handle_redirect(
     with conn.cursor() as cursor:
         cursor.execute(
             "SELECT gargling_id "
-            f"FROM withings_token_gargling where withings_id = %(fake_user_id)s",
+            f"FROM withings_token_gargling where service_user_id = %(fake_user_id)s",
             {"fake_user_id": fake_id},
         )
         data = cursor.fetchone()

@@ -52,7 +52,7 @@ class WithingsService:
                 access_token=credentials.access_token,
                 refresh_token=credentials.refresh_token,
                 expires_at=credentials.token_expiry,
-                service="withings",
+                token_table="withings_token",
             )
             conn.commit()
 

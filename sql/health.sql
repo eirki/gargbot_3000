@@ -36,25 +36,25 @@ create table googlefit_token (
 
 
 create table fitbit_token_gargling (
-  fitbit_id text not null references fitbit_token(id),
+  service_user_id text not null references fitbit_token(id),
   gargling_id smallint not null references gargling(id)
 );
 
 
 create table withings_token_gargling (
-  withings_id int not null references withings_token(id),
+  service_user_id int not null references withings_token(id),
   gargling_id smallint not null references gargling(id)
 );
 
 
 create table polar_token_gargling (
-  polar_id int not null references polar_token(id),
+  service_user_id int not null references polar_token(id),
   gargling_id smallint not null references gargling(id)
 );
 
 
 create table googlefit_token_gargling (
-  googlefit_id int not null references googlefit_token(id),
+  service_user_id int not null references googlefit_token(id),
   gargling_id smallint not null references gargling(id)
 );
 
@@ -72,11 +72,7 @@ create unique index on cached_step (gargling_id, taken_at);
 
 -- name: persist_token!
 insert into
-  /*{{ {
-   "fitbit": "fitbit_token",
-   "withings": "withings_token",
-   "polar": "polar_token",
-   }[service] }}*/
+  {token_table}
   (
     id,
     access_token,
@@ -127,60 +123,29 @@ where
 
 --name: toggle_report!
 update
-  /*{{ {
-   "fitbit": "fitbit_token",
-   "withings": "withings_token",
-   "polar": "polar_token",
-   "googlefit": "googlefit_token",
-   }[service] }}*/
-  as service_token
+  {token_table}
 set
   enable_report = :enable_
 from
-  /*{{ {
-   "fitbit": "fitbit_token_gargling",
-   "withings": "withings_token_gargling",
-   "polar": "polar_token_gargling",
-   "googlefit": "googlefit_token_gargling",
-   }[service] }}*/
-  as service_token_gargling
+  {token_gargling_table}
 where
-  service_token.id = service_token_gargling.
-  /*{{ {
-   "fitbit": "fitbit_id",
-   "withings": "withings_id",
-   "polar": "polar_id",
-   "googlefit": "googlefit_id",
-   }[service] }}*/
-  and service_token_gargling.gargling_id = :gargling_id;
+  {token_table}.id = {token_gargling_table}.service_user_id
+  and {token_gargling_table}.gargling_id = :gargling_id;
 
 
 -- name: match_ids!
 delete from
-  /*{{ {
-   "fitbit": "fitbit_token_gargling",
-   "withings": "withings_token_gargling",
-   "polar": "polar_token_gargling",
-   "googlefit": "googlefit_token_gargling",
-   }[service] }}*/
+  {token_gargling_table}
+
 where
   gargling_id = :gargling_id;
 
 
 insert into
-  /*{{ {
-   "fitbit": "fitbit_token_gargling",
-   "withings": "withings_token_gargling",
-   "polar": "polar_token_gargling",
-   "googlefit": "googlefit_token_gargling"
-   }[service] }}*/
+  {token_gargling_table}
+
   (
-    /*{{ {
-     "fitbit": "fitbit_id",
-     "withings": "withings_id",
-     "polar": "polar_id",
-     "googlefit": "googlefit_id",
-     }[service] }}*/
+    service_user_id
 ,
     gargling_id
   )
@@ -190,51 +155,24 @@ values
 
 -- name: service_user_id_for_gargling_id^
 select
-  /*{{ {
-   "fitbit": "fitbit_id",
-   "withings": "withings_id",
-   "polar": "polar_id",
-   "googlefit": "googlefit_id",
-   }[service] }}*/
-  as service_user_id
+ service_user_id
 from
-  /*{{ {
-   "fitbit": "fitbit_token_gargling",
-   "withings": "withings_token_gargling",
-   "polar": "polar_token_gargling",
-   "googlefit": "googlefit_token_gargling",
-   }[service] }}*/
+  {token_gargling_table}
+
 where
   gargling_id = :gargling_id;
 
 
 -- name: is_registered^
 select
-  service_token.enable_report
+   {token_table}.enable_report
 from
-  /*{{ {
-   "fitbit": "fitbit_token",
-   "withings": "withings_token",
-   "polar": "polar_token",
-   "googlefit": "googlefit_token",
-   }[service] }}*/
-  as service_token
+   {token_table}
   inner join
-  /*{{ {
-   "fitbit": "fitbit_token_gargling",
-   "withings": "withings_token_gargling",
-   "polar": "polar_token_gargling",
-   "googlefit": "googlefit_token_gargling",
-   }[service] }}*/
-  as service_token_gargling on service_token.id = service_token_gargling.
-  /*{{ {
-   "fitbit": "fitbit_id",
-   "withings": "withings_id",
-   "polar": "polar_id",
-   "googlefit": "googlefit_id",
-   }[service] }}*/
+  {token_gargling_table}
+  on {token_table}.id = {token_gargling_table}.service_user_id
 where
-  service_token_gargling.gargling_id = :gargling_id;
+  {token_gargling_table}.gargling_id = :gargling_id;
 
 
 -- name: tokens
