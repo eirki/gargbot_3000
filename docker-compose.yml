@@ -42,14 +42,14 @@ services:
     networks:
       - gargbot_network
 
-  gargbot_greeter:
-    container_name: gargbot_greeter
+  gargbot_scheduler:
+    container_name: gargbot_scheduler
     build: .
     env_file:
       - .env
     environment:
       - app_version
-    command: "venv/bin/python -m gargbot_3000 --mode greeter"
+    command: "venv/bin/python -m gargbot_3000 --mode scheduler"
     restart: always
     depends_on:
       - postgres_db

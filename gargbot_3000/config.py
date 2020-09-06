@@ -32,11 +32,13 @@ db_user = os.environ["POSTGRES_USER"]
 db_password = os.environ["POSTGRES_PASSWORD"]
 db_host = os.environ["POSTGRES_HOST"]
 db_port = os.environ["POSTGRES_PORT"]
+db_uri = f"postgres://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
 dropbox_token = os.environ["dropbox_token"]
 
 dbx_pic_folder = os.environ["dbx_pic_folder"]
 dbx_journey_folder = Path(os.environ["dbx_journey_folder"])
+dbx_db_backup_folder = Path(os.environ["dbx_db_backup_folder"])
 tz = pytz.timezone(os.environ["tz"])
 
 test_channel = os.environ["test_channel"]

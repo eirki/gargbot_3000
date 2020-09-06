@@ -7,8 +7,9 @@ from dropbox import Dropbox
 import gpxpy
 import pendulum
 from psycopg2.extensions import connection
+from slackclient import SlackClient
 
-from gargbot_3000 import config, health
+from gargbot_3000 import config, database, health, task
 from gargbot_3000.journey import common, location_apis, mapping
 from gargbot_3000.journey.common import STRIDE, queries
 from gargbot_3000.logger import log
@@ -358,3 +359,20 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
                 store_steps(conn, steps_data, journey_id, date)
     except Exception:
         log.error(f"Error in journey.main", exc_info=True)
+
+
+def run_updates() -> None:
+    current_date = pendulum.now()
+    try:
+        # now() function sometimes returns a date, not datetime??
+        current_date.hour
+        current_date = current_date.date()
+    except AttributeError:
+        pass
+    conn = database.connect()
+    try:
+        slack_client = SlackClient(config.slack_bot_user_token)
+        for update in main(conn, current_date):
+            task.send_response(slack_client, update, channel=config.health_channel)
+    finally:
+        conn.close()

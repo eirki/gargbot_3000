@@ -2,7 +2,7 @@
 # coding: utf-8
 import argparse
 
-from gargbot_3000 import database, greetings, server, task
+from gargbot_3000 import database, scheduler, server, task
 from gargbot_3000.logger import log
 
 
@@ -22,8 +22,8 @@ def main():
         elif args.mode == "server":
             options = {"bind": "%s%s" % (args.bind, args.port), "workers": args.workers}
             server.main(options=options, debug=args.debug)
-        elif args.mode == "greeter":
-            greetings.main()
+        elif args.mode == "scheduler":
+            scheduler.main()
         elif args.mode == "migrate":
             database.migrate()
         else:

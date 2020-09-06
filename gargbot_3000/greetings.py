@@ -1,18 +1,15 @@
-#! /usr/bin/env python3.6
+#! /usr/bin/env python3
 # coding: utf-8
 from dataclasses import dataclass
-import sys
-import time
 import typing as t
 
 import aiosql
 from dropbox import Dropbox
 import pendulum
 from psycopg2.extensions import connection
-import schedule
 from slackclient import SlackClient
 
-from gargbot_3000 import config, database, journey, pictures, task
+from gargbot_3000 import config, database, pictures, task
 from gargbot_3000.logger import log
 
 queries = aiosql.from_path("sql/congrats.sql", "psycopg2")
@@ -71,50 +68,3 @@ def send_congrats() -> None:
     for recipient in recipients:
         greet = formulate_congrat(recipient, conn, dbx)
         task.send_response(slack_client, greet, channel=config.main_channel)
-
-
-def update_journey() -> None:
-    current_date = pendulum.now()
-    try:
-        # now() function sometimes returns a date, not datetime??
-        current_date.hour
-        current_date = current_date.date()
-    except AttributeError:
-        pass
-    conn = database.connect()
-    try:
-        slack_client = SlackClient(config.slack_bot_user_token)
-        for update in journey.main(conn, current_date):
-            task.send_response(slack_client, update, channel=config.health_channel)
-    finally:
-        conn.close()
-
-
-def local_hour_at_utc(hour: int) -> str:
-    utc_hour = pendulum.today(config.tz).at(hour).in_timezone("UTC").hour
-    formatted = str(utc_hour).zfill(2) + ":00"
-    return formatted
-
-
-def main():
-    log.info("GargBot 3000 greeter starter")
-    try:
-        while True:
-            schedule.clear()
-
-            hour = local_hour_at_utc(7)
-            log.info(f"Greeter scheduling send_congrats at {hour}")
-            schedule.every().day.at(hour).do(send_congrats)
-
-            hour = local_hour_at_utc(12)
-            log.info(f"Greeter scheduling update_journey at {hour}")
-            schedule.every().day.at(hour).do(update_journey)
-
-            now = pendulum.now(config.tz)
-            tomorrow = pendulum.tomorrow(config.tz).at(now.hour, now.minute, now.second)
-            seconds_until_this_time_tomorrow = (tomorrow - now).seconds
-            for _ in range(seconds_until_this_time_tomorrow):
-                schedule.run_pending()
-                time.sleep(1)
-    except KeyboardInterrupt:
-        sys.exit()

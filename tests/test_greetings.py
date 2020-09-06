@@ -2,7 +2,6 @@
 # coding: utf-8
 import pendulum
 from psycopg2.extensions import connection
-import pytest
 
 from gargbot_3000 import config, greetings
 from tests import conftest

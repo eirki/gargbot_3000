@@ -6,6 +6,7 @@ import logging
 import os
 from pathlib import Path
 import re
+import subprocess
 import typing as t
 from xml.dom.minidom import parseString
 
@@ -13,8 +14,10 @@ from PIL import Image
 import aiosql
 from aiosql.adapters.psycopg2 import PsycoPG2Adapter
 import dropbox
+from dropbox import Dropbox
 import jinja2
 import migra
+import pendulum
 import psycopg2
 from psycopg2 import sql
 from psycopg2.extensions import connection
@@ -103,6 +106,17 @@ def connect() -> connection:
     log.info("Connecting to db")
     conn = psycopg2.connect(database=config.db_name, **credentials)
     return conn
+
+
+def backup():
+    log.info("Backing up database")
+    cmd = f"pg_dump --no-owner --dbname={config.db_uri}"
+    result = subprocess.check_output(cmd, shell=True)
+    dbx = Dropbox(config.dropbox_token)
+    date = pendulum.now().date
+    filename = f"{config.db_name}_{date.year}_{date.month}_{date.day}.sql"
+    path = config.dbx_db_backup_folder / filename
+    dbx.files_upload(f=result, path=path.as_posix(), autorename=True)
 
 
 class SqlFormatAdapter(PsycoPG2Adapter):
