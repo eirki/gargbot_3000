@@ -10,7 +10,6 @@ from flask import testing
 from google.oauth2.credentials import Credentials as GooglefitCredentials
 import pendulum
 from psycopg2.extensions import connection
-from psycopg2.extras import DictCursor, RealDictCursor
 import pytest
 from urllib3.connectionpool import HTTPConnectionPool
 from withings_api.common import Credentials as WithingsCredentials
@@ -26,6 +25,7 @@ from gargbot_3000 import (
     quotes,
     server,
 )
+from gargbot_3000.database import LoggingCursor
 from gargbot_3000.health.googlefit import GooglefitService
 
 age = 28
@@ -185,7 +185,7 @@ def conn(postgresql: connection):
     populate_pics_table(postgresql)
     populate_quotes_table(postgresql)
     populate_congrats_table(postgresql)
-    postgresql.cursor_factory = DictCursor
+    postgresql.cursor_factory = LoggingCursor
     postgresql.commit()
     yield postgresql
 

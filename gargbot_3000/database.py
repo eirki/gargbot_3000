@@ -1,4 +1,4 @@
-#! /usr/bin/env python3.6
+#! /usr/bin/env python3
 # coding: utf-8
 from contextlib import contextmanager
 import datetime as dt
@@ -31,7 +31,12 @@ from gargbot_3000.logger import log
 
 class LoggingCursor(DictCursor):
     def execute(self, query, args=None):
-        log.info(query % args if args else query)
+        if not args:
+            log.info(query)
+        elif isinstance(query, sql.Composable):
+            log.info(query.as_string(context=self) % args)
+        else:
+            log.info(query % args)
         return super().execute(query, args)
 
     def executemany(self, query, args=None):
