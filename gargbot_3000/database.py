@@ -113,7 +113,7 @@ def backup():
     cmd = f"pg_dump --no-owner --dbname={config.db_uri}"
     result = subprocess.check_output(cmd, shell=True)
     dbx = Dropbox(config.dropbox_token)
-    date = pendulum.now().date
+    date = pendulum.now().date()
     filename = f"{config.db_name}_{date.year}_{date.month}_{date.day}.sql"
     path = config.dbx_db_backup_folder / filename
     dbx.files_upload(f=result, path=path.as_posix(), autorename=True)
