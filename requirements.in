@@ -30,3 +30,4 @@ google-auth-oauthlib
 google-auth
 schedule
 staticmap
+ipykernel
