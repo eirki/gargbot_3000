@@ -65,7 +65,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+      - ~/postgres-data:/var/lib/postgresql/data
     networks:
       - gargbot_network
     restart: always
