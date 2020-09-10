@@ -347,6 +347,7 @@ def test_format_response():
         gargling_info=g_info,
         steps_data=steps_data,
         body_reports=body_reports,
+        achievement="New record!",
         **data,
     )
     expected = {
@@ -381,6 +382,7 @@ def test_format_response():
                 },
                 "type": "section",
             },
+            {"type": "section", "text": {"type": "mrkdwn", "text": "New record!"}},
             {"alt_text": "Breakdown!", "image_url": "www.tmap", "type": "image"},
             {
                 "text": {
@@ -426,6 +428,7 @@ def test_format_response_no_address_no_country():
         gargling_info=g_info,
         steps_data=steps_data,
         body_reports=body_reports,
+        achievement=None,
         **data,
     )
     address_block = response["blocks"][4]
@@ -451,6 +454,7 @@ def test_format_response_no_address():
         gargling_info=g_info,
         steps_data=steps_data,
         body_reports=body_reports,
+        achievement=None,
         **data,
     )
     address_block = response["blocks"][4]
@@ -479,6 +483,7 @@ def test_format_response_no_country():
         gargling_info=g_info,
         steps_data=steps_data,
         body_reports=body_reports,
+        achievement=None,
         **data,
     )
     address_block = response["blocks"][4]
@@ -509,6 +514,7 @@ def test_format_response_nopoi():
         gargling_info=g_info,
         steps_data=steps_data,
         body_reports=body_reports,
+        achievement=None,
         **data,
     )
     address_block = response["blocks"][4]
@@ -535,6 +541,7 @@ def test_format_response_no_photo_url():
         gargling_info=g_info,
         steps_data=steps_data,
         body_reports=body_reports,
+        achievement=None,
         **data,
     )
     assert len(response["blocks"]) == 8
@@ -557,6 +564,7 @@ def test_format_response_no_all():
         gargling_info=g_info,
         steps_data=steps_data,
         body_reports=body_reports,
+        achievement=None,
         **data,
     )
     assert len(response["blocks"]) == 6

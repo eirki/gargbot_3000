@@ -10,7 +10,7 @@ from psycopg2.extensions import connection
 from slackclient import SlackClient
 
 from gargbot_3000 import config, database, health, task
-from gargbot_3000.journey import common, location_apis, mapping
+from gargbot_3000.journey import achievements, common, location_apis, mapping
 from gargbot_3000.journey.common import STRIDE, queries
 from gargbot_3000.logger import log
 
@@ -209,6 +209,7 @@ def format_response(
     body_reports: t.Optional[t.List[str]],
     finished: bool,
     gargling_info: t.Dict[int, dict],
+    achievement: t.Optional[str],
 ) -> dict:
     blocks = []
     title_txt = (
@@ -241,6 +242,11 @@ def format_response(
         desc = f"\n\t:dot-{color}: {name}: {amount}"
         steps_txt += desc
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": steps_txt}})
+
+    if achievement:
+        blocks.append(
+            {"type": "section", "text": {"type": "mrkdwn", "text": achievement}}
+        )
 
     if map_img_url is not None:
         blocks.append(
@@ -334,6 +340,9 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
                 new_country,
                 finished,
             ) = update_data
+            store_update_data(conn, location, finished)
+            store_steps(conn, steps_data, journey_id, date)
+            achievement = achievements.new(conn, journey_id, date, gargling_info)
             n_day = (date - ongoing_journey["started_at"]).days + 1
             formatted = format_response(
                 date=date,
@@ -352,11 +361,10 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
                 photo_url=photo_url,
                 map_url=map_url,
                 map_img_url=map_img_url,
+                achievement=achievement,
             )
             yield formatted
-            with conn:
-                store_update_data(conn, location, finished)
-                store_steps(conn, steps_data, journey_id, date)
+            conn.commit()
     except Exception:
         log.error(f"Error in journey.main", exc_info=True)
 
