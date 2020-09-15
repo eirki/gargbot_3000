@@ -192,4 +192,4 @@ def test_googlefit_steps_no_data(conn: connection):
     }
     self = SimpleNamespace(_steps_api_call=lambda start_ms, end_ms: return_value)
     steps = GooglefitUser.steps(self, test_date)  # type: ignore
-    assert steps is None
+    assert steps == 0

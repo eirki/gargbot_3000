@@ -169,7 +169,7 @@ def test_fitbit_steps_no_data(conn: connection):
     user2._steps_api_call = lambda date: user2_return_value  # type: ignore
     test_date = pendulum.Date(2020, 1, 2)
     steps = [user.steps(test_date) for user in users]
-    assert steps == [None, None]
+    assert steps == [0, 0]
 
 
 def test_fitbit_body(conn: connection):

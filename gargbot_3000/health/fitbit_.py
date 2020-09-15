@@ -80,9 +80,9 @@ class FitbitUser:
     def steps(self, date: pendulum.Date) -> t.Optional[int]:
         data = self._steps_api_call(date)
         if not data["activities-steps"]:
-            return None
+            return 0
         entry = data["activities-steps"][0]
-        return int(entry["value"]) if entry else None
+        return int(entry["value"]) if entry else 0
 
     def _weight_api_call(self, date: pendulum.Date) -> dict:
         return self.client.get_bodyweight(base_date=date, period="1w")

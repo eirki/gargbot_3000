@@ -145,7 +145,7 @@ class GooglefitUser:
         try:
             return data["bucket"][0]["dataset"][0]["point"][0]["value"][0]["intVal"]
         except IndexError:
-            return None
+            return 0
 
     def body(self, date: pendulum.Date):
         pass

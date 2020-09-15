@@ -96,7 +96,7 @@ class WithingsUser:
         entry = next(
             (act for act in result.activities if act.date.day == date.day), None,
         )
-        return entry.steps if entry else None
+        return entry.steps if entry else 0
 
     def body(self, date: pendulum.Date) -> None:
         return None

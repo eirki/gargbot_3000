@@ -214,4 +214,4 @@ def test_withings_steps_no_data(conn: connection):
     )
     user._steps_api_call = lambda date: return_value  # type: ignore
     steps = user.steps(test_date)
-    assert steps is None
+    assert steps == 0
