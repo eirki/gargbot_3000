@@ -105,19 +105,3 @@ def test_body_reports4():
     report = health.health.body_details(data_in)
     expected = ["name1 sin body fat percentage er *10*. "]
     assert report == expected
-
-
-def test_main(conn):
-    import aiosql
-    from gargbot_3000 import database
-
-    sql_text = """-- name: thing
-    select
-        gargling.{col}
-    from
-        {table}
-        ;"""
-    queries = aiosql.from_str(sql_text, driver_adapter=database.SqlFormatAdapter)
-    data = queries.thing(conn, table="gargling", col="first_name")
-    print(data)
-    # 1 / 0

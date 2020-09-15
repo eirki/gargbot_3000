@@ -111,7 +111,6 @@ class FitbitUser:
                 weight = weight_entry["weight"]
             else:
                 elapsed = (date - weight_entry["datetime"]).days
-                print(elapsed)
         fat_data = self._bodyfat_api_call(date)
         fat_entry = most_recent(fat_data["fat"])
         if fat_entry is not None and fat_entry["datetime"] == date:

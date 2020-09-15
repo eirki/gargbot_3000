@@ -271,7 +271,7 @@ def handle_share_interaction(action: str, data: dict) -> dict:
 def handle_command(command_str: str, args: list) -> dict:
     db_func = (
         app.pool.get_connection
-        if command_str in {"hvem", "pic", "forum", "msn"}
+        if command_str in {"hvem", "pic", "forum", "msn", "rekorder"}
         else contextlib.nullcontext
     )
     with db_func() as conn:
@@ -282,7 +282,7 @@ def handle_command(command_str: str, args: list) -> dict:
     error = result.get("text", "").startswith("Error")
     if error:
         return result
-    if command_str in {"ping", "hvem"}:
+    if command_str in {"ping", "hvem", "rekorder"}:
         result["response_type"] = "in_channel"
     elif command_str in {"pic", "forum", "msn"}:
         result = attach_share_buttons(result=result, func=command_str, args=args)

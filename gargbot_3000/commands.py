@@ -12,6 +12,7 @@ from psycopg2.extensions import connection
 from requests.exceptions import SSLError
 
 from gargbot_3000 import pictures, quotes
+from gargbot_3000.journey import achievements
 from gargbot_3000.logger import log
 
 queries = aiosql.from_path("sql/gargling.sql", "psycopg2")
@@ -32,6 +33,7 @@ def command_explanation(server: bool = False):
         "`@gargbot_3000 pic [lark/fe/skating/henging] [kun] [gargling] [år]`: random bilde\n"
         "`@gargbot_3000 forum [garling]`: henter tilfeldig sitat fra ye olde forumet\n"
         "`@gargbot_3000 msn [garling]`: utfrag fra tilfeldig msn samtale\n"
+        "`@gargbot_3000 rekorder`: current rekorder i vår journey\n"
     )
     return commands if server is False else commands.replace("@gargbot_3000 ", "/")
 
@@ -141,6 +143,13 @@ def cmd_msn(args: t.Optional[t.List[str]], conn: connection) -> t.Dict:
     return response
 
 
+def cmd_rekorder(conn: connection) -> dict:
+    """if command is 'rekorder'"""
+    text = achievements.all_at_date(conn)
+    response: t.Dict[str, t.Any] = {"text": text}
+    return response
+
+
 def cmd_not_found(args: str) -> t.Dict:
     text = (
         f"Beep boop beep! Nôt sure whåt you mean by `{args}`. "
@@ -174,6 +183,7 @@ def execute(
         "pic": partial(cmd_pic, args, conn=conn, dbx=dbx),
         "forum": partial(cmd_forum, args, conn=conn),
         "msn": partial(cmd_msn, args, conn=conn),
+        "rekorder": partial(cmd_rekorder, conn=conn),
     }
     try:
         command_func = switch[command_str]

@@ -6,7 +6,56 @@ import aiosql
 import pendulum
 from psycopg2.extensions import connection
 
+from gargbot_3000.journey import common
+
 queries = aiosql.from_path("sql/journey_achievements.sql", "psycopg2")
+
+
+possible = [
+    {
+        "query": queries.most_steps_one_day_individual,
+        "emoji": ":first_place_medal:",
+        "desc": "Flest skritt gått av en gargling på én dag",
+        "unit": "skritt",
+        "kwargs": {"less_than": None},
+        "collective": False,
+    },
+    {
+        "query": queries.most_steps_one_day_collective,
+        "emoji": ":trophy:",
+        "desc": "Flest skritt gått av hele gargen på én dag",
+        "unit": "skritt",
+        "collective": True,
+    },
+    {
+        "query": queries.highest_share,
+        "emoji": ":sports_medal:",
+        "desc": "Størst andel av dagens skritt",
+        "unit": "%",
+        "collective": False,
+    },
+    {
+        "query": queries.biggest_improvement_individual,
+        "emoji": ":sports_medal:",
+        "desc": "Størst improvement fra en dag til neste for en gargling",
+        "unit": "skritt",
+        "collective": False,
+    },
+    {
+        "query": queries.biggest_improvement_collective,
+        "emoji": ":trophy:",
+        "desc": "Størst improvement fra en dag til neste for hele gargen",
+        "unit": "skritt",
+        "collective": True,
+    },
+    {
+        "query": queries.longest_streak,
+        "emoji": ":sports_medal:",
+        "desc": "Lengste streak med førsteplasser",
+        "unit": "dager",
+        "collective": False,
+    },
+]
 
 
 def format_new(
@@ -49,15 +98,12 @@ def extract(
     conn: connection,
     journey_id: int,
     date: pendulum.Date,
-    func: t.Callable,
-    desc: str,
-    unit: str,
+    query: t.Callable,
+    **query_kwargs,
 ) -> t.Optional[
-    t.Tuple[
-        str, str, t.Optional[t.List[int]], int, t.Optional[t.Set[int]], t.Optional[int],
-    ]
+    t.Tuple[t.Optional[t.List[int]], int, t.Optional[t.Set[int]], t.Optional[int]]
 ]:
-    current = func(conn, journey_id=journey_id, taken_before=date)
+    current = query(conn, journey_id=journey_id, taken_before=date, **query_kwargs)
     if len(current) == 0:
         return None
     if not any(rec["taken_at"] == date for rec in current):
@@ -72,7 +118,12 @@ def extract(
     if prev:
         prev_value = None
     else:
-        prev = func(conn, journey_id=journey_id, taken_before=date.subtract(days=1))
+        prev = query(
+            conn,
+            journey_id=journey_id,
+            taken_before=date.subtract(days=1),
+            **query_kwargs,
+        )
         if not prev:
             return None
         prev_value = prev[0]["amount"]
@@ -80,62 +131,7 @@ def extract(
         prev_holders: t.Optional[t.Set[int]] = {r["gargling_id"] for r in prev}
     except KeyError:
         prev_holders = None
-
-    return desc, unit, holders, value, prev_holders, prev_value
-
-
-def most_steps_one_day_individual(**kwargs):
-    return extract(
-        func=queries.most_steps_one_day_individual,
-        desc="Flest skritt gått av en gargling på én dag",
-        unit="skritt",
-        **kwargs,
-    )
-
-
-def most_steps_one_day_collective(**kwargs):
-    return extract(
-        func=queries.most_steps_one_day_collective,
-        desc="Flest skritt gått av hele gargen på én dag",
-        unit="skritt",
-        **kwargs,
-    )
-
-
-def highest_share(**kwargs):
-    return extract(
-        func=queries.highest_share,
-        desc="Størst andel av dagens skritt",
-        unit="%",
-        **kwargs,
-    )
-
-
-def biggest_improvement_individual(**kwargs):
-    return extract(
-        func=queries.biggest_improvement_individual,
-        desc="Størst improvement fra en dag til neste for en gargling",
-        unit="skritt",
-        **kwargs,
-    )
-
-
-def biggest_improvement_collective(**kwargs):
-    return extract(
-        func=queries.biggest_improvement_collective,
-        desc="Størst improvement fra en dag til neste for hele gargen",
-        unit="skritt",
-        **kwargs,
-    )
-
-
-def longest_streak(**kwargs):
-    return extract(
-        func=queries.longest_streak,
-        desc="Lengste streak med førsteplasser",
-        unit="dager",
-        **kwargs,
-    )
+    return holders, value, prev_holders, prev_value
 
 
 def new(
@@ -144,25 +140,128 @@ def new(
     date: pendulum.Date,
     gargling_info: t.Dict[int, dict],
 ) -> t.Optional[str]:
-    ordered = [
-        most_steps_one_day_individual,
-        most_steps_one_day_collective,
-        longest_streak,
-        highest_share,
-        biggest_improvement_individual,
-        biggest_improvement_collective,
-    ]
-    for achv_func in ordered:
-        achv = achv_func(conn=conn, journey_id=journey_id, date=date)
+    for p in possible:
+        achv = extract(
+            conn=conn,
+            journey_id=journey_id,
+            date=date,
+            query=p["query"],
+            **p.get("kwargs", {}),
+        )
         if achv is None:
             continue
-        desc, unit, holders, value, prev_holders, prev_value = achv
+        unit = p["unit"]
+        desc = p["desc"]
+        holders, value, prev_holders, prev_value = achv
         formatted = format_new(
-            desc, unit, holders, value, prev_holders, prev_value, gargling_info
+            desc=desc,
+            unit=unit,
+            holders=holders,
+            value=value,
+            prev_holders=prev_holders,
+            prev_value=prev_value,
+            gargling_info=gargling_info,
         )
         return formatted
     return None
 
 
-def current(conn):
-    ...
+def get_all_at_date(conn, journey_id, date=None):
+    all_records: t.List[dict] = []
+    p = possible[0]
+    most = [
+        p,
+        {
+            "query": queries.most_steps_one_day_individual,
+            "emoji": ":second_place_medal:",
+            "desc": "Nest flest skritt gått av en gargling på én dag",
+            "unit": "skritt",
+            "collective": False,
+        },
+        {
+            "query": queries.most_steps_one_day_individual,
+            "emoji": ":third_place_medal:",
+            "desc": "Tredje flest skritt gått av en gargling på én dag",
+            "unit": "skritt",
+            "collective": False,
+        },
+    ]
+    less_than = None
+    for p in most:
+        query = p["query"]
+        rec = query(conn, journey_id=journey_id, taken_before=date, less_than=less_than)
+        if not rec:
+            break
+        all_records.append(
+            {
+                "records": rec,
+                "emoji": p["emoji"],
+                "desc": p["desc"],
+                "unit": p["unit"],
+                "collective": p["collective"],
+            }
+        )
+        less_than = rec[0]["amount"]
+
+    for p in possible[1:]:
+        query = p["query"]
+        rec = query(conn, journey_id=journey_id, taken_before=date)
+        if not rec:
+            continue
+        all_records.append(
+            {
+                "records": rec,
+                "emoji": p["emoji"],
+                "desc": p["desc"],
+                "unit": p["unit"],
+                "collective": p["collective"],
+            }
+        )
+    return all_records
+
+
+def format_all(gargling_info: t.Dict[int, dict], records) -> str:
+    def fdate(date: pendulum.Date) -> str:
+        return f"{date.day}.{date.month}.{date.year}"
+
+    def format_col(data) -> str:
+        desc = data["desc"]
+        amount = data["records"][0]["amount"]
+        res = f"{desc}: {amount} {data['emoji']} - "
+        res += " & ".join([fdate(rec["taken_at"]) for rec in data["records"]])
+        return res
+
+    def format_ind(data) -> str:
+        desc = data["desc"]
+        amount = data["records"][0]["amount"]
+        res = f"{desc}: {amount} - "
+        ppl = []
+        for rec in data["records"]:
+            name = gargling_info[rec["gargling_id"]]["first_name"]
+            ppl.append(f"{name} {data['emoji']} ({fdate(rec['taken_at'])})")
+        res += " & ".join(ppl)
+        return res
+
+    result = []
+    for data in records:
+        if data["collective"]:
+            res = format_col(data)
+        else:
+            res = format_ind(data)
+        result.append(res)
+    return "\n".join(result)
+
+
+def all_at_date(conn: connection, date: pendulum.Date = None) -> str:
+    ongoing_journey = common.queries.get_ongoing_journey(conn)
+    journey_id = ongoing_journey["id"]
+    all_records = get_all_at_date(conn, journey_id, date)
+    gargling_ids = set()
+    for record in all_records:
+        for rec in record["records"]:
+            gargling_id = rec["gargling_id"]
+            if gargling_id:
+                gargling_ids.add(gargling_id)
+    gargling_info = common.get_colors_names(conn, ids=gargling_ids)
+    formatted = format_all(gargling_info, all_records)
+    return formatted

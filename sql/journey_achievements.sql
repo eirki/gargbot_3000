@@ -8,7 +8,14 @@ with journey_step as (
         step
     where
         journey_id = :journey_id
-        and taken_at <= :taken_before
+        and (
+            :taken_before is null
+            or taken_at <= :taken_before
+        )
+        and (
+            :less_than is null
+            or amount < :less_than
+        )
 )
 select
     *
@@ -32,7 +39,10 @@ with grouped as (
         step
     where
         journey_id = :journey_id
-        and taken_at <= :taken_before
+        and (
+            :taken_before is null
+            or taken_at <= :taken_before
+        )
     group by
         taken_at
 )
@@ -66,7 +76,10 @@ with journey_step_avgs as (
                 step
             where
                 journey_id = :journey_id
-                and step.taken_at <= :taken_before
+                and (
+                    :taken_before is null
+                    or step.taken_at <= :taken_before
+                )
             group by
                 taken_at
         ) as avgs on step.taken_at = avgs.taken_at
@@ -74,7 +87,7 @@ with journey_step_avgs as (
         journey_id = :journey_id
 )
 select
-    round(amount * 100)::int as amount,
+    round(amount * 100) :: int as amount,
     gargling_id,
     taken_at
 from
@@ -109,7 +122,10 @@ with journey_step_imp as (
         and step.gargling_id = yesterday.gargling_id
     where
         journey_id = :journey_id
-        and step.taken_at <= :taken_before
+        and (
+            :taken_before is null
+            or step.taken_at <= :taken_before
+        )
 )
 select
     amount,
@@ -135,7 +151,10 @@ with grouped as (
         step
     where
         journey_id = :journey_id
-        and taken_at <= :taken_before
+        and (
+            :taken_before is null
+            or taken_at <= :taken_before
+        )
     group by
         taken_at
 ),
@@ -202,7 +221,10 @@ with streaks as (
                 and step.amount = avgs.amount
             where
                 journey_id = :journey_id
-                and step.taken_at <= :taken_before
+                and (
+                    :taken_before is null
+                    or step.taken_at <= :taken_before
+                )
         ) as journey_step_maxs
     group by
         gargling_id,
