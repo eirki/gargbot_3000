@@ -22,7 +22,6 @@ poi_types = {
     "bowling_alley",
     "campground",
     "casino",
-    "cemetery",
     "church",
     "courthouse",
     "embassy",
@@ -50,7 +49,7 @@ poi_types = {
 def address_for_location(lat, lon) -> t.Tuple[t.Optional[str], t.Optional[str]]:
     geolocator = Nominatim(user_agent=config.bot_name)
     try:
-        location = geolocator.reverse(f"{lat}, {lon}", language="no")
+        location = geolocator.reverse(f"{lat}, {lon}", language="en")
         address = location.address
         country = location.raw.get("address", {}).get("country")
         return address, country
