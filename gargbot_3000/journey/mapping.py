@@ -15,7 +15,7 @@ from gargbot_3000.journey.common import STRIDE, queries
 from gargbot_3000.logger import log
 
 
-def generate_all_maps(journey_id, conn, write=True):
+def prepare_map_generation(conn, journey_id):
     all_steps = queries.get_steps(conn, journey_id=journey_id)
     all_steps.sort(key=itemgetter("taken_at"))
     steps_for_date = {
@@ -23,26 +23,54 @@ def generate_all_maps(journey_id, conn, write=True):
         for date, steps in itertools.groupby(all_steps, lambda step: step["taken_at"])
     }
     locations = queries.locations_for_journey(conn, journey_id=journey_id)
+    return steps_for_date, locations
+
+
+def map_for_locs(conn, journey_id, location, last_location, steps_for_date):
+    steps_data = steps_for_date[location["date"]]
+    steps_data.sort(key=itemgetter("amount"), reverse=True)
+    gargling_info = common.get_colors_names(
+        conn, ids=[gargling["gargling_id"] for gargling in steps_data]
+    )
+    img = main(
+        conn=conn,
+        journey_id=journey_id,
+        last_location=last_location,
+        current_lat=location["lat"],
+        current_lon=location["lon"],
+        current_distance=location["distance"],
+        steps_data=steps_data,
+        gargling_info=gargling_info,
+    )
+    return img
+
+
+def generate_map(conn, journey_id, index: int, write=True):
+    steps_for_date, locations = prepare_map_generation(conn, journey_id)
+    location = locations[index]
+    last_location = locations[index - 1]
+    img = map_for_locs(conn, journey_id, location, last_location, steps_for_date)
+    if write is False:
+        return img
+    elif img is not None:
+        with open(
+            (Path.cwd() / location["date"].isoformat()).with_suffix((".jpg")), "wb"
+        ) as f:
+            f.write(img)
+
+
+def generate_all_maps(conn, journey_id, write=True):
+    steps_for_date, locations = prepare_map_generation(conn, journey_id)
     last_location = None
+    imgs = []
     for location in locations:
-        date = location["date"]
-        steps_data = steps_for_date[date]
-        steps_data.sort(key=itemgetter("amount"), reverse=True)
-        gargling_info = common.get_colors_names(
-            conn, ids=[gargling["gargling_id"] for gargling in steps_data]
-        )
-        img = main(
-            conn=conn,
-            journey_id=journey_id,
-            last_location=last_location,
-            current_lat=location["lat"],
-            current_lon=location["lon"],
-            current_distance=location["distance"],
-            steps_data=steps_data,
-            gargling_info=gargling_info,
-        )
-        if img is not None and write is True:
-            with open((Path.cwd() / date.isoformat()).with_suffix((".jpg")), "wb") as f:
+        img = map_for_locs(conn, journey_id, location, last_location, steps_for_date)
+        if write is False:
+            imgs.append(img)
+        elif img is not None:
+            with open(
+                (Path.cwd() / location["date"].isoformat()).with_suffix((".jpg")), "wb"
+            ) as f:
                 f.write(img)
         last_location = location
 
@@ -209,7 +237,7 @@ def merge_maps(
     else:
         return None
     bytes_io = BytesIO()
-    img.save(bytes_io, format="JPEG")
+    img.save(bytes_io, format="JPEG", subsampling=0, quality=100)
     return bytes_io.getvalue()
 
 

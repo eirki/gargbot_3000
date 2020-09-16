@@ -680,4 +680,4 @@ def test_generate_all_maps(mock_activity, conn):
             journey.store_steps(conn, steps_data, journey_id, date)
     with patch("gargbot_3000.journey.mapping.render_map") as maps:
         maps.return_value = Image.new("RGB", (1000, 600), (255, 255, 255))
-        mapping.generate_all_maps(journey_id, conn, write=False)
+        mapping.generate_all_maps(conn, journey_id, write=False)
