@@ -555,6 +555,7 @@ def test_format_all():
             "records": [
                 {
                     "amount": 20111,
+                    "unit": "skritt",
                     "gargling_id": 5,
                     "taken_at": pendulum.Date(2000, 1, 3),
                 }
@@ -567,6 +568,7 @@ def test_format_all():
             "records": [
                 {
                     "amount": 17782,
+                    "unit": "skritt",
                     "gargling_id": 6,
                     "taken_at": pendulum.Date(2000, 1, 2),
                 }
@@ -579,6 +581,7 @@ def test_format_all():
             "records": [
                 {
                     "amount": 11521,
+                    "unit": "skritt",
                     "gargling_id": 2,
                     "taken_at": pendulum.Date(2000, 1, 2),
                 }
@@ -588,14 +591,25 @@ def test_format_all():
         },
         {
             "desc": "Flest skritt gått av hele gargen på én dag",
-            "records": [{"amount": 35794, "taken_at": pendulum.Date(2000, 1, 2)}],
+            "records": [
+                {
+                    "amount": 35794,
+                    "unit": "skritt",
+                    "taken_at": pendulum.Date(2000, 1, 2),
+                }
+            ],
             "collective": True,
             "emoji": ":trophy:",
         },
         {
             "desc": "Størst andel av dagens skritt",
             "records": [
-                {"amount": 68, "gargling_id": 5, "taken_at": pendulum.Date(2000, 1, 3)}
+                {
+                    "amount": 68,
+                    "unit": "%",
+                    "gargling_id": 5,
+                    "taken_at": pendulum.Date(2000, 1, 3),
+                }
             ],
             "collective": False,
             "emoji": ":sports_medal:",
@@ -605,6 +619,7 @@ def test_format_all():
             "records": [
                 {
                     "amount": 20000,
+                    "unit": "skritt",
                     "gargling_id": 5,
                     "taken_at": pendulum.Date(2000, 1, 3),
                 }
@@ -614,14 +629,25 @@ def test_format_all():
         },
         {
             "desc": "Størst improvement fra en dag til neste for hele gargen",
-            "records": [{"amount": 32215, "taken_at": pendulum.Date(2000, 1, 2)}],
+            "records": [
+                {
+                    "amount": 32215,
+                    "unit": "skritt",
+                    "taken_at": pendulum.Date(2000, 1, 2),
+                }
+            ],
             "collective": True,
             "emoji": ":trophy:",
         },
         {
             "desc": "Lengste streak med førsteplasser",
             "records": [
-                {"amount": 2, "gargling_id": 6, "taken_at": pendulum.Date(2000, 1, 2)}
+                {
+                    "amount": 2,
+                    "unit": "dager",
+                    "gargling_id": 6,
+                    "taken_at": pendulum.Date(2000, 1, 2),
+                }
             ],
             "collective": False,
             "emoji": ":sports_medal:",
@@ -636,14 +662,14 @@ def test_format_all():
 
     formatted = achievements.format_all(gargling_info, records)
     assert formatted == (
-        "Flest skritt gått av en gargling på én dag: 20111 - gargling 5 :first_place_medal: (3.1.2000)\n"
-        "Nest flest skritt gått av en gargling på én dag: 17782 - gargling 6 :second_place_medal: (2.1.2000)\n"
-        "Tredje flest skritt gått av en gargling på én dag: 11521 - gargling 2 :third_place_medal: (2.1.2000)\n"
-        "Flest skritt gått av hele gargen på én dag: 35794 :trophy: - 2.1.2000\n"
-        "Størst andel av dagens skritt: 68 - gargling 5 :sports_medal: (3.1.2000)\n"
-        "Størst improvement fra en dag til neste for en gargling: 20000 - gargling 5 :sports_medal: (3.1.2000)\n"
-        "Størst improvement fra en dag til neste for hele gargen: 32215 :trophy: - 2.1.2000\n"
-        "Lengste streak med førsteplasser: 2 - gargling 6 :sports_medal: (2.1.2000)"
+        "Flest skritt gått av en gargling på én dag: 20111 skritt - gargling 5 :first_place_medal: (3.1.2000)\n"
+        "Nest flest skritt gått av en gargling på én dag: 17782 skritt - gargling 6 :second_place_medal: (2.1.2000)\n"
+        "Tredje flest skritt gått av en gargling på én dag: 11521 skritt - gargling 2 :third_place_medal: (2.1.2000)\n"
+        "Flest skritt gått av hele gargen på én dag: 35794 skritt :trophy: - 2.1.2000\n"
+        "Størst andel av dagens skritt: 68 % - gargling 5 :sports_medal: (3.1.2000)\n"
+        "Størst improvement fra en dag til neste for en gargling: 20000 skritt - gargling 5 :sports_medal: (3.1.2000)\n"
+        "Størst improvement fra en dag til neste for hele gargen: 32215 skritt :trophy: - 2.1.2000\n"
+        "Lengste streak med førsteplasser: 2 dager - gargling 6 :sports_medal: (2.1.2000)"
     )
 
 
@@ -654,11 +680,13 @@ def test_format_all2():
             "records": [
                 {
                     "amount": 20111,
+                    "unit": "skritt",
                     "gargling_id": 5,
                     "taken_at": pendulum.Date(2000, 1, 3),
                 },
                 {
                     "amount": 20111,
+                    "unit": "skritt",
                     "gargling_id": 2,
                     "taken_at": pendulum.Date(2000, 1, 1),
                 },
@@ -669,8 +697,16 @@ def test_format_all2():
         {
             "desc": "Flest skritt gått av hele gargen på én dag",
             "records": [
-                {"amount": 35794, "taken_at": pendulum.Date(2000, 1, 2)},
-                {"amount": 35794, "taken_at": pendulum.Date(2000, 1, 3)},
+                {
+                    "amount": 35794,
+                    "unit": "skritt",
+                    "taken_at": pendulum.Date(2000, 1, 2),
+                },
+                {
+                    "amount": 35794,
+                    "unit": "skritt",
+                    "taken_at": pendulum.Date(2000, 1, 3),
+                },
             ],
             "collective": True,
             "emoji": ":trophy:",
@@ -684,7 +720,7 @@ def test_format_all2():
     }
     formatted = achievements.format_all(gargling_info, records)
     assert formatted == (
-        "Flest skritt gått av en gargling på én dag: 20111 - gargling 5 :first_place_medal: "
+        "Flest skritt gått av en gargling på én dag: 20111 skritt - gargling 5 :first_place_medal: "
         "(3.1.2000) & gargling 2 :first_place_medal: (1.1.2000)\n"
-        "Flest skritt gått av hele gargen på én dag: 35794 :trophy: - 2.1.2000 & 3.1.2000"
+        "Flest skritt gått av hele gargen på én dag: 35794 skritt :trophy: - 2.1.2000 & 3.1.2000"
     )
