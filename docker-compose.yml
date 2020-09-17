@@ -28,20 +28,6 @@ services:
       - nginx_network
     restart: always
 
-  gargbot_worker:
-    container_name: gargbot_worker
-    build: .
-    env_file:
-      - .env
-    environment:
-      - app_version
-    command: "venv/bin/python -m gargbot_3000 --mode task"
-    restart: always
-    depends_on:
-      - postgres_db
-    networks:
-      - gargbot_network
-
   gargbot_scheduler:
     container_name: gargbot_scheduler
     build: .
