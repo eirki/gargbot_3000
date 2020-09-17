@@ -27,7 +27,7 @@ def location_between_waypoints(
     return current_lat, current_lon
 
 
-def get_colors_names(conn: connection, ids: t.Collection[int]) -> t.Dict[int, dict]:
+def get_colors_names(conn: connection, ids: t.List[int]) -> t.Dict[int, dict]:
     infos = queries.colors_names_for_ids(conn, ids=ids)
     infodict = {
         info["id"]: {

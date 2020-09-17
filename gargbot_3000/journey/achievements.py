@@ -262,6 +262,6 @@ def all_at_date(conn: connection, date: pendulum.Date = None) -> str:
             gargling_id = rec.get("gargling_id")
             if gargling_id:
                 gargling_ids.add(gargling_id)
-    gargling_info = common.get_colors_names(conn, ids=gargling_ids)
+    gargling_info = common.get_colors_names(conn, ids=list(gargling_ids))
     formatted = format_all(gargling_info, all_records)
     return formatted
