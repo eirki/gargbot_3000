@@ -227,7 +227,7 @@ def format_all(gargling_info: t.Dict[int, dict], records) -> str:
     def format_col(data) -> str:
         desc = data["desc"]
         amount = data["records"][0]["amount"]
-        unit = data["records"][0]["unit"]
+        unit = data["unit"]
         res = f"{desc}: {amount} {unit} {data['emoji']} - "
         res += " & ".join([fdate(rec["taken_at"]) for rec in data["records"]])
         return res
@@ -235,7 +235,7 @@ def format_all(gargling_info: t.Dict[int, dict], records) -> str:
     def format_ind(data) -> str:
         desc = data["desc"]
         amount = data["records"][0]["amount"]
-        unit = data["records"][0]["unit"]
+        unit = data["unit"]
         res = f"{desc}: {amount} {unit} - "
         ppl = []
         for rec in data["records"]:
