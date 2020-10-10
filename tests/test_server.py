@@ -266,8 +266,8 @@ def test_auth(mock_SlackClient, client: testing.FlaskClient):
     user = conftest.users[0]
     mock_SlackClient.return_value.oauth_v2_access.return_value.data = {
         "ok": True,
-        "team_id": config.slack_team_id,
-        "user_id": user.slack_id,
+        "team": {"id": config.slack_team_id},
+        "authed_user": {"id": user.slack_id},
     }
     response = client.get("/auth", query_string={"code": "code123"})
     assert response.status_code == 200
@@ -283,8 +283,8 @@ def test_auth(mock_SlackClient, client: testing.FlaskClient):
 def test_auth_wrong_team(mock_SlackClient, client: testing.FlaskClient):
     mock_SlackClient.return_value.oauth_v2_access.return_value.data = {
         "ok": True,
-        "team_id": "wrong team_id",
-        "user_id": "user.id",
+        "team": {"id": "wrong team_id"},
+        "authed_user": {"id": "user.id"},
     }
     response = client.get("/auth", query_string={"code": "code123"})
     assert response.status_code == 403
@@ -295,8 +295,8 @@ def test_auth_error(mock_SlackClient, client: testing.FlaskClient):
     mock_SlackClient.return_value.oauth_v2_access.return_value.data = {
         "ok": False,
         "error": "Something went wrong",
-        "team_id": "wrong team_id",
-        "user_id": "user.id",
+        "team": {"id": "wrong team_id"},
+        "authed_user": {"id": "user.id"},
     }
     response = client.get("/auth", query_string={"code": "code123"})
     assert response.status_code == 403

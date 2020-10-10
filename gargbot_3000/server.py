@@ -70,9 +70,9 @@ def auth():
     if not response_data["ok"]:
         log.info(f"Slack auth error: {response_data['error']}")
         return Response(status=403)
-    if response_data["team_id"] != config.slack_team_id:
+    if response_data["team"]["id"] != config.slack_team_id:
         return Response(status=403)
-    slack_id = response_data["user_id"]
+    slack_id = response_data["authed_user"]["id"]
     with app.pool.get_connection() as conn:
         data = commands.queries.gargling_id_for_slack_id(conn, slack_id=slack_id)
         gargling_id = data["id"]
