@@ -16,10 +16,9 @@ function main() {
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString)
     const state = urlParams.get("state")
-    let url = new URL("https://slack.com/oauth/authorize")
-    url.searchParams.set("scope", "identity.basic")
+    let url = new URL("https://slack.com/oauth/v2/authorize")
+    url.searchParams.set("user_scope", "identity.basic")
     url.searchParams.set("client_id", config.slack_client_id)
-    url.searchParams.set("user_scope", "identify")
     url.searchParams.set("state", state)
     url.searchParams.set("redirect_uri", config.redirect_url)
     let link = document.createElement("a");
