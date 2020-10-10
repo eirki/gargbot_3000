@@ -1,13 +1,13 @@
 #! /usr/bin/env python3
 # coding: utf-8
 import json
-import typing as t
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+import typing as t
+from unittest.mock import patch
 
-import pytest
 from flask import testing
 from psycopg2.extensions import connection
+import pytest
 
 from gargbot_3000 import config
 from tests import conftest
@@ -63,8 +63,10 @@ def test_slash_cmd_ping(client: testing.FlaskClient, monkeypatch):
     response = client.post("/slash", data=params)
     assert response.status_code == 200
     assert mock_requests.url == "response_url"
-    assert mock_requests.json["text"] == "GargBot 3000 is active. Beep boop beep"
-    assert mock_requests.json["response_type"] == "in_channel"
+    assert (
+        mock_requests.json["text"] == "GargBot 3000 is active. Beep boop beep"  # type: ignore
+    )
+    assert mock_requests.json["response_type"] == "in_channel"  # type: ignore
 
 
 def test_slash_cmd_gargbot(client: testing.FlaskClient, monkeypatch):
@@ -81,8 +83,8 @@ def test_slash_cmd_gargbot(client: testing.FlaskClient, monkeypatch):
     response = client.post("/slash", data=params)
     assert response.status_code == 200
     assert mock_requests.url == "response_url"
-    assert mock_requests.json["text"].startswith("Beep boop beep!")
-    assert "/pic" in mock_requests.json["text"]
+    assert mock_requests.json["text"].startswith("Beep boop beep!")  # type: ignore
+    assert "/pic" in mock_requests.json["text"]  # type: ignore
 
 
 @pytest.mark.parametrize("cmd", ["pic", "forum", "msn"])
@@ -107,9 +109,10 @@ def test_slash(client: testing.FlaskClient, conn: connection, monkeypatch, cmd, 
     assert mock_commands.conn == conn
 
     assert mock_requests.url == "response_url"
-    assert mock_requests.json["text"] == cmd
+    assert mock_requests.json["text"] == cmd  # type: ignore
     action_ids = {
-        elem["action_id"] for elem in mock_requests.json["blocks"][-1]["elements"]
+        elem["action_id"]
+        for elem in mock_requests.json["blocks"][-1]["elements"]  # type: ignore
     }
     assert all(action_id in action_ids for action_id in ["share", "shuffle", "cancel"])
 
@@ -154,14 +157,14 @@ def test_interactive_share(
     assert response.status_code == 200
 
     assert mock_requests.urls[0] == "response_url"
-    assert mock_requests.jsons[0]["replace_original"] is True
-    assert mock_requests.jsons[0]["response_type"] == "ephemeral"
-    assert mock_requests.jsons[0]["text"] == "Sharing is caring!"
+    assert mock_requests.jsons[0]["replace_original"] is True  # type: ignore
+    assert mock_requests.jsons[0]["response_type"] == "ephemeral"  # type: ignore
+    assert mock_requests.jsons[0]["text"] == "Sharing is caring!"  # type: ignore
 
     assert mock_requests.urls[1] == "response_url"
-    assert mock_requests.jsons[1]["replace_original"] is False
-    assert mock_requests.jsons[1]["response_type"] == "in_channel"
-    assert mock_requests.jsons[1]["text"] == cmd
+    assert mock_requests.jsons[1]["replace_original"] is False  # type: ignore
+    assert mock_requests.jsons[1]["response_type"] == "in_channel"  # type: ignore
+    assert mock_requests.jsons[1]["text"] == cmd  # type: ignore
 
 
 def test_interactive_cancel(client: testing.FlaskClient, monkeypatch):
@@ -180,9 +183,9 @@ def test_interactive_cancel(client: testing.FlaskClient, monkeypatch):
     response = client.post("/interactive", data=params)
     assert response.status_code == 200
     assert mock_requests.url == "response_url"
-    assert mock_requests.json["replace_original"] is True
-    assert mock_requests.json["response_type"] == "ephemeral"
-    assert mock_requests.json["text"].startswith("Canceled!")
+    assert mock_requests.json["replace_original"] is True  # type: ignore
+    assert mock_requests.json["response_type"] == "ephemeral"  # type: ignore
+    assert mock_requests.json["text"].startswith("Canceled!")  # type: ignore
 
 
 @pytest.mark.parametrize("cmd", ["pic", "forum", "msn"])
@@ -216,9 +219,9 @@ def test_interactive_shuffle(
     response = client.post("/interactive", data=params)
     assert response.status_code == 200
     assert mock_requests.url == "response_url"
-    assert mock_requests.json["replace_original"] is True
-    assert mock_requests.json["response_type"] == "ephemeral"
-    assert mock_requests.json["text"] == cmd
+    assert mock_requests.json["replace_original"] is True  # type: ignore
+    assert mock_requests.json["response_type"] == "ephemeral"  # type: ignore
+    assert mock_requests.json["text"] == cmd  # type: ignore
 
     assert mock_commands.command_str == cmd
     assert mock_commands.args == args
@@ -250,19 +253,18 @@ def test_interactive_gargbot_commands(
 
     assert mock_requests.url == "response_url"
     assert mock_requests.url == "response_url"
-    assert mock_requests.json["text"] == cmd
+    assert mock_requests.json["text"] == cmd  # type: ignore
     action_ids = {
-        elem["action_id"] for elem in mock_requests.json["blocks"][-1]["elements"]
+        elem["action_id"]
+        for elem in mock_requests.json["blocks"][-1]["elements"]  # type: ignore
     }
     assert all(action_id in action_ids for action_id in ["share", "shuffle", "cancel"])
 
 
-@patch("gargbot_3000.server.SlackClient")
+@patch("gargbot_3000.server.WebClient")
 def test_auth(mock_SlackClient, client: testing.FlaskClient):
     user = conftest.users[0]
-    mock_instance = Mock()
-    mock_SlackClient.return_value = mock_instance
-    mock_instance.api_call.return_value = {
+    mock_SlackClient.return_value.oauth_v2_access.return_value.data = {
         "ok": True,
         "team_id": config.slack_team_id,
         "user_id": user.slack_id,
@@ -277,11 +279,9 @@ def test_auth(mock_SlackClient, client: testing.FlaskClient):
     assert response2.status_code == 200
 
 
-@patch("gargbot_3000.server.SlackClient")
+@patch("gargbot_3000.server.WebClient")
 def test_auth_wrong_team(mock_SlackClient, client: testing.FlaskClient):
-    mock_instance = Mock()
-    mock_SlackClient.return_value = mock_instance
-    mock_instance.api_call.return_value = {
+    mock_SlackClient.return_value.oauth_v2_access.return_value.data = {
         "ok": True,
         "team_id": "wrong team_id",
         "user_id": "user.id",
@@ -290,11 +290,9 @@ def test_auth_wrong_team(mock_SlackClient, client: testing.FlaskClient):
     assert response.status_code == 403
 
 
-@patch("gargbot_3000.server.SlackClient")
+@patch("gargbot_3000.server.WebClient")
 def test_auth_error(mock_SlackClient, client: testing.FlaskClient):
-    mock_instance = Mock()
-    mock_SlackClient.return_value = mock_instance
-    mock_instance.api_call.return_value = {
+    mock_SlackClient.return_value.oauth_v2_access.return_value.data = {
         "ok": False,
         "error": "Something went wrong",
         "team_id": "wrong team_id",

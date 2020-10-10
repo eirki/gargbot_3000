@@ -13,8 +13,10 @@ server_name = os.environ.get("SERVER_NAME")
 
 slack_verification_token = os.environ["slack_verification_token"]
 slack_bot_user_token = os.environ["slack_bot_user_token"]
+slack_oauth_access_token = os.environ["slack_oauth_access_token"]
 slack_client_id = os.environ["slack_client_id"]
 slack_client_secret = os.environ["slack_client_secret"]
+slack_signing_secret = os.environ["slack_signing_secret"]
 slack_team_id = os.environ["slack_team_id"]
 slack_redirect_url = os.environ["slack_redirect_url"]
 

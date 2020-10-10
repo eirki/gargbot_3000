@@ -7,9 +7,9 @@ import aiosql
 from dropbox import Dropbox
 import pendulum
 from psycopg2.extensions import connection
-from slackclient import SlackClient
+import slack
 
-from gargbot_3000 import config, database, pictures, task
+from gargbot_3000 import commands, config, database, pictures
 from gargbot_3000.logger import log
 
 queries = aiosql.from_path("sql/congrats.sql", "psycopg2")
@@ -64,7 +64,7 @@ def send_congrats() -> None:
     if not recipients:
         return
     log.info(f"Recipients today {recipients}")
-    slack_client = SlackClient(config.slack_bot_user_token)
+    slack_client = slack.WebClient(config.slack_bot_user_token)
     for recipient in recipients:
         greet = formulate_congrat(recipient, conn, dbx)
-        task.send_response(slack_client, greet, channel=config.main_channel)
+        commands.send_response(slack_client, greet, channel=config.main_channel)

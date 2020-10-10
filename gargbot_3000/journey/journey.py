@@ -7,9 +7,9 @@ from dropbox import Dropbox
 import gpxpy
 import pendulum
 from psycopg2.extensions import connection
-from slackclient import SlackClient
+import slack
 
-from gargbot_3000 import config, database, health, task
+from gargbot_3000 import commands, config, database, health
 from gargbot_3000.journey import achievements, common, location_apis, mapping
 from gargbot_3000.journey.common import STRIDE, queries
 from gargbot_3000.logger import log
@@ -379,8 +379,8 @@ def run_updates() -> None:
         pass
     conn = database.connect()
     try:
-        slack_client = SlackClient(config.slack_bot_user_token)
+        slack_client = slack.WebClient(config.slack_bot_user_token)
         for update in main(conn, current_date):
-            task.send_response(slack_client, update, channel=config.health_channel)
+            commands.send_response(slack_client, update, channel=config.health_channel)
     finally:
         conn.close()

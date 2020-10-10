@@ -2,7 +2,7 @@
 # coding: utf-8
 import argparse
 
-from gargbot_3000 import database, scheduler, server, task
+from gargbot_3000 import database, scheduler, server
 from gargbot_3000.logger import log
 
 
@@ -17,9 +17,7 @@ def main():
         parser.add_argument("--port", "-p", default=":5000")
         args = parser.parse_args()
 
-        if args.mode == "task":
-            task.main()
-        elif args.mode == "server":
+        if args.mode == "server":
             options = {"bind": "%s%s" % (args.bind, args.port), "workers": args.workers}
             server.main(options=options, debug=args.debug)
         elif args.mode == "scheduler":

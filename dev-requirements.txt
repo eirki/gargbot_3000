@@ -6,7 +6,7 @@
 #
 appdirs==1.4.3            # via black
 aspy.yaml==1.3.0          # via pre-commit
-attrs==19.3.0             # via black, pytest
+attrs==20.2.0             # via -c requirements.txt, black, pytest
 black==19.10b0            # via -r dev-requirements.in
 cfgv==2.0.1               # via pre-commit
 click==7.0                # via -c requirements.txt, black
@@ -14,7 +14,7 @@ coverage==5.0             # via pytest-cov
 entrypoints==0.3          # via flake8
 flake8==3.7.9             # via -r dev-requirements.in
 identify==1.4.8           # via pre-commit
-importlib-metadata==1.3.0  # via pluggy, pre-commit, pytest
+importlib-metadata==1.3.0  # via pre-commit
 isort==4.3.21             # via -r dev-requirements.in
 mccabe==0.6.1             # via flake8
 mirakuru==2.1.1           # via pytest-postgresql

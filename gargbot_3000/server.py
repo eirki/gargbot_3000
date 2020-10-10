@@ -1,5 +1,6 @@
 #! /usr/bin/env python3.6
 # coding: utf-8
+from asyncio import Future
 import contextlib
 import json
 import os
@@ -16,7 +17,8 @@ from flask_jwt_extended import (
 )
 from gunicorn.app.base import BaseApplication
 import requests
-from slackclient import SlackClient
+from slack import WebClient
+from slackeventsapi import SlackEventAdapter
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from gargbot_3000 import commands, config, database, health, journey, pictures
@@ -31,6 +33,10 @@ app.dbx = Dropbox
 app.config["JWT_SECRET_KEY"] = config.app_secret
 jwt = JWTManager(app)
 CORS(app)
+slack_events_adapter = SlackEventAdapter(
+    config.slack_signing_secret, "/slack/events", server=app
+)
+app.slack_client = WebClient(config.slack_bot_user_token)
 
 
 @app.route("/")
@@ -49,21 +55,24 @@ def auth():
     code = request.args["code"]
     log.info(request.args)
     log.info(code)
-    client = SlackClient("")
-    response = client.api_call(
-        "oauth.access",
+    client = WebClient()
+    response = client.oauth_v2_access(
         redirect_uri=config.slack_redirect_url,
         client_id=config.slack_client_id,
         client_secret=config.slack_client_secret,
         code=code,
     )
-    log.info(response)
-    if not response["ok"]:
-        log.info(f"Slack auth error: {response['error']}")
+    if isinstance(response, Future):
+        # satisfy mypy
+        raise Exception()
+    response_data = response.data
+    log.info(response_data)
+    if not response_data["ok"]:
+        log.info(f"Slack auth error: {response_data['error']}")
         return Response(status=403)
-    if response["team_id"] != config.slack_team_id:
+    if response_data["team_id"] != config.slack_team_id:
         return Response(status=403)
-    slack_id = response["user_id"]
+    slack_id = response_data["user_id"]
     with app.pool.get_connection() as conn:
         data = commands.queries.gargling_id_for_slack_id(conn, slack_id=slack_id)
         gargling_id = data["id"]
@@ -110,6 +119,23 @@ def interactive() -> Response:
     r = requests.post(response_url, json=result)
     r.raise_for_status()
     return Response(status=200)
+
+
+@slack_events_adapter.on("message")
+def handle_message(event_data):
+    AT_BOT = f"<@{config.bot_id}>"
+    message = event_data["event"]
+    channel = message["channel"]
+    text = message.get("text").replace(AT_BOT, "").strip()
+    if message.get("subtype") is not None:
+        return
+    try:
+        command_str, *args = text.replace("@", "").lower().split()
+    except ValueError:
+        command_str = ""
+        args = []
+    result = handle_command(command_str, args, buttons=False)
+    commands.send_response(app.slack_client, result, channel)
 
 
 @app.route("/slash", methods=["POST"])
@@ -268,7 +294,7 @@ def handle_share_interaction(action: str, data: dict) -> dict:
     return result
 
 
-def handle_command(command_str: str, args: list) -> dict:
+def handle_command(command_str: str, args: list, buttons=True) -> dict:
     db_func = (
         app.pool.get_connection
         if command_str in {"hvem", "pic", "forum", "msn", "rekorder"}
@@ -281,6 +307,8 @@ def handle_command(command_str: str, args: list) -> dict:
 
     error = result.get("text", "").startswith("Error")
     if error:
+        return result
+    if not buttons:
         return result
     if command_str in {"ping", "hvem", "rekorder"}:
         result["response_type"] = "in_channel"

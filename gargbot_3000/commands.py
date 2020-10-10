@@ -169,6 +169,13 @@ def cmd_panic(exc: Exception) -> t.Dict:
     return response
 
 
+def send_response(
+    slack_client, response: t.Dict, channel: str, thread_ts: t.Optional[str] = None,
+):
+    log.info("Sending to slack: ", response)
+    slack_client.chat_postMessage(channel=channel, thread_ts=thread_ts, **response)
+
+
 def execute(
     command_str: str, args: t.List, conn: connection, dbx: dropbox.Dropbox
 ) -> t.Dict:
