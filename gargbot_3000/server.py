@@ -123,6 +123,8 @@ def interactive() -> Response:
 
 @slack_events_adapter.on("message")
 def handle_message(event_data):
+    log.info("Receiving Slack event")
+    log.info(event_data)
     AT_BOT = f"<@{config.bot_id}>"
     message = event_data["event"]
     channel = message["channel"]
