@@ -22,7 +22,6 @@ poi_types = {
     "bowling_alley",
     "campground",
     "casino",
-    "church",
     "courthouse",
     "embassy",
     "funeral_home",
@@ -32,7 +31,6 @@ poi_types = {
     "hindu_temple",
     "library",
     "liquor_store",
-    "mosque",
     "movie_theater",
     "museum",
     "night_club",
@@ -40,7 +38,6 @@ poi_types = {
     "rv_park",
     "spa",
     "stadium",
-    "synagogue",
     "tourist_attraction",
     "zoo",
 }
@@ -103,9 +100,10 @@ def street_view_for_location(lat, lon) -> t.Optional[bytes]:
 
 
 def map_url_for_location(lat, lon) -> str:
-    # return f"https://www.google.com/maps/@?api=1&map_action=pano&fov=80&heading=251.74&pitch=0&viewpoint={lat}, {lon}"
-    # return f"http://maps.google.com/maps?q=&layer=c&cbll={lat}, {lon}"
-    return f"https://www.google.com/maps/search/?api=1&query={lat}, {lon}"
+    base = "https://www.google.com/maps/search/?"
+    params = {"api": 1, "query": f"{lat},{lon}"}
+    url = base + urllib.parse.urlencode(params)
+    return url
 
 
 def poi_for_location(lat, lon) -> t.Tuple[t.Optional[str], t.Optional[bytes]]:
