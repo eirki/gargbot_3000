@@ -9,7 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "countdown": "^2.6.0"
+    "countdown": "^2.6.0",
+    "highcharts": "^8.2.0"
   },
   "devDependencies": {
     "parcel-bundler": "^1.12.4"

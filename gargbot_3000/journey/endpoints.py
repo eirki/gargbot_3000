@@ -1,11 +1,13 @@
 #! /usr/bin/env python3
 # coding: utf-8
+from functools import partial
+
 from flask import Blueprint, Response, current_app, jsonify, request
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import get_jwt_identity, jwt_required
 import pendulum
 
 from gargbot_3000.journey import journey
-from gargbot_3000.journey.common import queries
+from gargbot_3000.journey.common import dashboard_queries, queries
 
 blueprint = Blueprint("journey", __name__)
 
@@ -83,3 +85,25 @@ def delete_journey():
         queries.delete_journey(conn, journey_id=journey_id)
         conn.commit()
     return Response(status=200)
+
+
+@blueprint.route("/dashboard/<chart_name>/<journey_id>")
+@jwt_required
+def dashboard(chart_name, journey_id):
+    gargling_id = get_jwt_identity()
+    print("ID", gargling_id)
+    funcs = {
+        "distance_area": partial(
+            dashboard_queries.distance_area, gargling_id=gargling_id
+        ),
+        "personal_stats": dashboard_queries.personal_stats,
+        "steps_pie": dashboard_queries.steps_pie,
+        "first_place_pie": dashboard_queries.first_place_pie,
+        "above_median_pie": dashboard_queries.above_median_pie,
+        "contributing_days_pie": dashboard_queries.contributing_days_pie,
+    }
+    func = funcs[chart_name]
+    with current_app.pool.get_connection() as conn:
+        data = func(conn, journey_id=journey_id)
+    data = [dict(datum) for datum in data]
+    return {"data": data}

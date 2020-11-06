@@ -8,6 +8,7 @@ from psycopg2.extensions import connection
 
 STRIDE = 0.75
 queries = aiosql.from_path("sql/journey.sql", "psycopg2")
+dashboard_queries = aiosql.from_path("sql/journey_dashboard.sql", "psycopg2")
 
 
 def location_between_waypoints(

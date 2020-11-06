@@ -1,0 +1,67 @@
+<html>
+<meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
+
+<head>
+    <title></title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="row">
+        <div class="column1">
+            <div class="card">
+                <div id="distance_area"></div>
+                <div class="pcswitch">
+                    <input type="checkbox" id="pcswitch" tabindex="0">
+                    <label for="pcswitch">
+                        Relative gargling contributions
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="column1">
+            <div class="card">
+                <div id="person_steps"></div>
+                <div class="container" id="person_stats">
+                    <div class="item"><select id="select_gargling"></select></div>
+                    <div class="item">
+                        <h4>Total steps</h4>
+                        <p id="total_steps"></p>
+                    </div>
+                    <div class="item">
+                        <h4>Average steps</h4>
+                        <p id="avg_steps"></p>
+                    </div>
+                    <div class="item">
+                        <h4>Maximum steps</h4>
+                        <p id="max_steps"></p>
+                    </div>
+                    <div class="item"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="column2">
+            <div class="card" id="steps_pie"></div>
+        </div>
+        <div class="column2">
+            <div class="card" id="first_place_pie"></div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="column2">
+            <div class="card" id="above_median_pie"></div>
+        </div>
+        <div class="column2">
+            <div class="card" id="contributing_days_pie"></div>
+        </div>
+    </div>
+</body>
+
+<script src="./dashboard.js"></script>
+
+
+</html>

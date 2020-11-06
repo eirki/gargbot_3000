@@ -120,3 +120,51 @@ input:checked + .slider:before {
   -ms-transform: translateX(130px);
   transform: translateX(130px);
 }
+
+
+.column1 {
+  float: left;
+  width: 100%;
+}
+.column2 {
+  float: left;
+  width: 50%;
+}
+
+.container {
+  display: flex; /* or inline-flex */
+  flex-wrap: wrap;
+    justify-content: space-between
+}
+
+/* Clear floats after the columns */
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Style the counter cards */
+.card {
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2); /* this adds the "card" effect */
+  padding: 16px;
+  text-align: center;
+}
+
+/* Responsive columns - one column layout (vertical) on small screens */
+@media screen and (max-width: 900px) {
+  div[class^="column"] {
+    width: 100%;
+    display: block;
+    margin-bottom: 20px;
+  }
+}
+
+
+h4 {
+    margin-top: 0;
+}
+
+.pcswitch {
+  text-align: left;
+}
