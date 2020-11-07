@@ -70,14 +70,6 @@ async function personal_stats(token, steps) {
         series: [JSON.parse(JSON.stringify(steps["data"][0]))], // deep copy
 
     });
-    function update_stats(obj) {
-        let parent = document.getElementById("person_stats")
-        let chldrn = parent.getElementsByTagName("p")
-        for (let chld of chldrn) {
-            chld.innerHTML = formatNumber(obj[chld.id])
-        }
-    }
-    update_stats(stats["data"][0])
 
     let allGarglingData = {}
     function populateGarglingData(obj, name) {
@@ -89,6 +81,16 @@ async function personal_stats(token, steps) {
     }
     populateGarglingData(steps, "steps")
     populateGarglingData(stats, "stats")
+
+    function update_stats(obj) {
+        let parent = document.getElementById("person_stats")
+        let chldrn = parent.getElementsByTagName("p")
+        for (let chld of chldrn) {
+            chld.innerHTML = formatNumber(obj[chld.id])
+        }
+    }
+    update_stats(allGarglingData[steps["data"][0]["name"]]["stats"])
+
     let select = document.getElementById("select_gargling")
     for (var [name, data] of Object.entries(allGarglingData)) {
         var opt = document.createElement('option');
