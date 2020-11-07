@@ -6,6 +6,11 @@ import { getToken, redirectLogin } from "./common.js"
 import * as config from "./config.js"
 
 
+function formatNumber(num) {
+    return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1 ')
+}
+
+
 async function distance_area_data(token) {
     const url = new URL(`/dashboard/distance_area/1`, config.backend_url)
     console.log(`Fetching ${url}`)
@@ -21,56 +26,6 @@ async function distance_area_data(token) {
             }
             return response.json();
         });
-}
-function distance_area(data) {
-    var chart = Highcharts.chart('distance_area', {
-        chart: {
-            type: 'area',
-            zoomType: 'x'
-        },
-        title: {
-            text: 'Skritt per dag'
-        },
-        xAxis: {
-            type: 'datetime',
-            title: {
-                enabled: false
-            }
-        },
-        yAxis: {
-            title: {
-                enabled: false
-            },
-        },
-        subtitle: {
-            text: document.ontouchstart === undefined ?
-                'Click and drag in the plot area to zoom in' : 'Pinch the chart to zoom in'
-        },
-        plotOptions: {
-            area: {
-                stacking: 'normal',
-                lineColor: '#FFFFFF',
-                lineWidth: 1,
-                marker: {
-                    enabled: false,
-                    lineWidth: 1,
-                    lineColor: '#FFFFFF'
-                }
-            }
-        },
-        series: data["data"]
-    });
-    let switcher = document.getElementById("pcswitch")
-    switcher.addEventListener("click", function () {
-        let mode = (switcher.checked ? "percent" : "normal")
-        chart.update({
-            plotOptions: {
-                area: {
-                    stacking: mode
-                }
-            }
-        })
-    })
 }
 
 
@@ -116,10 +71,11 @@ async function personal_stats(token, steps) {
 
     });
     function update_stats(obj) {
-        document.getElementById("total_steps").innerHTML = obj["total_steps"]
-        document.getElementById("avg_steps").innerHTML = obj["avg_steps"]
-        document.getElementById("max_steps").innerHTML = obj["max_steps"]
-
+        let parent = document.getElementById("person_stats")
+        let chldrn = parent.getElementsByTagName("p")
+        for (let chld of chldrn) {
+            chld.innerHTML = formatNumber(obj[chld.id])
+        }
     }
     update_stats(stats["data"][0])
 
@@ -148,6 +104,61 @@ async function personal_stats(token, steps) {
         })
         let person_stats = allGarglingData[event.target.value]["stats"]
         update_stats(person_stats)
+    })
+}
+
+
+function distance_area(data) {
+    var chart = Highcharts.chart('distance_area', {
+        chart: {
+            type: 'area',
+            zoomType: 'x'
+        },
+        title: {
+            text: 'Skritt per dag'
+        },
+        xAxis: {
+            type: 'datetime',
+            title: {
+                enabled: false
+            }
+        },
+        yAxis: {
+            title: {
+                enabled: false
+            },
+        },
+        subtitle: {
+            text: document.ontouchstart === undefined ?
+                'Click and drag in the plot area to zoom in' : 'Pinch the chart to zoom in'
+        },
+        tooltip: {
+            split: true
+        },
+        plotOptions: {
+            area: {
+                stacking: 'normal',
+                lineColor: '#FFFFFF',
+                lineWidth: 1,
+                marker: {
+                    enabled: false,
+                    lineWidth: 1,
+                    lineColor: '#FFFFFF'
+                }
+            }
+        },
+        series: data["data"]
+    });
+    let switcher = document.getElementById("pcswitch")
+    switcher.addEventListener("click", function () {
+        let mode = (switcher.checked ? "percent" : "normal")
+        chart.update({
+            plotOptions: {
+                area: {
+                    stacking: mode
+                }
+            }
+        })
     })
 }
 
@@ -359,8 +370,8 @@ async function main() {
         redirectLogin("dashboard")
     }
     let data = await distance_area_data(slackToken)
-    distance_area(data)
     personal_stats(slackToken, data)
+    distance_area(data)
     steps_pie(slackToken)
     first_place_pie(slackToken)
     above_median_pie(slackToken)

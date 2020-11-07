@@ -99,7 +99,8 @@ from
                 epoch
                 from
                     min(all_dates.taken_at)
-            ) * 1000 as "pointStart"
+            ) * 1000 as "pointStart",
+            sum(step.amount) as sum_amount
         from
             gargling
             cross join (
@@ -124,12 +125,14 @@ order by
     case
         when all_date_steps.gargling_id = :gargling_id then 1
         else 0
-    end;
+    end,
+    sum_amount asc;
 
 
 --name: personal_stats
 select
     gargling.first_name as name,
+    grouped.total_steps * 0.75 :: real as total_distance,
     grouped.*
 from
     gargling
@@ -137,7 +140,7 @@ from
         select
             sum(amount) as total_steps,
             max(amount) as max_steps,
-            avg(amount) :: real as avg_steps,
+            round(avg(amount), 1) :: real as avg_steps,
             gargling_id
         from
             step
