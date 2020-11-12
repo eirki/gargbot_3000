@@ -167,3 +167,13 @@ h4 {
 .pcswitch {
   text-align: left;
 }
+
+
+#mapid {
+  height: 100%;
+}
+
+
+.location_img {
+  width:300px;
+}

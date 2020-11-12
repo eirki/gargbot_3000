@@ -9,3 +9,5 @@ export const countdown_args = process.env.countdown_args;
 export const countdown_message = process.env.countdown_message;
 export const ongoing_message = process.env.ongoing_message;
 export const finished_message = process.env.finished_message;
+
+export const mapbox_token = process.env.mapbox_token;

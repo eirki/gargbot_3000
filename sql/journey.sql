@@ -43,7 +43,8 @@ create table location (
     date date not null,
     address text,
     country text,
-    poi text
+    poi text,
+    photo_url text
 );
 
 

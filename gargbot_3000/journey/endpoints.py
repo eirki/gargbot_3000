@@ -31,7 +31,9 @@ def detail_journey(journey_id):
                 "distance": most_recent["distance"],
             }
         )
-    return jsonify(waypoints=waypoints, **dict(j))
+        locations = queries.locations_for_journey(conn, journey_id=journey_id)
+        locations = [dict(point) for point in locations]
+    return jsonify(waypoints=waypoints, locations=locations, **dict(j))
 
 
 @blueprint.route("/list_journeys")
