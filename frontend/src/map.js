@@ -69,6 +69,7 @@ function addMarkers(map, data) {
         }
     }
     zoomHandler()
+    let last_distance = 0;
 
     for (const [i, location] of data["locations"].entries()) {
         let bigMarker = L.marker(location)
@@ -86,17 +87,33 @@ function addMarkers(map, data) {
         const date_options = { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' };
         let date_str = date_obj.toLocaleDateString("no-NB", date_options)
         date_str = date_str[0].toUpperCase() + date_str.slice(1)
-        let popupContent = `
-            Dag ${i + 1}<br>
-            ${date_str}
+        let p
+        p = document.createElement('p')
+        p.innerHTML = `<b>Dag ${i + 1}</b>`
+        popupElem.appendChild(p)
+        p = document.createElement('p')
+        p.innerHTML = date_str
+        popupElem.appendChild(p)
+
+        p = document.createElement('p')
+        let days_distance = location["distance"] - last_distance
+        p.innerHTML = `
+            Dagens distanse: ${Math.round(days_distance / 1000)} km<br>
+            Sammenlagt distanse: ${Math.round(location["distance"] / 1000)} km
         `
+        popupElem.appendChild(p)
+        last_distance = location["distance"]
+
         if (location["address"] != null) {
-            popupContent = popupContent.concat(`<br>${location["address"]}`)
+            p = document.createElement('p')
+            p.innerHTML = location["address"]
+            popupElem.appendChild(p)
         }
         if (location["poi"] != null) {
-            popupContent = popupContent.concat(`<br><br>Kveldens underholdning: ${location["poi"]}`)
+            p = document.createElement('p')
+            p.innerHTML = `Kveldens underholdning: ${location["poi"]}`
+            popupElem.appendChild(p)
         }
-        popupElem.innerHTML = popupContent
         if (location["photo_url"] != null) {
             let img = document.createElement('img');
             img.classList.add("location_img")
