@@ -12,6 +12,7 @@ import psycopg2
 from psycopg2.extensions import connection
 import pytest
 
+from gargbot_3000 import config
 from gargbot_3000.journey import journey, mapping
 
 xml = """<?xml version="1.0" encoding="UTF-8" standalone="no" ?><gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" creator="Graphhopper version f738fdfc4371477dfe39f433b7802f9f6348627a" version="1.1" xmlns:gh="https://graphhopper.com/public/schema/gpx/1.1">
@@ -412,7 +413,9 @@ def test_format_response():
             {"alt_text": "Address", "image_url": "www.image", "type": "image"},
             {
                 "text": {
-                    "text": "<www.mapurl|Ta en kikk på kartet da vel!>",
+                    "text": "<www.mapurl|Gøggle Maps> | "
+                    f"<{config.server_name}/map|Gargbot Kart> | "
+                    f"<{config.server_name}/dashboard|Stats>",
                     "type": "mrkdwn",
                 },
                 "type": "section",

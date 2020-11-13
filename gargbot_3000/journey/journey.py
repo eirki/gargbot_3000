@@ -274,7 +274,11 @@ def format_response(
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"<{map_url}|Ta en kikk på kartet da vel!>",
+                "text": (
+                    f"<{map_url}|Gøggle Maps> | "
+                    f"<{config.server_name}/map|Gargbot Kart> | "
+                    f"<{config.server_name}/dashboard|Stats>"
+                ),
             },
         }
     )
