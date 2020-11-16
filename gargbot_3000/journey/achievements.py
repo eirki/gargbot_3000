@@ -2,13 +2,12 @@
 # coding: utf-8
 import typing as t
 
-import aiosql
 import pendulum
 from psycopg2.extensions import connection
 
 from gargbot_3000.journey import common
 
-queries = aiosql.from_path("sql/journey_achievements.sql", "psycopg2")
+queries = common.queries.achievements
 
 
 possible = [

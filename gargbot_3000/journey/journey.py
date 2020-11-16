@@ -11,8 +11,9 @@ import slack
 
 from gargbot_3000 import commands, config, database, health
 from gargbot_3000.journey import achievements, common, location_apis, mapping
-from gargbot_3000.journey.common import STRIDE, queries
 from gargbot_3000.logger import log
+
+queries = common.queries.journey
 
 
 def define_journey(conn, origin, destination) -> int:
@@ -116,7 +117,7 @@ def perform_daily_update(
     last_location = most_recent_location(conn, journey_id)
     last_total_distance = last_location["distance"] if last_location else 0
 
-    distance_today = steps_today * STRIDE
+    distance_today = steps_today * common.STRIDE
     distance_total = distance_today + last_total_distance
     dist_remaining = journey["distance"] - distance_total
     lat, lon, latest_waypoint_id, finished = coordinates_for_distance(
@@ -232,7 +233,7 @@ def format_response(
         name = gargling_info[row["gargling_id"]]["first_name"]
 
         steps = row["amount"]
-        g_distance = round_meters(steps * STRIDE)
+        g_distance = round_meters(steps * common.STRIDE)
         if i == 0:
             amount = f"*{steps}* ({g_distance}) :star:"
         elif i == len(steps_data) - 1:

@@ -6,10 +6,10 @@ from flask import Blueprint, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 import pendulum
 
-from gargbot_3000.journey import journey
-from gargbot_3000.journey.common import dashboard_queries, queries
+from gargbot_3000.journey import common, journey
 
 blueprint = Blueprint("journey", __name__)
+queries = common.queries.journey
 
 
 @blueprint.route("/detail_journey/<journey_id>")
@@ -96,13 +96,13 @@ def dashboard(chart_name, journey_id):
     print("ID", gargling_id)
     funcs = {
         "distance_area": partial(
-            dashboard_queries.distance_area, gargling_id=gargling_id
+            queries.dashboard.distance_area, gargling_id=gargling_id
         ),
-        "personal_stats": dashboard_queries.personal_stats,
-        "steps_pie": dashboard_queries.steps_pie,
-        "first_place_pie": dashboard_queries.first_place_pie,
-        "above_median_pie": dashboard_queries.above_median_pie,
-        "contributing_days_pie": dashboard_queries.contributing_days_pie,
+        "personal_stats": queries.dashboard.personal_stats,
+        "steps_pie": queries.dashboard.steps_pie,
+        "first_place_pie": queries.dashboard.first_place_pie,
+        "above_median_pie": queries.dashboard.above_median_pie,
+        "contributing_days_pie": queries.dashboard.contributing_days_pie,
     }
     func = funcs[chart_name]
     with current_app.pool.get_connection() as conn:

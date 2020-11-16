@@ -7,8 +7,7 @@ import gpxpy
 from psycopg2.extensions import connection
 
 STRIDE = 0.75
-queries = aiosql.from_path("sql/journey.sql", "psycopg2")
-dashboard_queries = aiosql.from_path("sql/journey_dashboard.sql", "psycopg2")
+queries = aiosql.from_path("sql/journey", "psycopg2")
 
 
 def location_between_waypoints(
@@ -29,7 +28,7 @@ def location_between_waypoints(
 
 
 def get_colors_names(conn: connection, ids: t.List[int]) -> t.Dict[int, dict]:
-    infos = queries.colors_names_for_ids(conn, ids=ids)
+    infos = queries.journey.colors_names_for_ids(conn, ids=ids)
     infodict = {
         info["id"]: {
             "first_name": info["first_name"],

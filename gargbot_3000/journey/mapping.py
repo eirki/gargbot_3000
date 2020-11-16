@@ -11,8 +11,9 @@ from psycopg2.extensions import connection
 from staticmap import CircleMarker, Line, StaticMap
 
 from gargbot_3000.journey import common
-from gargbot_3000.journey.common import STRIDE, queries
 from gargbot_3000.logger import log
+
+queries = common.queries.journey
 
 
 def prepare_map_generation(conn, journey_id):
@@ -87,7 +88,7 @@ def get_detailed_coords(current_waypoints, last_location, steps_data, start_dist
     for gargling in steps_data:
         gargling_coords = []
         gargling_coords.append((latest_waypoint["lon"], latest_waypoint["lat"],))
-        gargling_distance = gargling["amount"] * STRIDE
+        gargling_distance = gargling["amount"] * common.STRIDE
         current_distance += gargling_distance
         while True:
             if next_waypoint is None or next_waypoint["distance"] < current_distance:
