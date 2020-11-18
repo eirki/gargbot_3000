@@ -19,6 +19,7 @@ create table waypoint (
     journey_id smallint not null references journey(id),
     lat double precision not null,
     lon double precision not null,
+    elevation float,
     distance float not null
 );
 
@@ -174,9 +175,9 @@ where
 
 -- name: add_waypoints*!
 insert into
-    waypoint (journey_id, lat, lon, distance)
+    waypoint (journey_id, lat, lon, distance, elevation)
 values
-    (:journey_id, :lat, :lon, :distance);
+    (:journey_id, :lat, :lon, :distance, :elevation);
 
 
 -- name: waypoints_for_journey
@@ -190,8 +191,9 @@ where
 
 -- name: waypoints_between_distances
 select
-    lat,
     lon,
+    lat,
+    elevation,
     distance
 from
     waypoint

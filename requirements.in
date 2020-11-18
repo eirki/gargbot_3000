@@ -32,3 +32,4 @@ google-auth
 schedule
 staticmap
 ipykernel
+geojson

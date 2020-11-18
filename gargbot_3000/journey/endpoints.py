@@ -4,6 +4,7 @@ from functools import partial
 
 from flask import Blueprint, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
+import geojson
 import pendulum
 
 from gargbot_3000.journey import common, journey
@@ -23,17 +24,14 @@ def detail_journey(journey_id):
         waypoints = queries.waypoints_between_distances(
             conn, journey_id=journey_id, low=0, high=most_recent["distance"]
         )
-        waypoints = [dict(point) for point in waypoints]
-        waypoints.append(
-            {
-                "lat": most_recent["lat"],
-                "lon": most_recent["lon"],
-                "distance": most_recent["distance"],
-            }
-        )
+        waypoints = [
+            [point["lon"], point["lat"], point["elevation"]] for point in waypoints
+        ]
+        waypoints.append([most_recent["lon"], most_recent["lat"], waypoints[-1][-1]])
+        as_geojson = geojson.LineString(waypoints)
         locations = queries.locations_for_journey(conn, journey_id=journey_id)
         locations = [dict(point) for point in locations]
-    return jsonify(waypoints=waypoints, locations=locations, **dict(j))
+    return jsonify(waypoints=as_geojson, locations=locations, **dict(j))
 
 
 @blueprint.route("/list_journeys")

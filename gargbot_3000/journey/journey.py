@@ -35,6 +35,7 @@ def parse_gpx(conn, journey_id, xml_data) -> None:
             "journey_id": journey_id,
             "lat": waypoint.latitude,
             "lon": waypoint.longitude,
+            "elevation": waypoint.elevation,
             "distance": cumulative_distance,
         }
         waypoints.append(data)

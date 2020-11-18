@@ -36,20 +36,20 @@ xml = """<?xml version="1.0" encoding="UTF-8" standalone="no" ?><gpx xmlns="http
 </gpx>"""
 
 gps_data = [
-    {"lat": 47.586392, "lon": 40.688998, "distance": 0.000000},
-    {"lat": 47.586482, "lon": 40.690648, "distance": 124.290397},
-    {"lat": 47.586346, "lon": 40.692903, "distance": 294.277151},
-    {"lat": 47.586119, "lon": 40.694385, "distance": 408.383249},
-    {"lat": 47.585707, "lon": 40.695735, "distance": 519.639149},
-    {"lat": 47.582350, "lon": 40.704350, "distance": 1266.708526},
-    {"lat": 47.581214, "lon": 40.707144, "distance": 1511.674758},
-    {"lat": 47.580374, "lon": 40.708726, "distance": 1662.856365},
-    {"lat": 47.579466, "lon": 40.710005, "distance": 1802.287666},
-    {"lat": 47.577354, "lon": 40.712160, "distance": 2087.707336},
-    {"lat": 47.549180, "lon": 40.750911, "distance": 6367.173839},
-    {"lat": 47.523033, "lon": 40.764962, "distance": 9463.573534},
-    {"lat": 47.427366, "lon": 41.011354, "distance": 30843.651920},
-    {"lat": 47.327962, "lon": 41.309018, "distance": 55862.151884},
+    {"lat": 47.586392, "lon": 40.688998, "distance": 0.000000, "elevation": 1},
+    {"lat": 47.586482, "lon": 40.690648, "distance": 124.290397, "elevation": 1},
+    {"lat": 47.586346, "lon": 40.692903, "distance": 294.277151, "elevation": 2},
+    {"lat": 47.586119, "lon": 40.694385, "distance": 408.383249, "elevation": 4},
+    {"lat": 47.585707, "lon": 40.695735, "distance": 519.639149, "elevation": 5},
+    {"lat": 47.582350, "lon": 40.704350, "distance": 1266.708526, "elevation": 1},
+    {"lat": 47.581214, "lon": 40.707144, "distance": 1511.674758, "elevation": 1},
+    {"lat": 47.580374, "lon": 40.708726, "distance": 1662.856365, "elevation": 1},
+    {"lat": 47.579466, "lon": 40.710005, "distance": 1802.287666, "elevation": 1},
+    {"lat": 47.577354, "lon": 40.712160, "distance": 2087.707336, "elevation": 2},
+    {"lat": 47.549180, "lon": 40.750911, "distance": 6367.173839, "elevation": 6},
+    {"lat": 47.523033, "lon": 40.764962, "distance": 9463.573534, "elevation": 9},
+    {"lat": 47.427366, "lon": 41.011354, "distance": 30843.651920, "elevation": 3},
+    {"lat": 47.327962, "lon": 41.309018, "distance": 55862.151884, "elevation": 5},
 ]
 
 
@@ -177,13 +177,13 @@ def test_detail_journey(client: FlaskClient, conn: connection):
     journey.store_update_data(conn, location, finished)
     response = client.get(f"/detail_journey/{journey_id}")
     waypoints = response.json.pop("waypoints")
-    length = len(waypoints) - 1
-    assert waypoints[:length] == gps_data[:length]
+    length = len(waypoints["coordinates"]) - 1
+    exp = [[d["lon"], d["lat"], d["elevation"]] for d in gps_data[:length]]
+    assert waypoints["coordinates"][:length] == exp
     loc = journey.most_recent_location(conn, journey_id)
     assert loc is not None
-    assert waypoints[length]["distance"] == loc["distance"]
-    assert waypoints[length]["lat"] == loc["lat"]
-    assert waypoints[length]["lon"] == loc["lon"]
+    assert waypoints["coordinates"][length][0] == pytest.approx(loc["lon"])
+    assert waypoints["coordinates"][length][1] == pytest.approx(loc["lat"])
     expected = {
         "destination": "Destination",
         "distance": 55862.151884,

@@ -1,12 +1,14 @@
 "use strict";
 
 import 'leaflet/dist/leaflet.css';
+import '@raruto/leaflet-elevation/dist/leaflet-elevation.css';
 import L from 'leaflet'
-delete L.Icon.Default.prototype._getIconUrl;
+import * as elevation from '@raruto/leaflet-elevation';
 
 import { getToken, redirectLogin } from "./common.js"
 import * as config from "./config.js"
 
+delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
     iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
     iconUrl: require('leaflet/dist/images/marker-icon.png'),
@@ -48,9 +50,32 @@ function defineMap() {
 
 
 function addLine(map, data) {
-    let latlngs = data["waypoints"]
-    var polyline = L.polyline(latlngs, { color: 'teal' }).addTo(map);
-    map.fitBounds(polyline.getBounds());
+    var elevation_options = {
+        theme: "lightblue-theme",
+        detached: true,
+        elevationDiv: "#elevation",
+        followMarker: true,
+        slope: false,
+        speed: false,
+        time: false,
+        summary: false,
+        ruler: false,
+        legend: false,
+    };
+    let waypoints = data["waypoints"]
+    let line = L.geoJSON(waypoints)
+    map.fitBounds(line.getBounds());
+    var controlElevation = L.control.elevation(elevation_options).addTo(map);
+    let geojson = {
+        "name": "demo.geojson",
+        "type": "FeatureCollection",
+        "features": [{
+            "properties": null,
+            "type": "Feature",
+            "geometry": waypoints
+        }]
+    }
+    controlElevation.load(geojson);
 }
 
 
