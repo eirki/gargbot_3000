@@ -7,21 +7,21 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 import geojson
 import pendulum
 
-from gargbot_3000.journey import common, journey
+from gargbot_3000.journey import journey
+from gargbot_3000.journey.common import queries
 
 blueprint = Blueprint("journey", __name__)
-queries = common.queries.journey
 
 
 @blueprint.route("/detail_journey/<journey_id>")
 def detail_journey(journey_id):
     with current_app.pool.get_connection() as conn:
-        j = queries.get_journey(conn, journey_id=journey_id)
+        j = queries.journey.get_journey(conn, journey_id=journey_id)
         most_recent = journey.most_recent_location(conn, journey_id)
         if most_recent is None:
             return jsonify(waypoints=[])
 
-        waypoints = queries.waypoints_between_distances(
+        waypoints = queries.journey.waypoints_between_distances(
             conn, journey_id=journey_id, low=0, high=most_recent["distance"]
         )
         waypoints = [
@@ -29,7 +29,7 @@ def detail_journey(journey_id):
         ]
         waypoints.append([most_recent["lon"], most_recent["lat"], waypoints[-1][-1]])
         as_geojson = geojson.LineString(waypoints)
-        locations = queries.locations_for_journey(conn, journey_id=journey_id)
+        locations = queries.journey.locations_for_journey(conn, journey_id=journey_id)
         locations = [dict(point) for point in locations]
     return jsonify(waypoints=as_geojson, locations=locations, **dict(j))
 
@@ -38,7 +38,7 @@ def detail_journey(journey_id):
 @jwt_required
 def list_journeys():
     with current_app.pool.get_connection() as conn:
-        journeys = queries.all_journeys(conn)
+        journeys = queries.journey.all_journeys(conn)
         journeys = [dict(j) for j in journeys]
     return jsonify(journeys=journeys)
 
@@ -62,7 +62,7 @@ def handle_start_journey():
     journey_id = request.args["journey_id"]
     with current_app.pool.get_connection() as conn:
         date = pendulum.now()
-        queries.start_journey(conn, journey_id=journey_id, date=date)
+        queries.journey.start_journey(conn, journey_id=journey_id, date=date)
         conn.commit()
     return Response(status=200)
 
@@ -72,7 +72,7 @@ def handle_start_journey():
 def stop_journey():
     journey_id = request.args["journey_id"]
     with current_app.pool.get_connection() as conn:
-        queries.stop_journey(conn, journey_id=journey_id)
+        queries.journey.stop_journey(conn, journey_id=journey_id)
         conn.commit()
     return Response(status=200)
 
@@ -82,7 +82,7 @@ def stop_journey():
 def delete_journey():
     journey_id = request.args["journey_id"]
     with current_app.pool.get_connection() as conn:
-        queries.delete_journey(conn, journey_id=journey_id)
+        queries.journey.delete_journey(conn, journey_id=journey_id)
         conn.commit()
     return Response(status=200)
 
