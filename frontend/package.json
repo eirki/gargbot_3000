@@ -1,18 +1,13 @@
 {
-  "name": "gargbot_frontend",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
   "scripts": {
-    "dev": "parcel src/*.html"
+    "dev": "parcel src/*.html --no-autoinstall",
+    "build": "parcel build ./src/*.html --no-minify --no-autoinstall "
   },
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@raruto/leaflet-elevation": "^1.4.0",
     "countdown": "^2.6.0",
     "highcharts": "^8.2.2",
-    "leaflet": "^1.7.1"
+    "leaflet": "^1.7.1",
+    "@raruto/leaflet-elevation": "^1.4.0"
   },
   "devDependencies": {
     "parcel-bundler": "^1.12.4"

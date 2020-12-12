@@ -12,7 +12,7 @@ RUN npm install --production
 
 COPY ./src ./src
 COPY ./.env ./.env
-RUN parcel build --no-minify ./src/*.html
+RUN npm run build
 
 # production environment
 FROM nginx:1.17
