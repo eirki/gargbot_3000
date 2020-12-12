@@ -5,7 +5,7 @@ import '@raruto/leaflet-elevation/dist/leaflet-elevation.css';
 import L from 'leaflet'
 import * as elevation from '@raruto/leaflet-elevation';
 
-import { getToken, redirectLogin, fetchBackend } from "./utils.js"
+import { getToken, redirectLogin, getBackend } from "./utils.js"
 import * as config from "./config.js"
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -25,7 +25,7 @@ const attr = 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStree
 
 
 function journeyDetails(token) {
-    return fetchBackend(token, "/detail_journey/1").then(response => response.json());
+    return getBackend(token, "/detail_journey/1").then(response => response.json());
 }
 
 function defineMap() {

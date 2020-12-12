@@ -15,7 +15,7 @@ export function getToken() {
 }
 
 
-export function fetchBackend(token, endpoint, params) {
+export function getBackend(token, endpoint, params) {
     const url = new URL(endpoint, config.backend_url)
     url.search = new URLSearchParams(params).toString();
     return fetch(url, {
@@ -29,5 +29,6 @@ export function fetchBackend(token, endpoint, params) {
                 redirectLogin();
             }
             return response
-        });
+        })
+        .then(response => response.json());
 }

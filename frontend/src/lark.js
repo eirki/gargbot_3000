@@ -2,15 +2,14 @@
 
 import countdown from "countdown";
 import * as config from "./config.js"
-import { getToken, redirectLogin, fetchBackend } from "./utils.js"
+import { getToken, redirectLogin, getBackend } from "./utils.js"
 
 
 function setBackground(token) {
     let args = config.countdown_args;
     args = args.split(" ");
     args = args.join(",");
-    fetchBackend(token, `/pic/${args}`)
-        .then(response => response.json())
+    getBackend(token, `/pic/${args}`)
         .then(data => {
             let image_url = data["url"];
             document.body.style.background = `url(${image_url}) no-repeat center center`;

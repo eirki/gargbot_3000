@@ -2,7 +2,7 @@
 
 import Highcharts from 'highcharts';
 
-import { getToken, redirectLogin, fetchBackend } from "./utils.js"
+import { getToken, redirectLogin, getBackend } from "./utils.js"
 
 
 function formatNumber(num) {
@@ -11,15 +11,14 @@ function formatNumber(num) {
 
 
 async function distance_area_data(token) {
-    let res = fetchBackend(token, "/dashboard/distance_area/1")
-    return await res.then(response => response.json())
+    let res = getBackend(token, "/dashboard/distance_area/1")
+    return await res
 }
 
 
 async function personal_stats(token, steps) {
     const stats = (
-        await fetchBackend(token, "/dashboard/personal_stats/1")
-            .then(response => response.json())
+        await getBackend(token, "/dashboard/personal_stats/1")
     )
     steps["data"].reverse()
     let steps_chart = Highcharts.chart('person_steps', {
@@ -144,8 +143,7 @@ function distance_area(data) {
 
 async function steps_pie(token) {
     const data = (
-        await fetchBackend(token, "/dashboard/steps_pie/1")
-            .then(response => response.json())
+        await getBackend(token, "/dashboard/steps_pie/1")
             .then(data => data["data"])
     )
     Highcharts.chart('steps_pie', {
@@ -187,8 +185,7 @@ async function steps_pie(token) {
 
 async function first_place_pie(token) {
     const data = (
-        await fetchBackend(token, "/dashboard/first_place_pie/1")
-            .then(response => response.json())
+        await getBackend(token, "/dashboard/first_place_pie/1")
             .then(data => data["data"])
     )
     Highcharts.chart('first_place_pie', {
@@ -222,8 +219,7 @@ async function first_place_pie(token) {
 
 async function above_median_pie(token) {
     const data = (
-        await fetchBackend(token, "/dashboard/above_median_pie/1")
-            .then(response => response.json())
+        await getBackend(token, "/dashboard/above_median_pie/1")
             .then(data => data["data"])
     )
     Highcharts.chart('above_median_pie', {
@@ -257,8 +253,7 @@ async function above_median_pie(token) {
 
 async function contributing_days_pie(token) {
     const data = (
-        await fetchBackend(token, "/dashboard/contributing_days_pie/1")
-            .then(response => response.json())
+        await getBackend(token, "/dashboard/contributing_days_pie/1")
             .then(data => data["data"])
     )
     Highcharts.chart('contributing_days_pie', {
