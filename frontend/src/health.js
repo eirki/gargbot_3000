@@ -1,7 +1,7 @@
 "use strict";
 
 
-import { getToken, redirectLogin } from "./common.js"
+import { getToken, redirectLogin } from "./utils.js"
 import * as config from "./config.js"
 
 

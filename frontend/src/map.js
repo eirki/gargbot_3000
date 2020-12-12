@@ -5,7 +5,7 @@ import '@raruto/leaflet-elevation/dist/leaflet-elevation.css';
 import L from 'leaflet'
 import * as elevation from '@raruto/leaflet-elevation';
 
-import { getToken, redirectLogin } from "./common.js"
+import { getToken, redirectLogin, fetchBackend } from "./utils.js"
 import * as config from "./config.js"
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -15,25 +15,18 @@ L.Icon.Default.mergeOptions({
     shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
 
+// https://leaflet-extras.github.io/leaflet-providers/preview/
+const tileServer = (
+    config.prod ?
+        'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}' :
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+)
 const attr = 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>';
 
-const tileServer = 'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}'
-// https://leaflet-extras.github.io/leaflet-providers/preview/
-// const tileServer = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 
 function journeyDetails(token) {
-    const url = new URL("/detail_journey/1", config.backend_url)
-    console.log(`Fetching ${url}`)
-    return fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    })
-        .then(response => response.json());
-
+    return fetchBackend(token, "/detail_journey/1").then(response => response.json());
 }
-
 
 function defineMap() {
     var map = L.map('mapid')

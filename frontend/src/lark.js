@@ -2,32 +2,19 @@
 
 import countdown from "countdown";
 import * as config from "./config.js"
-import { getToken, redirectLogin } from "./common.js"
+import { getToken, redirectLogin, fetchBackend } from "./utils.js"
 
 
 function setBackground(token) {
     let args = config.countdown_args;
     args = args.split(" ");
     args = args.join(",");
-    const url = new URL(`/pic/${args}`, config.backend_url)
-    console.log(`Fetching ${url}`)
-    fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    })
-        .then(response => {
-            if (response.status !== 200) {
-                redirectLogin();
-            }
-            return response.json();
-        })
+    fetchBackend(token, `/pic/${args}`)
+        .then(response => response.json())
         .then(data => {
             let image_url = data["url"];
             document.body.style.background = `url(${image_url}) no-repeat center center`;
         })
-        .catch(err => console.log('Fetch Error', err));
 }
 
 

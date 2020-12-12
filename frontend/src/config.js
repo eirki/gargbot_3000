@@ -11,3 +11,5 @@ export const ongoing_message = process.env.ongoing_message;
 export const finished_message = process.env.finished_message;
 
 export const mapbox_token = process.env.mapbox_token;
+
+export const prod = process.env.NODE_ENV !== "development"

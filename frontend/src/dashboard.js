@@ -2,8 +2,7 @@
 
 import Highcharts from 'highcharts';
 
-import { getToken, redirectLogin } from "./common.js"
-import * as config from "./config.js"
+import { getToken, redirectLogin, fetchBackend } from "./utils.js"
 
 
 function formatNumber(num) {
@@ -12,38 +11,16 @@ function formatNumber(num) {
 
 
 async function distance_area_data(token) {
-    const url = new URL(`/dashboard/distance_area/1`, config.backend_url)
-    console.log(`Fetching ${url}`)
-    return await fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    })
-        .then(response => {
-            if (response.status !== 200) {
-                redirectLogin();
-            }
-            return response.json();
-        });
+    let res = fetchBackend(token, "/dashboard/distance_area/1")
+    return await res.then(response => response.json())
 }
 
 
 async function personal_stats(token, steps) {
-    const url = new URL(`/dashboard/personal_stats/1`, config.backend_url)
-    console.log(`Fetching ${url}`)
-    const stats = await fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    })
-        .then(response => {
-            if (response.status !== 200) {
-                redirectLogin();
-            }
-            return response.json();
-        });
+    const stats = (
+        await fetchBackend(token, "/dashboard/personal_stats/1")
+            .then(response => response.json())
+    )
     steps["data"].reverse()
     let steps_chart = Highcharts.chart('person_steps', {
         chart: {
@@ -166,24 +143,11 @@ function distance_area(data) {
 
 
 async function steps_pie(token) {
-    const url = new URL(`/dashboard/steps_pie/1`, config.backend_url)
-    console.log(`Fetching ${url}`)
-    const data = await fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    })
-        .then(response => {
-            if (response.status !== 200) {
-                redirectLogin();
-            }
-            return response.json();
-        })
-        .then(data => {
-            let dd = data["data"]
-            return dd
-        })
+    const data = (
+        await fetchBackend(token, "/dashboard/steps_pie/1")
+            .then(response => response.json())
+            .then(data => data["data"])
+    )
     Highcharts.chart('steps_pie', {
         chart: {
             plotBackgroundColor: null,
@@ -222,24 +186,11 @@ async function steps_pie(token) {
 
 
 async function first_place_pie(token) {
-    const url = new URL(`/dashboard/first_place_pie/1`, config.backend_url)
-    console.log(`Fetching ${url}`)
-    const data = await fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    })
-        .then(response => {
-            if (response.status !== 200) {
-                redirectLogin();
-            }
-            return response.json();
-        })
-        .then(data => {
-            let dd = data["data"]
-            return dd
-        })
+    const data = (
+        await fetchBackend(token, "/dashboard/first_place_pie/1")
+            .then(response => response.json())
+            .then(data => data["data"])
+    )
     Highcharts.chart('first_place_pie', {
         chart: {
             plotBackgroundColor: null,
@@ -270,24 +221,11 @@ async function first_place_pie(token) {
 
 
 async function above_median_pie(token) {
-    const url = new URL(`/dashboard/above_median_pie/1`, config.backend_url)
-    console.log(`Fetching ${url}`)
-    const data = await fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    })
-        .then(response => {
-            if (response.status !== 200) {
-                redirectLogin();
-            }
-            return response.json();
-        })
-        .then(data => {
-            let dd = data["data"]
-            return dd
-        })
+    const data = (
+        await fetchBackend(token, "/dashboard/above_median_pie/1")
+            .then(response => response.json())
+            .then(data => data["data"])
+    )
     Highcharts.chart('above_median_pie', {
         chart: {
             plotBackgroundColor: null,
@@ -318,24 +256,11 @@ async function above_median_pie(token) {
 
 
 async function contributing_days_pie(token) {
-    const url = new URL(`/dashboard/contributing_days_pie/1`, config.backend_url)
-    console.log(`Fetching ${url}`)
-    const data = await fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    })
-        .then(response => {
-            if (response.status !== 200) {
-                redirectLogin();
-            }
-            return response.json();
-        })
-        .then(data => {
-            let dd = data["data"]
-            return dd
-        })
+    const data = (
+        await fetchBackend(token, "/dashboard/contributing_days_pie/1")
+            .then(response => response.json())
+            .then(data => data["data"])
+    )
     Highcharts.chart('contributing_days_pie', {
         chart: {
             plotBackgroundColor: null,
@@ -368,7 +293,6 @@ async function contributing_days_pie(token) {
 async function main() {
     let slackToken = getToken();
     if (!slackToken) {
-        // not logged in to slack
         redirectLogin("dashboard")
     }
     let data = await distance_area_data(slackToken)
