@@ -10,14 +10,13 @@ export function redirectLogin(state) {
 
 export function getToken() {
     const token = localStorage.getItem('garglingtoken');
-    console.log(`token: ${token}`)
     return token
 }
-
 
 export function getBackend(token, endpoint, params) {
     const url = new URL(endpoint, config.backend_url)
     url.search = new URLSearchParams(params).toString();
+    console.log(`Fetching ${url}`)
     return fetch(url, {
         method: 'GET',
         headers: {
@@ -30,5 +29,31 @@ export function getBackend(token, endpoint, params) {
             }
             return response
         })
-        .then(response => response.json());
+        .then(response => {
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                return response.json()
+            } else {
+                return response
+            }
+        });
+}
+
+export function postBackend(token, endpoint, data) {
+    const url = new URL(endpoint, config.backend_url)
+    console.log(`Fetching ${url}`)
+    return fetch(url, {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+        .then(response => {
+            if (response.status === 401) {
+                redirectLogin();
+            }
+            return response
+        })
 }

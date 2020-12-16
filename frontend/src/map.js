@@ -25,7 +25,7 @@ const attr = 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStree
 
 
 function journeyDetails(token) {
-    return getBackend(token, "/detail_journey/1").then(response => response.json());
+    return getBackend(token, "/detail_journey/1")
 }
 
 function defineMap() {
