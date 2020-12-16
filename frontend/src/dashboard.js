@@ -116,12 +116,10 @@ function distance_area(data) {
         plotOptions: {
             area: {
                 stacking: 'normal',
-                lineColor: '#FFFFFF',
-                lineWidth: 1,
+                lineWidth: 0,
                 marker: {
                     enabled: false,
-                    lineWidth: 1,
-                    lineColor: '#FFFFFF'
+                    lineWidth: 0,
                 }
             }
         },
