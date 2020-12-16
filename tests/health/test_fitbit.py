@@ -21,7 +21,7 @@ def fake_token(user):
     }
 
 
-def register_user(user, conn: connection, enable_report=False) -> FitbitUser:
+def register_user(user, conn: connection, enable_steps=False) -> FitbitUser:
     token = fake_token(user)
     FitbitService.persist_token(token, conn)
     queries.match_ids(
@@ -30,11 +30,12 @@ def register_user(user, conn: connection, enable_report=False) -> FitbitUser:
         gargling_id=user.id,
         token_gargling_table="fitbit_token_gargling",
     )
-    if enable_report:
-        queries.toggle_report(
+    if enable_steps:
+        queries.toggle_service(
             conn,
             enable_=True,
             gargling_id=user.id,
+            type_col=f"enable_steps",
             token_table="fitbit_token",
             token_gargling_table="fitbit_token_gargling",
         )
@@ -64,7 +65,8 @@ def test_persist_token(conn: connection):
         "access_token": "access_token2",
         "refresh_token": "refresh_token2",
         "expires_at": 1573921366.6757,
-        "enable_report": False,
+        "enable_steps": False,
+        "enable_weight": False,
     }
     assert token == exp
     assert len(matched) == 1
@@ -97,7 +99,9 @@ def test_auth_is_registered(
     mock_jwt_identity.return_value = user.id
     response = client.get("fitbit/auth")
     assert response.status_code == 200
-    assert "report_enabled" in response.json
+    assert response.json["auth_url"].startswith(
+        "https://www.fitbit.com/oauth2/authorize"
+    )
 
 
 @patch("gargbot_3000.health.health.get_jwt_identity")
@@ -134,7 +138,7 @@ def test_handle_redirect(
 
 def fitbit_users(conn) -> t.List[FitbitUser]:
     users = conftest.users[0:2]
-    health_users = [register_user(user, conn, enable_report=True) for user in users]
+    health_users = [register_user(user, conn, enable_steps=True) for user in users]
     return health_users
 
 

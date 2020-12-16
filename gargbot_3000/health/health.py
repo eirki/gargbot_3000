@@ -53,23 +53,9 @@ def authorize(service_name: str):
     if gargling_id is None:
         raise Exception("JWT token issued to None")
     log.info(f"gargling_id: {gargling_id}")
-    with current_app.pool.get_connection() as conn:
-        data = queries.is_registered(
-            conn,
-            gargling_id=gargling_id,
-            token_table=f"{service_name}_token",
-            token_gargling_table=f"{service_name}_token_gargling",
-        )
-    if data is None:
-        log.info("not registered")
-        service = init_service(service_name)
-        url = service.authorization_url()
-        log.info(url)
-        response = jsonify(auth_url=url)
-    else:
-        report_enabled = data["enable_report"]
-        log.info(f"registered, report enabled: {report_enabled}")
-        response = jsonify(report_enabled=report_enabled)
+    service = init_service(service_name)
+    url = service.authorization_url()
+    response = jsonify(is_registered=False, auth_url=url)
     log.info(response)
     return response
 
@@ -117,23 +103,43 @@ def handle_redirect(service_name: str):
     return Response(status=200)
 
 
-@blueprint.route("/toggle_report", methods=["POST"])
+@blueprint.route("/health_toggle", methods=["POST"])
 @jwt_required
-def toggle_report():
+def toggle():
     gargling_id = get_jwt_identity()
     content = request.json
     service = init_service(content["service"])
+    measure = content["measure"]
+    if measure not in {"steps", "weight"}:
+        raise Exception
     enable = content["enable"]
     with current_app.pool.get_connection() as conn:
-        queries.toggle_report(
+        if enable:
+            queries.disable_services(
+                conn, gargling_id=gargling_id, type_col=f"enable_{measure}",
+            )
+        queries.toggle_service(
             conn,
             enable_=enable,
             gargling_id=gargling_id,
+            type_col=f"enable_{measure}",
             token_table=f"{service.name}_token",
             token_gargling_table=f"{service.name}_token_gargling",
         )
+
         conn.commit()
     return Response(status=200)
+
+
+@blueprint.route("/health_status")
+@jwt_required
+def health_status():
+    gargling_id = get_jwt_identity()
+    with current_app.pool.get_connection() as conn:
+        data = queries.health_status(conn, gargling_id=gargling_id)
+    as_dict = {row["service"]: dict(row) for row in data}
+    print(as_dict)
+    return jsonify(data=as_dict)
 
 
 def steps(
@@ -204,8 +210,19 @@ def activity(
     tokens = queries.tokens(conn)
     if not tokens:
         return None
-    users = [init_user(dict(token)) for token in tokens]
-    steps_data = steps(conn, users, date)
-    body_data = get_body_data(users, date)
+    step_users, weight_users = [], []
+    for token in tokens:
+        token = dict(token)
+        enable_steps = token.pop("enable_steps")
+        enable_weight = token.pop("enable_weight")
+        if not (enable_steps or enable_weight):
+            continue
+        user = init_user(token)
+        if enable_steps:
+            step_users.append(user)
+        if enable_weight:
+            weight_users.append(user)
+    steps_data = steps(conn, step_users, date)
+    body_data = get_body_data(weight_users, date)
     body_reports = body_details(body_data)
     return steps_data, body_reports

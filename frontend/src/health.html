@@ -1,0 +1,54 @@
+<html>
+<meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
+
+<head>
+    <title></title>
+    <link rel="stylesheet" href="health.css">
+</head>
+
+<body>
+    <table>
+        <tr>
+            <th>service</th>
+            <th>steps</th>
+            <th>weight & fat</th>
+        </tr>
+        <tr class="service-row" id="fitbit">
+            <td>Fitbit</td>
+            <th><label class="switch"><input class="steps" type="checkbox" disabled><span class="slider"></span></label>
+            </th>
+            <th><label class="switch"><input class="weight" type="checkbox" disabled><span
+                        class="slider"></span></label></th>
+            <th><input class="auth" type="button" value="Authenticate" disabled></th>
+        </tr>
+        <tr class="service-row" id="googlefit">
+            <td>Google Fit</td>
+            <th><label class="switch"><input class="steps" type="checkbox" disabled><span class="slider"></span></label>
+            </th>
+            <th><label class="switch"><input class="weight" type="checkbox" disabled><span
+                        class="slider"></span></label></th>
+            <th><input class="auth" type="button" value="Authenticate" disabled></th>
+        </tr>
+        <tr class="service-row" id="polar">
+            <td>Polar</td>
+            <th><label class="switch"><input class="steps" type="checkbox" disabled><span class="slider"></span></label>
+            </th>
+            <th><label class="switch"><input class="weight" type="checkbox" disabled><span
+                        class="slider"></span></label></th>
+            <th><input class="auth" type="button" value="Authenticate" disabled></th>
+        </tr>
+        <tr class="service-row" id="withings">
+            <td>Withings</td>
+            <th><label class="switch"><input class="steps" type="checkbox" disabled><span class="slider"></span></label>
+            </th>
+            <th><label class="switch"><input class="weight" type="checkbox" disabled><span
+                        class="slider"></span></label></th>
+            <th><input class="auth" type="button" value="Authenticate" disabled></th>
+        </tr>
+    </table>
+    <p id="msg"></p>
+</body>
+
+<script src="health.js" async></script>
+
+</html>

@@ -1,163 +1,109 @@
 "use strict";
 
 
-import { getToken, redirectLogin } from "./utils.js"
-import * as config from "./config.js"
+import { getToken, redirectLogin, getBackend, postBackend } from "./utils.js"
 
 
-function parseService() {
-    let pathname = window.location.pathname;
-    let service = pathname.replace(config.ext, "").substring(1);
-    return service
-}
+let errormsg = "Errår. Kan det va fel på systemet?"
 
-function getCodeifRedirected() {
-    const queryString = window.location.search;
-    const urlParams = new URLSearchParams(queryString)
-    const code = urlParams.get("code")
-    console.log(code)
-    return code
-}
+function toggleService(elem, service_name, measure, token) {
+    let otherEnabled = document.querySelectorAll(`tr:not(#${service_name}) > th > .switch > .${measure}:not([disabled])`)
+    let wasChecked = null
+    for (let box of otherEnabled) {
+        box.disabled = true;
+        if (box.checked) {
+            wasChecked = box
+        }
+    }
+    let checked = elem.checked
+    elem.disabled = true
 
-function forwardServiceCode(service, slackToken, code) {
-    const url = new URL(`/${service}/redirect`, config.backend_url)
-    url.searchParams.set('code', code);
-    return fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + slackToken
+    let data = {
+        'service': service_name,
+        'measure': measure,
+        'enable': checked
+    }
+    postBackend(token, "/health_toggle", data).then(response => {
+        if (response.status !== 200) {
+            throw ("Failed to set setting:" + response.status);
         }
     })
-        .then(response => {
-            if (response.status !== 200) {
-                let elem = document.getElementById("msg");
-                elem.innerHTML = `Error sending ${service} code to gargbot`
-                throw `Failed to authenticate:${response.status}`;
+        .catch(error => {
+            console.log(error)
+            elem.checked = !checked
+            if (wasChecked) {
+                wasChecked.checked
             }
+            window.alert(errormsg)
         })
-
+        .finally(() => {
+            for (let box of otherEnabled) {
+                box.checked = false;
+                box.disabled = false
+            }
+            elem.disabled = false
+        })
 }
 
-
-function authorizeService(service, token) {
-    const url = new URL(`/${service}/auth`, config.backend_url)
-    return fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    })
-        .then(response => {
-            if (response.status !== 200) {
-                let elem = document.getElementById("msg");
-                elem.innerHTML = `Error authenticating ${service}`
-                throw "Failed to authenticate"
-            }
-            return response
-        })
-        .then(response => {
-            const contentType = response.headers.get("content-type");
-            if (contentType && contentType.indexOf("application/json") !== -1) {
-                return response.json()
-            }
-        })
-        .then(data => {
-            console.log(data);
-            return data
-        })
-
-}
 
 function redirectService(url) {
     location.href = url
 }
 
 
-function renderHealthMenu(service, token, report_enabled) {
-    let elem = document.getElementById("msg");
-    elem.innerHTML = "enable report?";
-    let toggle = document.createElement("label");
-    toggle.className = 'switch'
-
-    let input = document.createElement("input");
-    input.type = "checkbox";
-    toggle.appendChild(input)
-
-    let span = document.createElement("span");
-    span.className = 'slider'
-    toggle.appendChild(span)
-
-    input.onclick = buttonClickMaker(service, token);
-    input.checked = report_enabled;
-    document.body.appendChild(toggle);
-
-}
-
-function toggleReport(service, token, enable) {
-    const url = new URL("/toggle_report", config.backend_url)
-    let data = {
-        'service': service,
-        'enable': enable
-    }
-    return fetch(url, {
-        method: 'POST',
-        headers: {
-            'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    })
-        .then(response => {
-            if (response.status !== 200) {
-                throw ("Failed to set setting:" + response.status);
-            }
-            console.log(response)
+function authorizeService(elem, service, token) {
+    getBackend(token, `/${service}/auth`)
+        .then(data => redirectService(data["auth_url"]))
+        .catch(error => {
+            console.log(error)
+            window.alert(errormsg)
         })
 }
 
+function activateTable(user_data, token) {
+    let service_rows = document.querySelectorAll(".service-row")
+    for (let row of service_rows) {
+        let service_name = row.id
+        let service_data = user_data[service_name]
 
-function buttonClickMaker(service, token) {
-    async function inner() {
-        this.disabled = true;
-        let checked = this.checked
-        try {
-            await toggleReport(service, token, checked)
-        } catch {
-            console.log(checked)
-            this.checked = !checked
-        } finally {
-            this.disabled = false;
+        let steps_input = row.querySelector(".steps")
+        steps_input.addEventListener("change", (event) => toggleService(event.target, service_name, "steps", token))
+
+        let weight_input = row.querySelector(".weight")
+        weight_input.addEventListener("change", (event) => toggleService(event.target, service_name, "weight", token))
+
+        let auth_input = row.querySelector(".auth")
+        auth_input.addEventListener("click", (event) => authorizeService(event.target, service_name, token))
+        auth_input.disabled = false
+        if (service_data) {
+            auth_input.value = "Reauthenticate"
+        } else {
+            continue
         }
+
+        steps_input.disabled = false
+        steps_input.checked = service_data["enable_steps"]
+
+        if (service_name === "fitbit") {
+            weight_input.disabled = false
+        }
+        weight_input.checked = service_data["enable_weight"]
     }
-    return inner
 }
 
 
+function userHealthData(token) {
+    return getBackend(token, "/health_status")
+}
+
 async function main() {
-    let service = parseService();
-    let slackToken = getToken();
-    if (!slackToken) {
-        // not logged in to slack
-        redirectLogin(service)
+    let token = getToken();
+    if (!token) {
+        redirectLogin("health")
     }
 
-    let serviceCode = getCodeifRedirected();
-    if (serviceCode != null) {
-        // in the process of logging in to service
-        await forwardServiceCode(service, slackToken, serviceCode)
-    }
-
-    let user_data = await authorizeService(service, slackToken)
-    if (user_data && "auth_url" in user_data) {
-        redirectService(user_data["auth_url"])
-    } else if (user_data && "report_enabled" in user_data) {
-        console.log(`server indicates logged into ${service}`)
-        let report_enabled = user_data["report_enabled"]
-        renderHealthMenu(service, slackToken, report_enabled);
-    } else {
-        let elem = document.getElementById("msg");
-        elem.innerHTML = "Failed to authenticate";
-    }
+    let user_data = await userHealthData(token).then(obj => obj["data"])
+    activateTable(user_data, token);
 
 }
 

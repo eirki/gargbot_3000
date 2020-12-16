@@ -4,7 +4,8 @@ create table fitbit_token (
   access_token text not null,
   refresh_token text not null,
   expires_at float not null,
-  enable_report boolean not null default false
+  enable_steps boolean not null default false,
+  enable_weight boolean not null default false
 );
 
 
@@ -13,7 +14,8 @@ create table withings_token (
   access_token text not null,
   refresh_token text not null,
   expires_at int not null,
-  enable_report boolean not null default false
+  enable_steps boolean not null default false,
+  enable_weight boolean not null default false
 );
 
 
@@ -22,7 +24,8 @@ create table polar_token (
   access_token text not null,
   refresh_token text default null,
   expires_at int default null,
-  enable_report boolean default false
+  enable_steps boolean not null default false,
+  enable_weight boolean not null default false
 );
 
 
@@ -31,7 +34,8 @@ create table googlefit_token (
   access_token text not null,
   refresh_token text,
   expires_at int not null,
-  enable_report boolean default false
+  enable_steps boolean not null default false,
+  enable_weight boolean not null default false
 );
 
 
@@ -121,11 +125,56 @@ where
   id = :id;
 
 
---name: toggle_report!
+--name: disable_services!
+update
+  fitbit_token
+set
+  {type_col} = false
+from
+  fitbit_token_gargling
+where
+  fitbit_token.id = fitbit_token_gargling.service_user_id
+  and fitbit_token_gargling.gargling_id = :gargling_id;
+
+
+update
+  withings_token
+set
+  {type_col} = false
+from
+  withings_token_gargling
+where
+  withings_token.id = withings_token_gargling.service_user_id
+  and withings_token_gargling.gargling_id = :gargling_id;
+
+
+update
+  polar_token
+set
+  {type_col} = false
+from
+  polar_token_gargling
+where
+  polar_token.id = polar_token_gargling.service_user_id
+  and polar_token_gargling.gargling_id = :gargling_id;
+
+
+update
+  googlefit_token
+set
+  {type_col} = false
+from
+  googlefit_token_gargling
+where
+  googlefit_token.id = googlefit_token_gargling.service_user_id
+  and googlefit_token_gargling.gargling_id = :gargling_id;
+
+
+--name: toggle_service!
 update
   {token_table}
 set
-  enable_report = :enable_
+  {type_col} = :enable_
 from
   {token_gargling_table}
 where
@@ -165,7 +214,7 @@ where
 
 -- name: is_registered^
 select
-   {token_table}.enable_report
+   true as is_registered
 from
    {token_table}
   inner join
@@ -186,10 +235,8 @@ select
   'fitbit' as service
 from
   fitbit_token as fitbit
-  inner join fitbit_token_gargling on fitbit.id = fitbit_token_gargling.fitbit_id
+  inner join fitbit_token_gargling on fitbit.id = fitbit_token_gargling.service_user_id
   inner join gargling on fitbit_token_gargling.gargling_id = gargling.id
-where
-  fitbit.enable_report
 union
 all
 select
@@ -202,10 +249,8 @@ select
   'withings' as service
 from
   withings_token as withings
-  inner join withings_token_gargling on withings.id = withings_token_gargling.withings_id
+  inner join withings_token_gargling on withings.id = withings_token_gargling.service_user_id
   inner join gargling on withings_token_gargling.gargling_id = gargling.id
-where
-  withings.enable_report
 union
 all
 select
@@ -218,10 +263,8 @@ select
   'polar' as service
 from
   polar_token as polar
-  inner join polar_token_gargling on polar.id = polar_token_gargling.polar_id
+  inner join polar_token_gargling on polar.id = polar_token_gargling.service_user_id
   inner join gargling on polar_token_gargling.gargling_id = gargling.id
-where
-  polar.enable_report
 union
 all
 select
@@ -234,10 +277,8 @@ select
   'googlefit' as service
 from
   googlefit_token as googlefit
-  inner join googlefit_token_gargling on googlefit.id = googlefit_token_gargling.googlefit_id
+  inner join googlefit_token_gargling on googlefit.id = googlefit_token_gargling.service_user_id
   inner join gargling on googlefit_token_gargling.gargling_id = gargling.id
-where
-  googlefit.enable_report;
 
 
 -- name: all_ids_nicks
@@ -269,3 +310,52 @@ from
 where
   taken_at = :date
   and gargling_id = :id;
+
+
+-- name: health_status
+select
+  'fitbit' as service,
+  enable_steps,
+  enable_weight
+from
+  fitbit_token as fitbit
+  inner join fitbit_token_gargling on fitbit.id = fitbit_token_gargling.service_user_id
+  inner join gargling on fitbit_token_gargling.gargling_id = gargling.id
+where
+  gargling_id = :gargling_id
+union
+all
+select
+  'withings' as service,
+  enable_steps,
+  enable_weight
+from
+  withings_token as withings
+  inner join withings_token_gargling on withings.id = withings_token_gargling.service_user_id
+  inner join gargling on withings_token_gargling.gargling_id = gargling.id
+where
+  gargling_id = :gargling_id
+union
+all
+select
+  'polar' as service,
+  enable_steps,
+  enable_weight
+from
+  polar_token as polar
+  inner join polar_token_gargling on polar.id = polar_token_gargling.service_user_id
+  inner join gargling on polar_token_gargling.gargling_id = gargling.id
+where
+  gargling_id = :gargling_id
+union
+all
+select
+  'googlefit' as service,
+  enable_steps,
+  enable_weight
+from
+  googlefit_token as googlefit
+  inner join googlefit_token_gargling on googlefit.id = googlefit_token_gargling.service_user_id
+  inner join gargling on googlefit_token_gargling.gargling_id = gargling.id
+where
+  gargling_id = :gargling_id

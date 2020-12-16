@@ -16,7 +16,7 @@ from tests import conftest
 
 def googlefit_user(conn) -> GooglefitUser:
     user = conftest.users[0]
-    googlefit_user = register_user(user, conn, enable_report=True)
+    googlefit_user = register_user(user, conn, enable_steps=True)
     return googlefit_user
 
 
@@ -35,7 +35,7 @@ def fake_token(user) -> Credentials:
     return cred
 
 
-def register_user(user, conn: connection, enable_report=False) -> GooglefitUser:
+def register_user(user, conn: connection, enable_steps=False) -> GooglefitUser:
     token = fake_token(user)
     service_user_id = GooglefitService.insert_token(token, conn)
     queries.match_ids(
@@ -44,11 +44,12 @@ def register_user(user, conn: connection, enable_report=False) -> GooglefitUser:
         gargling_id=user.id,
         token_gargling_table="googlefit_token_gargling",
     )
-    if enable_report:
-        queries.toggle_report(
+    if enable_steps:
+        queries.toggle_service(
             conn,
             enable_=True,
             gargling_id=user.id,
+            type_col=f"enable_steps",
             token_table="googlefit_token",
             token_gargling_table="googlefit_token_gargling",
         )
@@ -78,7 +79,8 @@ def test_persist_token(conn: connection):
         "access_token": "access_token2",
         "refresh_token": "refresh_token2",
         "expires_at": expiry,
-        "enable_report": False,
+        "enable_steps": False,
+        "enable_weight": False,
     }
     assert token == exp
     assert len(matched) == 1
@@ -113,7 +115,9 @@ def test_auth_is_registered(
     mock_jwt_identity.return_value = user.id
     response = client.get("googlefit/auth")
     assert response.status_code == 200
-    assert "report_enabled" in response.json
+    assert response.json["auth_url"].startswith(
+        "https://accounts.google.com/o/oauth2/auth"
+    )
 
 
 @patch("gargbot_3000.health.health.get_jwt_identity")

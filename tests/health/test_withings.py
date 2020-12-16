@@ -20,7 +20,7 @@ from tests import conftest
 
 def withings_user(conn) -> WithingsUser:
     user = conftest.users[0]
-    withings_user = register_user(user, conn, enable_report=True)
+    withings_user = register_user(user, conn, enable_steps=True)
     return withings_user
 
 
@@ -36,7 +36,7 @@ def fake_token(user) -> Credentials:
     )
 
 
-def register_user(user, conn: connection, enable_report=False) -> WithingsUser:
+def register_user(user, conn: connection, enable_steps=False) -> WithingsUser:
     token = fake_token(user)
     WithingsService.persist_token(token, conn)
     queries.match_ids(
@@ -45,11 +45,12 @@ def register_user(user, conn: connection, enable_report=False) -> WithingsUser:
         gargling_id=user.id,
         token_gargling_table="withings_token_gargling",
     )
-    if enable_report:
-        queries.toggle_report(
+    if enable_steps:
+        queries.toggle_service(
             conn,
             enable_=True,
             gargling_id=user.id,
+            type_col=f"enable_steps",
             token_table="withings_token",
             token_gargling_table="withings_token_gargling",
         )
@@ -79,7 +80,8 @@ def test_persist_token(conn: connection):
         "access_token": "access_token2",
         "refresh_token": "refresh_token2",
         "expires_at": 1573921366,
-        "enable_report": False,
+        "enable_steps": False,
+        "enable_weight": False,
     }
     assert token == exp
     assert len(matched) == 1
@@ -112,7 +114,9 @@ def test_auth_is_registered(
     mock_jwt_identity.return_value = user.id
     response = client.get("withings/auth")
     assert response.status_code == 200
-    assert "report_enabled" in response.json
+    assert response.json["auth_url"].startswith(
+        "https://account.withings.com/oauth2_user/authorize2"
+    )
 
 
 @patch("gargbot_3000.health.health.get_jwt_identity")

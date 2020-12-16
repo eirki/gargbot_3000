@@ -24,7 +24,7 @@ services = ("service_name", ["withings", "fitbit", "googlefit", "polar"])
 @pytest.mark.parametrize("enable", [True, False])
 @patch("gargbot_3000.health.health.get_jwt_identity")
 @patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
-def test_toggle_report(
+def test_toggle_steps(
     mock_jwt_required,
     mock_jwt_identity,
     service_name: str,
@@ -34,28 +34,21 @@ def test_toggle_report(
 ):
     user = conftest.users[0]
     module, test_module = modules[service_name]
-    test_module.register_user(user, conn, enable_report=not enable)
-    data = health.queries.is_registered(
-        conn,
-        gargling_id=user.id,
-        token_table=f"{service_name}_token",
-        token_gargling_table=f"{service_name}_token_gargling",
-    )
-    assert data["enable_report"] is not enable
+    test_module.register_user(user, conn, enable_steps=not enable)
+    data = health.queries.health_status(conn, gargling_id=user.id)
+    as_dict = {row["service"]: dict(row) for row in data}
+    assert as_dict[service_name]["enable_steps"] is not enable
 
     mock_jwt_identity.return_value = user.id
     response = client.post(
-        "/toggle_report", json={"service": service_name, "enable": enable}
+        "/health_toggle",
+        json={"measure": "steps", "service": service_name, "enable": enable},
     )
     assert response.status_code == 200
 
-    data = health.queries.is_registered(
-        conn,
-        gargling_id=user.id,
-        token_table=f"{service_name}_token",
-        token_gargling_table=f"{service_name}_token_gargling",
-    )
-    assert data["enable_report"] is enable
+    data = health.queries.health_status(conn, gargling_id=user.id)
+    as_dict = {row["service"]: dict(row) for row in data}
+    assert as_dict[service_name]["enable_steps"] is enable
 
 
 def test_body_reports0():
