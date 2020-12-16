@@ -25,7 +25,7 @@ function main() {
             location.href = url
         })
         .catch(error => {
-            let elem = document.getElementById("msg");
+            let elem = document.querySelector("#msg");
             elem.innerHTML = "Could not authenticate";
 
         })

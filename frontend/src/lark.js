@@ -18,8 +18,8 @@ function setBackground(token) {
 
 
 function startTimer() {
-    const message = document.getElementById("message");
-    const display = document.getElementById("time");
+    const message = document.querySelector("#message");
+    const display = document.querySelector("#time");
     const until_date = config.countdown_date;
     console.log(until_date)
     const countdown_message = config.countdown_message;

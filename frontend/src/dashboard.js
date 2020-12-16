@@ -59,15 +59,15 @@ async function personal_stats(token, steps) {
     populateGarglingData(stats, "stats")
 
     function update_stats(obj) {
-        let parent = document.getElementById("person_stats")
-        let chldrn = parent.getElementsByTagName("p")
+        let parent = document.querySelector("#person_stats")
+        let chldrn = parent.querySelectorAll("p")
         for (let chld of chldrn) {
             chld.innerHTML = formatNumber(obj[chld.id])
         }
     }
     update_stats(allGarglingData[steps["data"][0]["name"]]["stats"])
 
-    let select = document.getElementById("select_gargling")
+    let select = document.querySelector("#select_gargling")
     for (var [name, data] of Object.entries(allGarglingData)) {
         var opt = document.createElement('option');
         opt.value = name;
@@ -125,7 +125,7 @@ function distance_area(data) {
         },
         series: data["data"]
     });
-    let switcher = document.getElementById("pcswitch")
+    let switcher = document.querySelector("#pcswitch")
     switcher.addEventListener("click", function () {
         let mode = (switcher.checked ? "percent" : "normal")
         chart.update({
