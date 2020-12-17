@@ -148,7 +148,7 @@ def steps(
     step_amounts = []
     for user in users:
         try:
-            steps = (
+            amount = (
                 user.steps(date)
                 if not isinstance(user, PolarUser)
                 else user.steps(date, conn)
@@ -159,9 +159,9 @@ def steps(
                 exc_info=True,
             )
             continue
-        if steps is None:
+        if amount is None:
             continue
-        step_amounts.append({"amount": steps, "gargling_id": user.gargling_id})
+        step_amounts.append({"amount": amount, "gargling_id": user.gargling_id})
     return step_amounts
 
 

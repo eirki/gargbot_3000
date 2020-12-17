@@ -232,6 +232,8 @@ select
   fitbit.access_token,
   fitbit.refresh_token,
   fitbit.expires_at,
+  fitbit.enable_steps,
+  fitbit.enable_weight,
   'fitbit' as service
 from
   fitbit_token as fitbit
@@ -246,6 +248,8 @@ select
   withings.access_token,
   withings.refresh_token,
   withings.expires_at :: float,
+  withings.enable_steps,
+  withings.enable_weight,
   'withings' as service
 from
   withings_token as withings
@@ -260,6 +264,8 @@ select
   polar.access_token,
   polar.refresh_token,
   polar.expires_at,
+  polar.enable_steps,
+  polar.enable_weight,
   'polar' as service
 from
   polar_token as polar
@@ -274,6 +280,8 @@ select
   googlefit.access_token,
   googlefit.refresh_token,
   googlefit.expires_at,
+  googlefit.enable_steps,
+  googlefit.enable_weight,
   'googlefit' as service
 from
   googlefit_token as googlefit

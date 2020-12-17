@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 from flask import testing
+import pendulum
 from psycopg2.extensions import connection
 import pytest
 
@@ -98,3 +99,13 @@ def test_body_reports4():
     report = health.health.body_details(data_in)
     expected = ["name1 sin body fat percentage er *10*. "]
     assert report == expected
+
+
+def test_activity(conn):
+    user1 = conftest.users[0]
+    test_fitbit.register_user(user1, conn, enable_steps=True)
+    user2 = conftest.users[1]
+    test_fitbit.register_user(user2, conn, enable_steps=False)
+    test_date = pendulum.Date(2020, 1, 2)
+    health.activity(conn, test_date)
+    # TODO: mock out body and steps calls and check results
