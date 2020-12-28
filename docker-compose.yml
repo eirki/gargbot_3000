@@ -22,7 +22,7 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      - postgres_db
+      - gargbot_db
     networks:
       - gargbot_network
       - nginx_network
@@ -38,12 +38,12 @@ services:
     command: "venv/bin/python -m gargbot_3000 --mode scheduler"
     restart: always
     depends_on:
-      - postgres_db
+      - gargbot_db
     networks:
       - gargbot_network
 
-  postgres_db:
-    container_name: postgres_db
+  gargbot_db:
+    container_name: gargbot_db
     image: "postgres"
     env_file: .env
     expose:
