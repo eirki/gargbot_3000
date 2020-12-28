@@ -254,7 +254,7 @@ def format_all(gargling_info: t.Dict[int, dict], records) -> str:
 
 
 def all_at_date(conn: connection, date: pendulum.Date = None) -> str:
-    ongoing_journey = common.queries.get_ongoing_journey(conn)
+    ongoing_journey = common.queries.journey.get_ongoing_journey(conn)
     journey_id = ongoing_journey["id"]
     all_records = get_all_at_date(conn, journey_id, date)
     gargling_ids = set()

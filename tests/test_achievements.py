@@ -698,3 +698,25 @@ def test_format_all2():
         "(3.1.2000) & gargling 2 :first_place_medal: (1.1.2000)\n"
         "Flest skritt gått av hele gargen på én dag: 35794 skritt :trophy: - 2.1.2000 & 3.1.2000"
     )
+
+
+def test_all_at_date(conn: connection):
+    date = pendulum.Date(2000, 1, 1)
+    journey_id = test_journey.insert_journey_data(conn)
+    journey.queries.start_journey(conn, journey_id=journey_id, date=date)
+    steps_data = [
+        {"gargling_id": 6, "amount": 1778},
+        {"gargling_id": 2, "amount": 1152},
+        {"gargling_id": 3, "amount": 638},
+        {"gargling_id": 5, "amount": 11},
+    ]
+    journey.store_steps(conn, steps_data, journey_id, date)
+    achv = achievements.all_at_date(conn=conn, date=date)
+    assert achv == (
+        "Flest skritt gått av en gargling på én dag: 1778 skritt - name6 :first_place_medal: (1.1.2000)\n"
+        "Nest flest skritt gått av en gargling på én dag: 1152 skritt - name2 :second_place_medal: (1.1.2000)\n"
+        "Tredje flest skritt gått av en gargling på én dag: 638 skritt - name3 :third_place_medal: (1.1.2000)\n"
+        "Flest skritt gått av hele gargen på én dag: 3579 skritt :trophy: - 1.1.2000\n"
+        "Størst andel av dagens skritt: 50 % - name6 :sports_medal: (1.1.2000)\n"
+        "Lengste streak med førsteplasser: 1 dager - name6 :sports_medal: (1.1.2000)"
+    )
