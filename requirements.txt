@@ -16,7 +16,7 @@ certifi==2019.11.28       # via requests
 cffi==1.13.2              # via cryptography
 chardet==3.0.4            # via aiohttp, requests
 click==7.0                # via flask
-cryptography==2.8         # via pyopenssl
+cryptography==3.2         # via pyopenssl
 decorator==4.4.2          # via ipython
 dropbox==9.4.0            # via -r requirements.in
 fitbit==0.3.1             # via -r requirements.in
