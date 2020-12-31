@@ -25,8 +25,6 @@ app_secret = os.environ["app_secret"]
 bot_id = os.environ["bot_id"]
 bot_name = os.environ["bot_name"]
 
-app_version = os.environ.get("app_version", "test")
-
 home = Path(os.getenv("home_folder", os.getcwd()))
 
 db_name = os.environ["POSTGRES_DB"]

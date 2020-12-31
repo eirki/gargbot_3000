@@ -21,7 +21,7 @@ from slack import WebClient
 from slackeventsapi import SlackEventAdapter
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from gargbot_3000 import commands, config, database, health, journey, pictures
+from gargbot_3000 import commands, config, database, health, journey, pictures, version
 from gargbot_3000.logger import log
 
 app = Flask(__name__)
@@ -46,7 +46,7 @@ def home_page() -> str:
 
 @app.route("/version")
 def version_page() -> str:
-    return config.app_version
+    return version.version
 
 
 @app.route("/auth", methods=["GET"])

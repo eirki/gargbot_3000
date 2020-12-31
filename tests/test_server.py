@@ -9,7 +9,7 @@ from flask import testing
 from psycopg2.extensions import connection
 import pytest
 
-from gargbot_3000 import config
+from gargbot_3000 import config, version
 from tests import conftest
 
 
@@ -47,6 +47,11 @@ def test_home(client: testing.FlaskClient):
     response = client.get("/")
     assert response.status_code == 200
     assert response.data == b"home"
+
+
+def test_version(client: testing.FlaskClient):
+    response = client.get("/version")
+    assert response.data.decode() == version.version
 
 
 def test_slash_cmd_ping(client: testing.FlaskClient, monkeypatch):
