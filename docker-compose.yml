@@ -14,8 +14,6 @@ services:
     build: .
     env_file:
       - .env
-    environment:
-      - app_version
     command: "venv/bin/python -m gargbot_3000 --mode server"
     expose:
       - 5000
@@ -33,8 +31,6 @@ services:
     build: .
     env_file:
       - .env
-    environment:
-      - app_version
     command: "venv/bin/python -m gargbot_3000 --mode scheduler"
     restart: always
     depends_on:

@@ -59,4 +59,4 @@ app_version=$tag docker-compose up -d
 
 echo
 echo "Pushing"
-git push && git push --follow-tags
+git push --no-verify && git push --no-verify --follow-tags
