@@ -138,7 +138,6 @@ def health_status():
     with current_app.pool.get_connection() as conn:
         data = queries.health_status(conn, gargling_id=gargling_id)
     as_dict = {row["service"]: dict(row) for row in data}
-    print(as_dict)
     return jsonify(data=as_dict)
 
 
