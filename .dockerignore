@@ -1,7 +1,11 @@
+test-coverage.xml
+tests/
+
+.git/
+
+frontend/*
+
 postgres-data/*
-frontend/src/*
-frontend/dist/*
-frontend/.cache/*
 
 
 .cache
