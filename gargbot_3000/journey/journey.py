@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 # coding: utf-8
+import math
 from operator import itemgetter
 import typing as t
 
@@ -65,6 +66,64 @@ def coordinates_for_distance(
     return current_lat, current_lon, latest_waypoint["id"], finished
 
 
+def daily_factoid(
+    date: pendulum.Date,
+    conn: connection,
+    journey_data: dict,
+    distance_today: float,
+    distance_total: float,
+) -> str:
+    dist_remaining = journey_data["distance"] - distance_total
+    destination = journey_data["destination"]
+
+    def remaining_distance() -> str:
+        return (
+            f"Nå har vi gått {round_meters(distance_total)} totalt på vår journey til {destination}. "
+            f"Vi har {round_meters(dist_remaining)} igjen til vi er framme."
+        )
+
+    def eta_average():
+        n_days = (date - journey_data["started_at"]).days + 1
+        distance_average = distance_total / n_days
+        days_remaining = math.ceil(dist_remaining / distance_average)
+        eta = date.add(days=days_remaining)
+        return (
+            f"Average daglig progress er {round_meters(distance_average)}. "
+            f"Holder vi dette tempoet er vi fremme i {destination} {eta.format('DD. MMMM YYYY', locale='nb')}, "
+            f"om {days_remaining} dager."
+        )
+
+    def eta_today():
+        days_remaining = math.ceil(journey_data["distance"] / distance_today)
+        eta = journey_data["started_at"].add(days=days_remaining)
+        return f"Hadde vi gått den distansen hver dag ville journeyen vart til {eta.format('DD. MMMM YYYY', locale='nb')}."
+
+    def weekly_summary():
+        data = queries.weekly_summary(conn, journey_id=journey_data["id"], date=date)
+        steps_week = sum(datum["amount"] for datum in data)
+        distance_week = steps_week * common.STRIDE
+        max_week = sorted(data, key=itemgetter("amount"))[-1]
+        max_week_distance = round_meters(max_week["amount"] * common.STRIDE)
+        return (
+            f"Denne uken har vi gått {round_meters(distance_week)} til sammen. "
+            f"Garglingen som gikk lengst var {max_week['first_name']}, med {max_week_distance}!"
+        )
+
+    switch = {
+        pendulum.MONDAY: remaining_distance,
+        pendulum.TUESDAY: eta_average,
+        pendulum.WEDNESDAY: eta_today,
+        pendulum.THURSDAY: remaining_distance,
+        pendulum.FRIDAY: eta_average,
+        pendulum.SATURDAY: eta_today,
+        pendulum.SUNDAY: weekly_summary,
+    }
+    func = switch[date.day_of_week]
+
+    result = f"Vi gikk *{round_meters(distance_today)}*! " + func()
+    return result
+
+
 def upload_images(
     journey_id: int,
     date: pendulum.Date,
@@ -105,10 +164,10 @@ def perform_daily_update(
     steps_data: t.List[dict],
     gargling_info: t.Dict[int, dict],
 ) -> t.Optional[
-    t.Tuple[dict, float, float, t.Optional[str], str, t.Optional[str], bool, bool]
+    t.Tuple[dict, float, dict, t.Optional[str], str, t.Optional[str], bool, bool]
 ]:
-    journey = queries.get_journey(conn, journey_id=journey_id)
-    if journey["finished_at"] is not None or journey["started_at"] is None:
+    journey_data = dict(queries.get_journey(conn, journey_id=journey_id))
+    if journey_data["finished_at"] is not None or journey_data["started_at"] is None:
         return None
     steps_data.sort(key=itemgetter("amount"), reverse=True)
     steps_today = sum(data["amount"] for data in steps_data)
@@ -120,7 +179,6 @@ def perform_daily_update(
 
     distance_today = steps_today * common.STRIDE
     distance_total = distance_today + last_total_distance
-    dist_remaining = journey["distance"] - distance_total
     lat, lon, latest_waypoint_id, finished = coordinates_for_distance(
         conn, journey_id, distance_total
     )
@@ -157,7 +215,7 @@ def perform_daily_update(
     return (
         location,
         distance_today,
-        dist_remaining,
+        journey_data,
         photo_url,
         map_url,
         map_img_url,
@@ -199,9 +257,7 @@ def format_response(
     n_day: int,
     date: pendulum.Date,
     steps_data: list,
-    dist_today: float,
-    distance: float,
-    dist_remaining: float,
+    factoid: str,
     address: t.Optional[str],
     country: t.Optional[str],
     poi: t.Optional[str],
@@ -221,12 +277,7 @@ def format_response(
     )
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": title_txt}})
 
-    distance_summary = f"Vi gikk *{round_meters(dist_today)}*!"
-    distance_txt = distance_summary + (
-        f" Nå har vi gått {round_meters(distance)} totalt på vår journey til {destination} -"
-        f" vi har {round_meters(dist_remaining)} igjen til vi er framme."
-    )
-    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": distance_txt}})
+    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": factoid}})
 
     steps_txt = "Steps taken:"
     for i, row in enumerate(steps_data):
@@ -290,6 +341,7 @@ def format_response(
         body_txt = "Also: " + "".join(body_reports)
         blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": body_txt}})
 
+    distance_summary = factoid.split("!")[0] + "!"
     response = {
         "text": f"{title_txt}: {distance_summary}".replace("*", ""),
         "blocks": blocks,
@@ -339,7 +391,7 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
             (
                 location,
                 distance_today,
-                dist_remaining,
+                journey_data,
                 photo_url,
                 map_url,
                 map_img_url,
@@ -349,6 +401,9 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
             store_update_data(conn, location, finished)
             store_steps(conn, steps_data, journey_id, date)
             achievement = achievements.new(conn, journey_id, date, gargling_info)
+            factoid = daily_factoid(
+                date, conn, journey_data, distance_today, location["distance"],
+            )
             n_day = (date - ongoing_journey["started_at"]).days + 1
             formatted = format_response(
                 date=date,
@@ -356,11 +411,9 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
                 n_day=n_day,
                 steps_data=steps_data,
                 body_reports=body_reports,
-                dist_today=distance_today,
-                dist_remaining=dist_remaining,
+                factoid=factoid,
                 finished=finished,
                 gargling_info=gargling_info,
-                distance=location["distance"],
                 address=location["address"],
                 country=location["country"] if new_country else None,
                 poi=location["poi"],

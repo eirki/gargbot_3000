@@ -332,3 +332,17 @@ from
     left join gargling on step.gargling_id = gargling.id
 where
     step.journey_id = :journey_id;
+
+
+--name: weekly_summary
+select
+    sum(step.amount) as amount,
+    gargling.first_name
+from
+    step
+    left join gargling on step.gargling_id = gargling.id
+where
+    step.journey_id = :journey_id
+    and step.taken_at > :date - interval '7 days'
+group by
+    first_name;

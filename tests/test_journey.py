@@ -95,9 +95,6 @@ def example_update_data() -> dict:
     date = pendulum.Date(2013, 3, 31)
     return {
         "date": date,
-        "dist_today": 26845.5,
-        "distance": 26845.5,
-        "dist_remaining": 29016.651884,
         "address": "Address",
         "country": "Country",
         "poi": "Poi",
@@ -331,16 +328,26 @@ def test_daily_update(conn: connection):
     (
         location,
         distance_today,
-        dist_remaining,
+        journey_data,
         photo_url,
         map_url,
         map_img_url,
         new_country,
         finished,
     ) = data
+    expected_distance_today = 26845.5
+    assert distance_today == expected_distance_today
+    expected_journey_data = {
+        "id": 1,
+        "origin": "Origin",
+        "destination": "Destination",
+        "ongoing": True,
+        "started_at": pendulum.date(2013, 3, 31),
+        "finished_at": None,
+        "distance": 55862.151884,
+    }
+    assert journey_data == expected_journey_data
     expected = example_update_data()
-    assert distance_today == expected.pop("dist_today")
-    assert dist_remaining == expected.pop("dist_remaining")
     assert photo_url == expected.pop("photo_url")
     assert map_url == expected.pop("map_url")
     assert map_img_url == expected.pop("map_img_url")
@@ -349,7 +356,90 @@ def test_daily_update(conn: connection):
     expected["lat"] = 47.445256107266275
     expected["latest_waypoint"] = 12
     expected["lon"] = 40.965460224508455
+    expected["distance"] = 26845.5
     assert location == expected
+
+
+def test_factoid_remaining_distance():
+    conn = None
+    journey_data = {
+        "destination": "Destination",
+        "started_at": pendulum.date(2013, 3, 31),
+        "distance": 10_000,
+    }
+    distance_today = 1000
+    distance_total = 2000
+    date = pendulum.date(2013, 4, 1)
+    factoid = journey.daily_factoid(
+        date, conn, journey_data, distance_today, distance_total
+    )
+    exp = "Vi gikk *1 km*! Nå har vi gått 2 km totalt på vår journey til Destination. Vi har 8 km igjen til vi er framme."
+    assert factoid == exp
+
+
+def test_factoid_eta_average():
+    conn = None
+    journey_data = {
+        "destination": "Destination",
+        "started_at": pendulum.date(2013, 3, 30),
+        "distance": 10_000,
+    }
+    distance_today = 1000
+    distance_total = 2000
+    date = pendulum.date(2013, 4, 2)
+    factoid = journey.daily_factoid(
+        date, conn, journey_data, distance_today, distance_total
+    )
+    exp = "Vi gikk *1 km*! Average daglig progress er 500 m. Holder vi dette tempoet er vi fremme i Destination 18. april 2013, om 16 dager."
+    assert factoid == exp
+
+
+def test_factoid_eta_today():
+    conn = None
+    journey_data = {
+        "destination": "Destination",
+        "started_at": pendulum.date(2013, 3, 30),
+        "distance": 10_000,
+    }
+    distance_today = 1000
+    distance_total = 2000
+    date = pendulum.date(2013, 4, 3)
+    factoid = journey.daily_factoid(
+        date, conn, journey_data, distance_today, distance_total
+    )
+    exp = "Vi gikk *1 km*! Hadde vi gått den distansen hver dag ville journeyen vart til 09. april 2013."
+    assert factoid == exp
+
+
+def test_factoid_weekly_summary(conn: connection):
+    journey_id = insert_journey_data(conn)
+    steps_data, body_reports = example_activity_data()
+    g_info = example_gargling_info()
+    date = pendulum.Date(2013, 3, 31)
+    assert date.day_of_week == pendulum.SUNDAY
+    journey.queries.start_journey(
+        conn, journey_id=journey_id, date=date.subtract(days=1)
+    )
+    journey.store_steps(conn, steps_data, journey_id, date.subtract(days=1))
+    journey.store_steps(conn, steps_data, journey_id, date)
+    with api_mocker():
+        data = journey.perform_daily_update(conn, journey_id, date, steps_data, g_info)
+    assert data is not None
+    (
+        location,
+        distance_today,
+        journey_data,
+        photo_url,
+        map_url,
+        map_img_url,
+        new_country,
+        finished,
+    ) = data
+    factoid = journey.daily_factoid(
+        date, conn, journey_data, distance_today, location["distance"],
+    )
+    exp = "Vi gikk *26.8 km*! Denne uken har vi gått 53.7 km til sammen. Garglingen som gikk lengst var name6, med 26.7 km!"
+    assert factoid == exp
 
 
 def test_format_response():
@@ -357,13 +447,14 @@ def test_format_response():
     data = example_update_data()
     steps_data, body_reports = example_activity_data()
     data["destination"] = "Destinasjon"
-
+    factoid = "Vi gikk *26.8 km*! Nå har vi gått 26.8 km totalt, vi har 29 km igjen til vi er framme."
     formatted = journey.format_response(
         n_day=8,
         gargling_info=g_info,
         steps_data=steps_data,
         body_reports=body_reports,
         achievement="New record!",
+        factoid=factoid,
         **data,
     )
     expected = {
@@ -376,15 +467,7 @@ def test_format_response():
                 },
                 "type": "section",
             },
-            {
-                "text": {
-                    "text": "Vi gikk *26.8 km*! Nå har vi gått 26.8 km "
-                    "totalt på vår journey til Destinasjon - vi har 29 km igjen til "
-                    "vi er framme.",
-                    "type": "mrkdwn",
-                },
-                "type": "section",
-            },
+            {"text": {"text": factoid, "type": "mrkdwn"}, "type": "section"},
             {
                 "text": {
                     "text": (
@@ -447,6 +530,7 @@ def test_format_response_no_address_no_country():
         steps_data=steps_data,
         body_reports=body_reports,
         achievement=None,
+        factoid="Vi gikk *26.8 km*! Nå har vi gått 26.8 km totalt, vi har 29 km igjen til vi er framme.",
         **data,
     )
     address_block = response["blocks"][4]
@@ -473,6 +557,7 @@ def test_format_response_no_address():
         steps_data=steps_data,
         body_reports=body_reports,
         achievement=None,
+        factoid="Vi gikk *26.8 km*! Nå har vi gått 26.8 km totalt, vi har 29 km igjen til vi er framme.",
         **data,
     )
     address_block = response["blocks"][4]
@@ -502,6 +587,7 @@ def test_format_response_no_country():
         steps_data=steps_data,
         body_reports=body_reports,
         achievement=None,
+        factoid="Vi gikk *26.8 km*! Nå har vi gått 26.8 km totalt, vi har 29 km igjen til vi er framme.",
         **data,
     )
     address_block = response["blocks"][4]
@@ -533,6 +619,7 @@ def test_format_response_nopoi():
         steps_data=steps_data,
         body_reports=body_reports,
         achievement=None,
+        factoid="Vi gikk *26.8 km*! Nå har vi gått 26.8 km totalt, vi har 29 km igjen til vi er framme.",
         **data,
     )
     address_block = response["blocks"][4]
@@ -560,6 +647,7 @@ def test_format_response_no_photo_url():
         steps_data=steps_data,
         body_reports=body_reports,
         achievement=None,
+        factoid="Vi gikk *26.8 km*! Nå har vi gått 26.8 km totalt, vi har 29 km igjen til vi er framme.",
         **data,
     )
     assert len(response["blocks"]) == 8
@@ -583,6 +671,7 @@ def test_format_response_no_all():
         steps_data=steps_data,
         body_reports=body_reports,
         achievement=None,
+        factoid="Vi gikk *26.8 km*! Nå har vi gått 26.8 km totalt, vi har 29 km igjen til vi er framme.",
         **data,
     )
     assert len(response["blocks"]) == 6
