@@ -110,13 +110,13 @@ def daily_factoid(
         )
 
     switch = {
-        pendulum.MONDAY: remaining_distance,
-        pendulum.TUESDAY: eta_average,
-        pendulum.WEDNESDAY: eta_today,
-        pendulum.THURSDAY: remaining_distance,
-        pendulum.FRIDAY: eta_average,
-        pendulum.SATURDAY: eta_today,
-        pendulum.SUNDAY: weekly_summary,
+        pendulum.SUNDAY: remaining_distance,
+        pendulum.MONDAY: eta_average,
+        pendulum.TUESDAY: eta_today,
+        pendulum.WEDNESDAY: remaining_distance,
+        pendulum.THURSDAY: eta_average,
+        pendulum.FRIDAY: eta_today,
+        pendulum.SATURDAY: weekly_summary,
     }
     func = switch[date.day_of_week]
 

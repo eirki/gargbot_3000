@@ -369,7 +369,8 @@ def test_factoid_remaining_distance():
     }
     distance_today = 1000
     distance_total = 2000
-    date = pendulum.date(2013, 4, 1)
+    date = pendulum.date(2013, 3, 31)
+    assert date.day_of_week == pendulum.SUNDAY
     factoid = journey.daily_factoid(
         date, conn, journey_data, distance_today, distance_total
     )
@@ -381,16 +382,17 @@ def test_factoid_eta_average():
     conn = None
     journey_data = {
         "destination": "Destination",
-        "started_at": pendulum.date(2013, 3, 30),
+        "started_at": pendulum.date(2013, 3, 29),
         "distance": 10_000,
     }
     distance_today = 1000
     distance_total = 2000
-    date = pendulum.date(2013, 4, 2)
+    date = pendulum.date(2013, 4, 1)
+    assert date.day_of_week == pendulum.MONDAY
     factoid = journey.daily_factoid(
         date, conn, journey_data, distance_today, distance_total
     )
-    exp = "Vi gikk *1 km*! Average daglig progress er 500 m. Holder vi dette tempoet er vi fremme i Destination 18. april 2013, om 16 dager."
+    exp = "Vi gikk *1 km*! Average daglig progress er 500 m. Holder vi dette tempoet er vi fremme i Destination 17. april 2013, om 16 dager."
     assert factoid == exp
 
 
@@ -398,16 +400,17 @@ def test_factoid_eta_today():
     conn = None
     journey_data = {
         "destination": "Destination",
-        "started_at": pendulum.date(2013, 3, 30),
+        "started_at": pendulum.date(2013, 3, 31),
         "distance": 10_000,
     }
     distance_today = 1000
     distance_total = 2000
-    date = pendulum.date(2013, 4, 3)
+    date = pendulum.date(2013, 4, 2)
+    assert date.day_of_week == pendulum.TUESDAY
     factoid = journey.daily_factoid(
         date, conn, journey_data, distance_today, distance_total
     )
-    exp = "Vi gikk *1 km*! Hadde vi gått den distansen hver dag ville journeyen vart til 09. april 2013."
+    exp = "Vi gikk *1 km*! Hadde vi gått den distansen hver dag ville journeyen vart til 10. april 2013."
     assert factoid == exp
 
 
@@ -415,8 +418,8 @@ def test_factoid_weekly_summary(conn: connection):
     journey_id = insert_journey_data(conn)
     steps_data, body_reports = example_activity_data()
     g_info = example_gargling_info()
-    date = pendulum.Date(2013, 3, 31)
-    assert date.day_of_week == pendulum.SUNDAY
+    date = pendulum.date(2013, 4, 6)
+    assert date.day_of_week == pendulum.SATURDAY
     journey.queries.start_journey(
         conn, journey_id=journey_id, date=date.subtract(days=1)
     )
