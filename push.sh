@@ -30,7 +30,7 @@ if [[ $? != 0 ]]; then
   exit 1
 fi
 git stage test-coverage.xml
-git commit --amend --no-edit
+git commit --amend --no-edit --no-verify
 
 DATE=$(date +%y.%m.%d)
 i=0
@@ -46,7 +46,7 @@ done
 
 echo "version = \"$tag\"" > gargbot_3000/version.py
 git stage gargbot_3000/version.py
-git commit --amend --no-edit
+git commit --amend --no-edit --no-verify
 
 echo
 echo "Tagging: $tag"
