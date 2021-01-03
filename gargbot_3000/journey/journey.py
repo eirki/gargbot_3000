@@ -169,6 +169,11 @@ def perform_daily_update(
     journey_data = dict(queries.get_journey(conn, journey_id=journey_id))
     if journey_data["finished_at"] is not None or journey_data["started_at"] is None:
         return None
+    journey_data["started_at"] = pendulum.Date(
+        year=journey_data["started_at"].year,
+        month=journey_data["started_at"].month,
+        day=journey_data["started_at"].day,
+    )  # TODO: return pendulum instance from db
     steps_data.sort(key=itemgetter("amount"), reverse=True)
     steps_today = sum(data["amount"] for data in steps_data)
     if steps_today == 0:
