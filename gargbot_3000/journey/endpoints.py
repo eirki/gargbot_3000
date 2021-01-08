@@ -2,6 +2,7 @@
 # coding: utf-8
 from functools import partial
 
+import aiosql
 from flask import Blueprint, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 import geojson
@@ -11,6 +12,7 @@ from gargbot_3000.journey import journey
 from gargbot_3000.journey.common import queries
 
 blueprint = Blueprint("journey", __name__)
+user_queries = aiosql.from_path("sql/gargling.sql", "psycopg2")
 
 
 @blueprint.route("/detail_journey/<journey_id>")
@@ -46,6 +48,10 @@ def list_journeys():
 @blueprint.route("/upload_journey", methods=["POST"])
 @jwt_required
 def handle_journey_upload():
+    gargling_id = get_jwt_identity()
+    with current_app.pool.get_connection() as conn:
+        if not user_queries.is_admin(conn, gargling_id=gargling_id):
+            return Response(status=403)
     origin = request.form["origin"]
     dest = request.form["dest"]
     xmlfile = request.files["file"]
@@ -58,7 +64,11 @@ def handle_journey_upload():
 
 @blueprint.route("/start_journey")
 @jwt_required
-def handle_start_journey():
+def start_journey():
+    gargling_id = get_jwt_identity()
+    with current_app.pool.get_connection() as conn:
+        if not user_queries.is_admin(conn, gargling_id=gargling_id):
+            return Response(status=403)
     journey_id = request.args["journey_id"]
     with current_app.pool.get_connection() as conn:
         date = pendulum.now()
@@ -70,6 +80,10 @@ def handle_start_journey():
 @blueprint.route("/stop_journey")
 @jwt_required
 def stop_journey():
+    gargling_id = get_jwt_identity()
+    with current_app.pool.get_connection() as conn:
+        if not user_queries.is_admin(conn, gargling_id=gargling_id):
+            return Response(status=403)
     journey_id = request.args["journey_id"]
     with current_app.pool.get_connection() as conn:
         queries.journey.stop_journey(conn, journey_id=journey_id)
@@ -80,11 +94,30 @@ def stop_journey():
 @blueprint.route("/delete_journey")
 @jwt_required
 def delete_journey():
+    gargling_id = get_jwt_identity()
+    with current_app.pool.get_connection() as conn:
+        if not user_queries.is_admin(conn, gargling_id=gargling_id):
+            return Response(status=403)
     journey_id = request.args["journey_id"]
     with current_app.pool.get_connection() as conn:
         queries.journey.delete_journey(conn, journey_id=journey_id)
         conn.commit()
     return Response(status=200)
+
+
+@blueprint.route("/run_journey_update")
+@jwt_required
+def run_journey_update():
+    gargling_id = get_jwt_identity()
+    with current_app.pool.get_connection() as conn:
+        if not user_queries.is_admin(conn, gargling_id=gargling_id):
+            return Response(status=403)
+    try:
+        journey.run_updates()
+    except Exception:
+        return Response(status=500)
+    else:
+        return Response(status=200)
 
 
 @blueprint.route("/dashboard/<chart_name>/<journey_id>")

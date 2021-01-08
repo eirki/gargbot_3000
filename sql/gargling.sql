@@ -8,7 +8,8 @@ create table gargling (
   avatar text,
   slack_avatar text,
   color_hex text not null,
-  color_name text not null
+  color_name text not null,
+  is_admin boolean not null default false
 );
 
 
@@ -66,3 +67,10 @@ where
   slack_id = :slack_id;
 
 
+-- name: is_admin$
+select
+  is_admin
+from
+ gargling
+where
+  id = :gargling_id;
