@@ -3,6 +3,7 @@
 from operator import itemgetter
 import typing as t
 
+import fitbit
 from fitbit import Fitbit as FitbitApi
 from fitbit.api import FitbitOauth2Client
 import pendulum
@@ -72,10 +73,13 @@ class FitbitUser:
             system=FitbitApi.METRIC,
         )
 
-    def _steps_api_call(self, date: pendulum.Date) -> dict:
-        return self.client.time_series(
-            resource="activities/steps", base_date=date, period="1d"
-        )
+    def _steps_api_call(self, date: pendulum.Date) -> dict:  # no test coverage
+        kwargs = {"resource": "activities/steps", "base_date": date, "period": "1d"}
+        try:
+            return self.client.time_series(**kwargs)
+        except fitbit.exceptions.HTTPServerError:
+            # retry
+            return self.client.time_series(**kwargs)
 
     def steps(self, date: pendulum.Date) -> t.Optional[int]:
         data = self._steps_api_call(date)
