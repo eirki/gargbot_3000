@@ -7,11 +7,41 @@
   width: 50%;
 }
 
-.container {
-  display: flex; /* or inline-flex */
+.container_outer {
+  display: flex;
   flex-wrap: wrap;
   justify-content: space-between
 }
+
+.container_inner {
+  flex-grow: 3;  /* children property, since inner is part of outer */
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  justify-content: space-evenly
+}
+
+@media screen and (max-width: 900px) {
+  .container_inner {
+    flex-direction: column;
+  }
+}
+
+.statbox {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center
+}
+
+.statheader {
+    margin-bottom: 1px;
+}
+
+.stat {
+  margin: 5px;
+  margin-bottom: 10px;
+}
+
 
 /* Clear floats after the columns */
 .row:after {
@@ -29,7 +59,7 @@
 
 /* Responsive columns - one column layout (vertical) on small screens */
 @media screen and (max-width: 900px) {
-  div[class^="column"] {
+  div[class="column2"] {
     width: 100%;
     display: block;
     margin-bottom: 20px;

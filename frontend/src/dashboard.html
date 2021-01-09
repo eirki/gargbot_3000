@@ -11,24 +11,43 @@
         <div class="column1">
             <div class="card">
                 <div id="person_steps"></div>
-                <div class="container" id="person_stats">
-                    <div class="item"><select id="select_gargling"></select></div>
-                    <div class="item">
-                        <h4>Total steps</h4>
-                        <p id="total_steps"></p>
+                <div class="container_outer">
+                    <div><select id="left_gargling"></select></div>
+                    <div class="container_inner" id="person_stats">
+                        <div>
+                            <h4 class="statheader">Total steps</h4>
+                            <div id="total_steps" class="statbox">
+                                <span class="left stat"></span>
+                                <span class="comp stat"></span>
+                                <span class="right stat"></span>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="statheader">Total distance</h4>
+                            <div id="total_distance" class="statbox">
+                                <span class="left stat"></span>
+                                <span class="comp stat"></span>
+                                <span class="right stat"></span>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="statheader">Average steps</h4>
+                            <div id="avg_steps" class="statbox">
+                                <span class="left stat"></span>
+                                <span class="comp stat"></span>
+                                <span class="right stat"></span>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="statheader">Maximum steps</h4>
+                            <div id="max_steps" class="statbox">
+                                <span class="left stat"></span>
+                                <span class="comp stat"></span>
+                                <span class="right stat"></span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="item">
-                        <h4>Total distance</h4>
-                        <p id="total_distance"></p>
-                    </div>
-                    <div class="item">
-                        <h4>Average steps</h4>
-                        <p id="avg_steps"></p>
-                    </div>
-                    <div class="item">
-                        <h4>Maximum steps</h4>
-                        <p id="max_steps"></p>
-                    </div>
+                    <div><select id="right_gargling"></select></div>
                 </div>
             </div>
         </div>

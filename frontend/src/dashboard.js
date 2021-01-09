@@ -20,7 +20,26 @@ async function personal_stats(token, steps) {
     const stats = (
         await getBackend(token, "/dashboard/personal_stats/1")
     )
-    steps["data"].reverse()
+    let allGarglingData = {}
+    function populateGarglingData(obj, type) {
+        for (var data of Object.values(obj["data"])) {
+            let garglingData = allGarglingData[data["name"]] || {}
+            garglingData[type] = data
+            allGarglingData[data["name"]] = garglingData
+        }
+    }
+    populateGarglingData(steps, "steps")
+    populateGarglingData(stats, "stats")
+
+    let leftIndex = steps["data"].length - 1
+    let rightIndex = 0
+
+    let leftName = steps["data"][leftIndex]["name"]
+    let rightName = steps["data"][rightIndex]["name"]
+
+    let leftSeries = JSON.parse(JSON.stringify(allGarglingData[leftName]["steps"])); // deep copy
+    let rightSeries = JSON.parse(JSON.stringify(allGarglingData[rightName]["steps"])); // deep copy
+    let both_series = [leftSeries, rightSeries]
     let steps_chart = Highcharts.chart('person_steps', {
         chart: {
             zoomType: 'x'
@@ -43,50 +62,68 @@ async function personal_stats(token, steps) {
         legend: {
             enabled: false
         },
-        series: [JSON.parse(JSON.stringify(steps["data"][0]))], // deep copy
+        series: both_series
 
     });
 
-    let allGarglingData = {}
-    function populateGarglingData(obj, name) {
-        for (var data of Object.values(obj["data"])) {
-            let garglingData = allGarglingData[data["name"]] || {}
-            garglingData[name] = data
-            allGarglingData[data["name"]] = garglingData
-        }
-    }
-    populateGarglingData(steps, "steps")
-    populateGarglingData(stats, "stats")
+    let leftStatset = allGarglingData[leftName]["stats"]
+    let rightStatset = allGarglingData[rightName]["stats"]
 
-    function update_stats(obj) {
+    let both_statsets = [leftStatset, rightStatset]
+    function update_stats(leftSet, rightSet) {
         let parent = document.querySelector("#person_stats")
-        let chldrn = parent.querySelectorAll("p")
+        let chldrn = parent.querySelectorAll(".statbox")
         for (let chld of chldrn) {
-            chld.innerHTML = formatNumber(obj[chld.id])
+            let leftElem = chld.querySelector(".left")
+            let leftVal = leftSet[chld.id]
+            leftElem.innerHTML = formatNumber(leftVal)
+            let rightElem = chld.querySelector(".right")
+            let rightVal = rightSet[chld.id]
+            rightElem.innerHTML = formatNumber(rightVal)
+            let compElem = chld.querySelector(".comp")
+            let compSign
+            if (leftVal > rightVal) compSign = ">"
+            else if (rightVal > leftVal) compSign = "<"
+            else compSign = "="
+            console.log(compSign)
+            compElem.innerHTML = ` ${compSign} `
+
         }
     }
-    update_stats(allGarglingData[steps["data"][0]["name"]]["stats"])
+    update_stats(...both_statsets)
 
-    let select = document.querySelector("#select_gargling")
-    for (var [name, data] of Object.entries(allGarglingData)) {
+    let select_left = document.querySelector("#left_gargling")
+    let select_right = document.querySelector("#right_gargling")
+    let names = Object.keys(allGarglingData)
+    names.sort()
+    for (var name of names) {
         var opt = document.createElement('option');
         opt.value = name;
-        opt.innerHTML = data["steps"]["name"];
-        select.appendChild(opt);
+        opt.innerHTML = name;
+        select_left.appendChild(opt);
+        select_right.appendChild(opt.cloneNode(true));
     }
+    select_left.selectedIndex = names.indexOf(leftName);
+    select_right.selectedIndex = names.indexOf(rightName);
 
-    select.addEventListener("change", (event) => {
+    function updater(event, right) {
+        let index = right ? both_series.length - 1 : 0
         let person_steps = allGarglingData[event.target.value]["steps"]
+        both_series[index] = person_steps
         steps_chart.update({
-            series: [person_steps]
+            series: both_series
         })
         let person_stats = allGarglingData[event.target.value]["stats"]
-        update_stats(person_stats)
-    })
+        both_statsets[index] = person_stats
+        update_stats(...both_statsets)
+    }
+    select_left.addEventListener("change", updater)
+    select_right.addEventListener("change", (event) => updater(event, true))
 }
 
 
 function distance_area(data) {
+    let data_without_avg = data["data"].filter(obj => obj.gargling_id >= 0)
     var chart = Highcharts.chart('distance_area', {
         chart: {
             type: 'area',
@@ -123,7 +160,7 @@ function distance_area(data) {
                 }
             }
         },
-        series: data["data"]
+        series: data_without_avg
     });
     let switcher = document.querySelector("#pcswitch")
     switcher.addEventListener("click", function () {
