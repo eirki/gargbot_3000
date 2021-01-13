@@ -23,15 +23,6 @@ if [[ $? != 0 ]]; then
   exit 1
 fi
 
-diff-cover  test-coverage.xml --fail-under=100
-if [[ $? != 0 ]]; then
-  echo
-  echo "Changes not covered by tests"
-  exit 1
-fi
-git stage test-coverage.xml
-git commit --amend --no-edit --no-verify
-
 DATE=$(date +%y.%m.%d)
 i=0
 while :

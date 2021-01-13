@@ -10,6 +10,7 @@ setup/*
 .vscode/
 .coverage
 cov.xml
+test-coverage.xml
 logs/*
 
 node_modules

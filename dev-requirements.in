@@ -7,5 +7,4 @@ black
 mypy
 flake8
 isort
-diff_cover
 lxml

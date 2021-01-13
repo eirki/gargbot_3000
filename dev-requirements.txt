@@ -11,17 +11,12 @@ black==19.10b0            # via -r dev-requirements.in
 cfgv==2.0.1               # via pre-commit
 click==7.0                # via -c requirements.txt, black
 coverage==5.0             # via pytest-cov
-diff-cover==4.0.1         # via -r dev-requirements.in
 entrypoints==0.3          # via flake8
 flake8==3.7.9             # via -r dev-requirements.in
 identify==1.4.8           # via pre-commit
 importlib-metadata==1.3.0  # via pre-commit
-inflect==5.0.2            # via jinja2-pluralize
 isort==4.3.21             # via -r dev-requirements.in
-jinja2-pluralize==0.3.0   # via diff-cover
-jinja2==2.10.3            # via -c requirements.txt, diff-cover, jinja2-pluralize
 lxml==4.6.2               # via -r dev-requirements.in
-markupsafe==1.1.1         # via -c requirements.txt, jinja2
 mccabe==0.6.1             # via flake8
 mirakuru==2.1.1           # via pytest-postgresql
 more-itertools==8.0.2     # via pytest
@@ -30,14 +25,13 @@ mypy==0.760               # via -r dev-requirements.in
 nodeenv==1.3.3            # via pre-commit
 packaging==19.2           # via pytest
 pathspec==0.6.0           # via black
-pluggy==0.13.1            # via diff-cover, pytest
+pluggy==0.13.1            # via pytest
 port-for==0.4             # via pytest-postgresql
 pre-commit==1.14.4        # via -r dev-requirements.in
 psutil==5.6.7             # via mirakuru
 py==1.8.0                 # via pytest
 pycodestyle==2.5.0        # via flake8
 pyflakes==2.1.1           # via flake8
-pygments==2.6.1           # via -c requirements.txt, diff-cover
 pyparsing==2.4.5          # via packaging
 pytest-cov==2.8.1         # via -r dev-requirements.in
 pytest-postgresql==2.2.1  # via -r dev-requirements.in
