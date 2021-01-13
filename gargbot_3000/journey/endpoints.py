@@ -134,9 +134,19 @@ def dashboard(chart_name, journey_id):
         "first_place_pie": queries.dashboard.first_place_pie,
         "above_median_pie": queries.dashboard.above_median_pie,
         "contributing_days_pie": queries.dashboard.contributing_days_pie,
+        "weekday_polar": queries.dashboard.weekday_polar,
+        "month_polar": queries.dashboard.month_polar,
+        "countries_timeline": queries.dashboard.countries_timeline,
     }
     func = funcs[chart_name]
     with current_app.pool.get_connection() as conn:
         data = func(conn, journey_id=journey_id)
+    response = {}
+    if chart_name == "personal_stats":
+        gargling_name = next(
+            datum["name"] for datum in data if datum["gargling_id"] == gargling_id
+        )
+        response["name"] = gargling_name
     data = [dict(datum) for datum in data]
-    return {"data": data}
+    response["data"] = data
+    return response

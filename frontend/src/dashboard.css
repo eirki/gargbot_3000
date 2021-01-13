@@ -10,7 +10,8 @@
 .container_outer {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between
+  justify-content: space-between;
+  align-items:  center;
 }
 
 .container_inner {
@@ -72,4 +73,20 @@ h4 {
 
 .pcswitch {
   text-align: left;
+}
+
+
+
+.gargling-select {
+  display: block;
+  font-size: 16px;
+  font-family: sans-serif;
+  font-weight: 500;
+  padding: .6em 1.4em .5em .8em;
+  box-sizing: border-box;
+}
+
+option {
+    background: white;
+    color:black;
 }

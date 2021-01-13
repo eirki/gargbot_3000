@@ -10,9 +10,8 @@
     <div class="row">
         <div class="column1">
             <div class="card">
-                <div id="person_steps"></div>
                 <div class="container_outer">
-                    <div><select id="left_gargling"></select></div>
+                    <div><select class="gargling-select" id="left_gargling"></select></div>
                     <div class="container_inner" id="person_stats">
                         <div>
                             <h4 class="statheader">Total steps</h4>
@@ -47,11 +46,35 @@
                             </div>
                         </div>
                     </div>
-                    <div><select id="right_gargling"></select></div>
+                    <div><select class="gargling-select" id="right_gargling"></select></div>
                 </div>
             </div>
         </div>
     </div>
+
+    <div class="row">
+        <div class="column1">
+            <div class="card">
+                <div id="person_steps"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="column2">
+            <div class="card" id="weekday_polar"></div>
+        </div>
+        <div class="column2">
+            <div class="card" id="month_polar"></div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="column">
+            <div class="card" id="countries_timeline"></div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="column1">
             <div class="card">
@@ -65,6 +88,7 @@
             </div>
         </div>
     </div>
+
     <div class="row">
         <div class="column2">
             <div class="card" id="steps_pie"></div>
@@ -73,6 +97,7 @@
             <div class="card" id="first_place_pie"></div>
         </div>
     </div>
+
     <div class="row">
         <div class="column2">
             <div class="card" id="above_median_pie"></div>
