@@ -11,18 +11,19 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  align-items:  center;
+  align-items: stretch;
 }
 
 .container_inner {
   flex-grow: 3;  /* children property, since inner is part of outer */
+  flex-shrink: 2;  /* children property, since select is part of outer */
   display: flex;
   flex-wrap: wrap;
   flex-direction: row;
   justify-content: space-evenly
 }
 
-@media screen and (max-width: 900px) {
+@media screen and (max-width: 590px) {
   .container_inner {
     flex-direction: column;
   }
@@ -41,6 +42,21 @@
 .stat {
   margin: 5px;
   margin-bottom: 10px;
+}
+
+.gargling-select {
+  display: block;
+  font-size: 16px;
+  font-family: sans-serif;
+  font-weight: 500;
+  padding: .6em 1.4em .5em .8em;
+  margin: 5px;
+  box-sizing: border-box;
+}
+
+option {
+    background: white;
+    color:black;
 }
 
 
@@ -77,16 +93,3 @@ h4 {
 
 
 
-.gargling-select {
-  display: block;
-  font-size: 16px;
-  font-family: sans-serif;
-  font-weight: 500;
-  padding: .6em 1.4em .5em .8em;
-  box-sizing: border-box;
-}
-
-option {
-    background: white;
-    color:black;
-}
