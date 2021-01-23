@@ -20,10 +20,10 @@ def connection_context(
 ) -> t.Generator[connection, None, None]:
     if conn is not None:
         yield conn
-    elif current_app:
+    elif current_app:  # no test coverage
         with current_app.pool.get_connection() as conn:
             yield conn
-    else:
+    else:  # no test coverage
         conn = database.connect()
         try:
             yield conn

@@ -41,7 +41,7 @@ def get_colors_names(conn: connection, ids: list[int]) -> dict[int, dict]:
     }
     return infodict
     infodict = {}
-    for info in infos:
+    for info in infos:  # no test coverage
         gargling_id = info["id"]
         del info["id"]
         infodict[gargling_id] = dict(info)

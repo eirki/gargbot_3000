@@ -45,7 +45,9 @@ poi_types = {
 }
 
 
-def address_for_location(lat, lon) -> t.Tuple[t.Optional[str], t.Optional[str]]:
+def address_for_location(
+    lat, lon
+) -> t.Tuple[t.Optional[str], t.Optional[str]]:  # no test coverage
     geolocator = Nominatim(user_agent=config.bot_name)
     try:
         location = geolocator.reverse(f"{lat}, {lon}", language="en")
@@ -57,7 +59,7 @@ def address_for_location(lat, lon) -> t.Tuple[t.Optional[str], t.Optional[str]]:
         return None, None
 
 
-def street_view_for_location(lat, lon) -> t.Optional[bytes]:
+def street_view_for_location(lat, lon) -> t.Optional[bytes]:  # no test coverage
     def encode_url(domain, endpoint, params):
         params = params.copy()
         url_to_sign = endpoint + urllib.parse.urlencode(params)
@@ -101,14 +103,16 @@ def street_view_for_location(lat, lon) -> t.Optional[bytes]:
     return data
 
 
-def map_url_for_location(lat, lon) -> str:
+def map_url_for_location(lat, lon) -> str:  # no test coverage
     base = "https://www.google.com/maps/search/?"
     params = {"api": 1, "query": f"{lat},{lon}"}
     url = base + urllib.parse.urlencode(params)
     return url
 
 
-def poi_for_location(lat, lon) -> t.Tuple[t.Optional[str], t.Optional[bytes]]:
+def poi_for_location(
+    lat, lon
+) -> t.Tuple[t.Optional[str], t.Optional[bytes]]:  # no test coverage
     try:
         gmaps = googlemaps.Client(key=config.google_api_key)
         places = gmaps.places_nearby(location=(lat, lon), radius=5000)["results"]
@@ -140,7 +144,7 @@ def main(
     lat: float, lon: float
 ) -> t.Tuple[
     t.Optional[str], t.Optional[str], t.Optional[bytes], str, t.Optional[str],
-]:
+]:  # no test coverage
     address, country = address_for_location(lat, lon)
     poi, photo = poi_for_location(lat, lon)
     if photo is None:

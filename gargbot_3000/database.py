@@ -57,7 +57,7 @@ credentials = {
 }
 
 
-class ConnectionPool:
+class ConnectionPool:  # no test coverage
     """https://gist.github.com/jeorgen/4eea9b9211bafeb18ada"""
 
     is_setup = False
@@ -109,13 +109,13 @@ class ConnectionPool:
                 cursor.close()
 
 
-def connect() -> connection:
+def connect() -> connection:  # no test coverage
     log.info("Connecting to db")
     conn = psycopg2.connect(database=config.db_name, **credentials)
     return conn
 
 
-def backup():
+def backup():  # no test coverage
     log.info("Backing up database")
     cmd = f"pg_dump --no-owner --dbname={config.db_uri}"
     result = subprocess.check_output(cmd, shell=True)
@@ -158,7 +158,9 @@ class SqlFormatAdapter(PsycoPG2Adapter):
 
     @classmethod
     @contextmanager
-    def select_cursor(cls, conn, _query_name, template: str, parameters: dict):
+    def select_cursor(
+        cls, conn, _query_name, template: str, parameters: dict
+    ):  # no test coverage
         query = cls.render_template(template, parameters)
         return super().select_cursor(conn, _query_name, query, parameters)
 
@@ -201,7 +203,9 @@ class JinjaSqlAdapter(PsycoPG2Adapter):
         return query
 
     @classmethod
-    def select(cls, conn, _query_name, sql, parameters: dict, record_class=None):
+    def select(
+        cls, conn, _query_name, sql, parameters: dict, record_class=None
+    ):  # no test coverage
         sql = cls.render_template(sql, parameters)
         return super().select(
             conn, _query_name, sql, parameters, record_class=record_class
@@ -216,12 +220,16 @@ class JinjaSqlAdapter(PsycoPG2Adapter):
 
     @classmethod
     @contextmanager
-    def select_cursor(cls, conn, _query_name, sql, parameters: dict):
+    def select_cursor(
+        cls, conn, _query_name, sql, parameters: dict
+    ):  # no test coverage
         sql = cls.render_template(sql, parameters)
         return super().select_cursor(conn, _query_name, sql, parameters)
 
     @classmethod
-    def insert_update_delete(cls, conn, _query_name, sql, parameters: dict):
+    def insert_update_delete(
+        cls, conn, _query_name, sql, parameters: dict
+    ):  # no test coverage
         sql = cls.render_template(sql, parameters)
         return super().insert_update_delete(conn, _query_name, sql, parameters)
 
@@ -241,12 +249,12 @@ class JinjaSqlAdapter(PsycoPG2Adapter):
         return super().execute_script(conn, sql)
 
 
-def connect_test() -> connection:
+def connect_test() -> connection:  # no test coverage
     conn = psycopg2.connect(database="target_db", **credentials)
     return conn
 
 
-def setup_test() -> None:
+def setup_test() -> None:  # no test coverage
     conn = psycopg2.connect(database="postgres", **credentials)
     conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
     with conn.cursor() as cursor:
@@ -271,7 +279,7 @@ def setup_test() -> None:
     conn.close()
 
 
-def get_migrations():
+def get_migrations():  # no test coverage
     setup_test()
     base = "postgresql+psycopg2://"
     with S(base, creator=connect) as current, S(base, creator=connect_test) as target:
@@ -279,7 +287,7 @@ def get_migrations():
     return m
 
 
-def migrate() -> None:
+def migrate() -> None:  # no test coverage
     conn = connect()
     queries = aiosql.from_path("sql/migrations.sql", "psycopg2")
     queries.migrations(conn)
@@ -296,7 +304,7 @@ def migrate() -> None:
         log.info("Migrations up to date")
 
 
-class MSN:
+class MSN:  # no test coverage
     def __init__(self):
         self.conn = connect()
 
@@ -422,7 +430,7 @@ class MSN:
         conn.close()
 
 
-def add_user_ids_table(users):
+def add_user_ids_table(users):  # no test coverage
     conn = connect()
     cursor = conn.cursor()
     for slack_id, db_id, slack_nick, first_name in users:
@@ -441,7 +449,7 @@ def add_user_ids_table(users):
     conn.close()
 
 
-class DropPics:
+class DropPics:  # no test coverage
     def __init__(self):
         self.conn = None
         self.dbx = None

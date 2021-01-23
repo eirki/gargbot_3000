@@ -17,7 +17,7 @@ from gargbot_3000.logger import log
 queries = aiosql.from_path("sql/picture.sql", driver_adapter=JinjaSqlAdapter)
 
 
-def connect_dbx() -> Dropbox:
+def connect_dbx() -> Dropbox:  # no test coverage
     dbx = Dropbox(config.dropbox_token)
     log.info("Connected to dbx")
     return dbx
@@ -121,7 +121,7 @@ def get_pic(
         log.info(f"arg_combination: {arg_combination}")
         parsed = queries.parse_args(conn, args=list(arg_combination))
         data = queries.pic_for_topic_year_garglings(conn, **parsed)
-        if data is None:
+        if data is None:  # no test coverage
             continue
 
         arg_combination_fmt = ", ".join(f"`{arg}`" for arg in arg_combination)
@@ -131,5 +131,6 @@ def get_pic(
         return url, taken_at, description
 
     #  No pics found for any args
-    url, taken_at = get_random_pic(conn, dbx)
-    return url, taken_at, description
+
+    url, taken_at = get_random_pic(conn, dbx)  # no test coverage
+    return url, taken_at, description  # no test coverage

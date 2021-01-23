@@ -58,7 +58,7 @@ def formulate_congrat(recipient: Recipient, conn: connection, dbx: Dropbox) -> d
     return response
 
 
-def send_congrats() -> None:
+def send_congrats() -> None:  # no test coverage
     dbx = pictures.connect_dbx()
     conn = database.connect()
     recipients = todays_recipients(conn)

@@ -22,7 +22,7 @@ def detail_journey(journey_id):
     with current_app.pool.get_connection() as conn:
         j = queries.journey.get_journey(conn, journey_id=journey_id)
         most_recent = journey.most_recent_location(conn, journey_id)
-        if most_recent is None:
+        if most_recent is None:  # no test coverage
             return jsonify(waypoints=[])
 
         waypoints = queries.journey.waypoints_between_distances(
@@ -49,7 +49,7 @@ def list_journeys():
 
 @blueprint.route("/upload_journey", methods=["POST"])
 @jwt_required
-def handle_journey_upload():
+def handle_journey_upload():  # no test coverage
     gargling_id = get_jwt_identity()
     with current_app.pool.get_connection() as conn:
         if not user_queries.is_admin(conn, gargling_id=gargling_id):
@@ -66,7 +66,7 @@ def handle_journey_upload():
 
 @blueprint.route("/start_journey")
 @jwt_required
-def start_journey():
+def start_journey():  # no test coverage
     gargling_id = get_jwt_identity()
     with current_app.pool.get_connection() as conn:
         if not user_queries.is_admin(conn, gargling_id=gargling_id):
@@ -81,7 +81,7 @@ def start_journey():
 
 @blueprint.route("/stop_journey")
 @jwt_required
-def stop_journey():
+def stop_journey():  # no test coverage
     gargling_id = get_jwt_identity()
     with current_app.pool.get_connection() as conn:
         if not user_queries.is_admin(conn, gargling_id=gargling_id):
@@ -95,7 +95,7 @@ def stop_journey():
 
 @blueprint.route("/delete_journey")
 @jwt_required
-def delete_journey():
+def delete_journey():  # no test coverage
     gargling_id = get_jwt_identity()
     with current_app.pool.get_connection() as conn:
         if not user_queries.is_admin(conn, gargling_id=gargling_id):
@@ -109,7 +109,7 @@ def delete_journey():
 
 @blueprint.route("/run_journey_update")
 @jwt_required
-def run_journey_update():
+def run_journey_update():  # no test coverage
     gargling_id = get_jwt_identity()
     with current_app.pool.get_connection() as conn:
         if not user_queries.is_admin(conn, gargling_id=gargling_id):
@@ -124,7 +124,7 @@ def run_journey_update():
 
 @blueprint.route("/dashboard/<chart_name>/<journey_id>")
 @jwt_required
-def dashboard(chart_name, journey_id):
+def dashboard(chart_name, journey_id):  # no test coverage
     gargling_id = get_jwt_identity()
     print("ID", gargling_id)
     funcs = {

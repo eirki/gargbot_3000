@@ -191,7 +191,7 @@ def get_all_at_date(conn, journey_id, date=None):
     for p in most:
         query = p["query"]
         rec = query(conn, journey_id=journey_id, taken_before=date, less_than=less_than)
-        if not rec:
+        if not rec:  # no test coverage
             break
         all_records.append(
             {

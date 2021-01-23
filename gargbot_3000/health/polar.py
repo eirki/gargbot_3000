@@ -32,7 +32,7 @@ class PolarService:
         auth_url = self.client.get_authorization_url()
         return auth_url
 
-    def token(self, code: str) -> t.Tuple[int, dict]:
+    def token(self, code: str) -> t.Tuple[int, dict]:  # no test coverage
         token = self.client.get_access_token(code)
         try:
             self.client.users.register(access_token=token["access_token"])
@@ -76,7 +76,9 @@ class PolarUser:
         self.user_id = service_user_id
         self.token = access_token
 
-    def _get_transaction(self) -> t.Optional[DailyActivityTransaction]:
+    def _get_transaction(
+        self,
+    ) -> t.Optional[DailyActivityTransaction]:  # no test coverage
         trans = self.client.daily_activity.create_transaction(self.user_id, self.token)
         return trans
 
@@ -117,5 +119,5 @@ class PolarUser:
         steps = todays_data["n_steps"] if todays_data is not None else 0
         return steps
 
-    def body(self, date: pendulum.Date) -> None:
+    def body(self, date: pendulum.Date) -> None:  # no test coverage
         return None

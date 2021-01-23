@@ -52,7 +52,7 @@ def init_user(token: dict) -> HealthUser:
 @jwt_required
 def authorize(service_name: str):
     gargling_id = get_jwt_identity()
-    if gargling_id is None:
+    if gargling_id is None:  # no test coverage
         raise Exception("JWT token issued to None")
     log.info(f"gargling_id: {gargling_id}")
     service = init_service(service_name)
@@ -66,7 +66,7 @@ def authorize(service_name: str):
 @jwt_required
 def handle_redirect(service_name: str):
     gargling_id = get_jwt_identity()
-    if gargling_id is None:
+    if gargling_id is None:  # no test coverage
         raise Exception("JWT token issued to None")
     log.info(f"gargling_id: {gargling_id}")
     log.info(request)
@@ -91,7 +91,7 @@ def handle_redirect(service_name: str):
             )["service_user_id"]
             service.update_token(service_user_id_, token, conn)
         else:
-            if isinstance(service, GooglefitService):
+            if isinstance(service, GooglefitService):  # no test coverage
                 service_user_id = service.insert_token(token, conn)
             else:
                 service.persist_token(token, conn)
@@ -112,7 +112,7 @@ def toggle():
     content = request.json
     service = init_service(content["service"])
     measure = content["measure"]
-    if measure not in {"steps", "weight"}:
+    if measure not in {"steps", "weight"}:  # no test coverage
         raise Exception
     enable = content["enable"]
     with current_app.pool.get_connection() as conn:
@@ -135,7 +135,7 @@ def toggle():
 
 @blueprint.route("/health_status")
 @jwt_required
-def health_status():
+def health_status():  # no test coverage
     gargling_id = get_jwt_identity()
     with current_app.pool.get_connection() as conn:
         data = queries.health_status(conn, gargling_id=gargling_id)
@@ -158,15 +158,17 @@ def steps(conn: connection, users: list[HealthUser], date: pendulum.Date) -> lis
                 exc_info=True,
             )
             continue
-        if amount is None:
+        if amount is None:  # no test coverage
             continue
-        step_amounts.append({"amount": amount, "gargling_id": user.gargling_id})
+        step_amounts.append(
+            {"amount": amount, "gargling_id": user.gargling_id}
+        )  # no test coverage
     return step_amounts
 
 
 def get_body_data(users: list[HealthUser], date: pendulum.Date) -> list[dict]:
     all_data = []
-    for user in users:
+    for user in users:  # no test coverage
         try:
             body_data = user.body(date)
         except Exception:
@@ -207,7 +209,7 @@ def activity(
     conn: connection, date: pendulum.Date
 ) -> t.Optional[t.Tuple[list, t.Optional[list]]]:
     tokens = queries.tokens(conn)
-    if not tokens:
+    if not tokens:  # no test coverage
         return None
     step_users, weight_users = [], []
     for token in tokens:
@@ -219,7 +221,7 @@ def activity(
         user = init_user(token)
         if enable_steps:
             step_users.append(user)
-        if enable_weight:
+        if enable_weight:  # no test coverage
             weight_users.append(user)
     steps_data = steps(conn, step_users, date)
     body_data = get_body_data(weight_users, date)

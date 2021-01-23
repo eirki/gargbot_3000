@@ -64,7 +64,7 @@ def auth():
         client_secret=config.slack_client_secret,
         code=code,
     )
-    if isinstance(response, Future):
+    if isinstance(response, Future):  # no test coverage
         # satisfy mypy
         raise Exception()
     response_data = response.data
@@ -108,7 +108,7 @@ def interactive() -> Response:
     log.info("incoming interactive request:")
     data = json.loads(request.form["payload"])
     log.info(data)
-    if not data.get("token") == config.slack_verification_token:
+    if not data.get("token") == config.slack_verification_token:  # no test coverage
         return Response(status=403)
     action_id = data["actions"][0]["action_id"]
     block_id = data["actions"][0]["block_id"]
@@ -124,7 +124,7 @@ def interactive() -> Response:
 
 
 @slack_events_adapter.on("message")
-def handle_message(event_data):
+def handle_message(event_data):  # no test coverage
     log.info("Receiving Slack event")
     log.info(event_data)
     AT_BOT = f"<@{config.bot_id}>"
@@ -148,7 +148,7 @@ def slash_cmds() -> Response:
     data = request.form
     log.info(data)
 
-    if not data.get("token") == config.slack_verification_token:
+    if not data.get("token") == config.slack_verification_token:  # no test coverage
         return Response(status=403)
 
     command_str = data["command"].replace("/", "")
@@ -310,9 +310,9 @@ def handle_command(command_str: str, args: list, buttons=True) -> dict:
         )
 
     error = result.get("text", "").startswith("Error")
-    if error:
+    if error:  # no test coverage
         return result
-    if not buttons:
+    if not buttons:  # no test coverage
         return result
     if command_str in {"ping", "hvem", "rekorder"}:
         result["response_type"] = "in_channel"
@@ -323,7 +323,7 @@ def handle_command(command_str: str, args: list, buttons=True) -> dict:
     return result
 
 
-class StandaloneApplication(BaseApplication):
+class StandaloneApplication(BaseApplication):  # no test coverage
     def __init__(self, app, options: dict[str, t.Any] = None) -> None:
         self.options = options if options is not None else {}
         self.application = app
@@ -338,7 +338,7 @@ class StandaloneApplication(BaseApplication):
         return self.application
 
 
-def main(options: t.Optional[dict], debug: bool = False):
+def main(options: t.Optional[dict], debug: bool = False):  # no test coverage
     try:
         app.pool.setup()
         with app.pool.get_connection() as conn:

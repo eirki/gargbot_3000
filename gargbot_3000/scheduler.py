@@ -13,13 +13,13 @@ from gargbot_3000.journey import journey
 from gargbot_3000.logger import log
 
 
-def local_hour_at_utc(hour: int) -> str:
+def local_hour_at_utc(hour: int) -> str:  # no test coverage
     utc_hour = pendulum.today(config.tz).at(hour).in_timezone("UTC").hour
     formatted = str(utc_hour).zfill(2) + ":00"
     return formatted
 
 
-def main():
+def main():  # no test coverage
     log.info("GargBot 3000 scheduler starter")
     try:
         while True:

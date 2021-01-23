@@ -131,7 +131,7 @@ def upload_images(
     date: pendulum.Date,
     photo: t.Optional[bytes],
     traversal_map: t.Optional[bytes],
-) -> t.Tuple[t.Optional[str], t.Optional[str]]:
+) -> t.Tuple[t.Optional[str], t.Optional[str]]:  # no test coverage
     dbx = Dropbox(config.dropbox_token)
 
     def upload(data: bytes, name: str) -> t.Optional[str]:
@@ -178,7 +178,7 @@ def perform_daily_update(
     )  # TODO: return pendulum instance from db
     steps_data.sort(key=itemgetter("amount"), reverse=True)
     steps_today = sum(data["amount"] for data in steps_data)
-    if steps_today == 0:
+    if steps_today == 0:  # no test coverage
         return None
 
     last_location = most_recent_location(conn, journey_id)
@@ -380,7 +380,7 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
             log.info(f"Journey update for {date}")
             with conn:
                 activity_data = health.activity(conn, date)
-                if not activity_data:
+                if not activity_data:  # no test coverage
                     continue
                 steps_data, body_reports = activity_data
             gargling_info = common.get_colors_names(
@@ -393,7 +393,7 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
                 steps_data=steps_data,
                 gargling_info=gargling_info,
             )
-            if not update_data:
+            if not update_data:  # no test coverage
                 continue
             (
                 location,
@@ -431,11 +431,11 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
             )
             yield formatted
             conn.commit()
-    except Exception:
+    except Exception:  # no test coverage
         log.error(f"Error in journey.main", exc_info=True)
 
 
-def run_updates() -> None:
+def run_updates() -> None:  # no test coverage
     current_date = pendulum.now()
     try:
         # now() function sometimes returns a date, not datetime??

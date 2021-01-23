@@ -32,7 +32,7 @@ class FitbitService:
         url, _ = self.client.authorize_token_url(scope=scope)
         return url
 
-    def token(self, code: str) -> t.Tuple[str, dict]:
+    def token(self, code: str) -> t.Tuple[str, dict]:  # no test coverage
         self.client.fetch_access_token(code)
         token = self.client.session.token
         return token["user_id"], token
@@ -90,10 +90,10 @@ class FitbitUser:
         entry = data["activities-steps"][0]
         return int(entry["value"]) if entry else 0
 
-    def _weight_api_call(self, date: pendulum.Date) -> dict:
+    def _weight_api_call(self, date: pendulum.Date) -> dict:  # no test coverage
         return self.client.get_bodyweight(base_date=date, period="1w")
 
-    def _bodyfat_api_call(self, date: pendulum.Date) -> dict:
+    def _bodyfat_api_call(self, date: pendulum.Date) -> dict:  # no test coverage
         return self.client.get_bodyfat(base_date=date, period="1w")
 
     def body(self, date: pendulum.Date) -> dict:

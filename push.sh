@@ -1,5 +1,4 @@
 #!/bin/bash
-git checkout test-coverage.xml
 git update-index --refresh
 git diff-index --quiet HEAD --
 if [[ $? != 0 ]]; then

@@ -8,7 +8,7 @@ from gargbot_3000 import database, scheduler, server
 from gargbot_3000.logger import log
 
 
-def main():
+def main():  # no test coverage
     try:
         log.info("Starting gargbot_3000")
         parser = argparse.ArgumentParser()

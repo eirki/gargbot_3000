@@ -76,7 +76,7 @@ def cmd_hvem(args: list[str], conn: connection) -> dict:
 
 def cmd_pic(
     args: t.Optional[list[str]], conn: connection, dbx: dropbox.Dropbox
-) -> dict:
+) -> dict:  # no test coverage
     """if command is 'pic'"""
     picurl, date, description = pictures.get_pic(conn, dbx, args)
     pretty_date = prettify_date(date)
@@ -99,7 +99,9 @@ def cmd_pic(
     return response
 
 
-def cmd_forum(args: t.Optional[list[str]], conn: connection) -> dict:
+def cmd_forum(
+    args: t.Optional[list[str]], conn: connection
+) -> dict:  # no test coverage
     """if command is 'forum'"""
     text, user, avatar_url, date, url, description = quotes.forum(conn, args)
     pretty_date = prettify_date(date)
@@ -120,7 +122,7 @@ def cmd_forum(args: t.Optional[list[str]], conn: connection) -> dict:
     return response
 
 
-def cmd_msn(args: t.Optional[list[str]], conn: connection) -> dict:
+def cmd_msn(args: t.Optional[list[str]], conn: connection) -> dict:  # no test coverage
     """if command is 'msn'"""
     date, text, description = quotes.msn(conn, args)
 
@@ -145,7 +147,7 @@ def cmd_msn(args: t.Optional[list[str]], conn: connection) -> dict:
     return response
 
 
-def cmd_rekorder(conn: connection) -> dict:
+def cmd_rekorder(conn: connection) -> dict:  # no test coverage
     """if command is 'rekorder'"""
     text = achievements.all_at_date(conn)
     response: dict[str, t.Any] = {"text": text}
@@ -173,7 +175,7 @@ def cmd_panic(exc: Exception) -> dict:
 
 def send_response(
     slack_client, response: dict, channel: str, thread_ts: t.Optional[str] = None,
-):
+):  # no test coverage
     log.info("Sending to slack: ", response)
     slack_client.chat_postMessage(channel=channel, thread_ts=thread_ts, **response)
 
@@ -201,9 +203,9 @@ def execute(
 
     try:
         return command_func()
-    except psycopg2.OperationalError:
+    except psycopg2.OperationalError:  # no test coverage
         raise
-    except (SSLError, dropbox.exceptions.ApiError):
+    except (SSLError, dropbox.exceptions.ApiError):  # no test coverage
         # Dropbox sometimes gives SSLerrors, (or ApiError if file not there) try again:
         try:
             log.error("SSLerror/ApiError, retrying", exc_info=True)

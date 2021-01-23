@@ -199,7 +199,7 @@ def dbx(conn):
     yield mock_dbx
 
 
-class MockPool(database.ConnectionPool):
+class MockPool(database.ConnectionPool):  # no test coverage
     def __init__(self, conn: connection) -> None:
         self.conn = conn
 
@@ -220,7 +220,7 @@ def client(conn) -> t.Generator[testing.FlaskClient, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def no_http_requests(monkeypatch):
+def no_http_requests(monkeypatch):  # no test coverage
     """https://blog.jerrycodes.com/no-http-requests/"""
     allowed_hosts = {"localhost"}
     original_urlopen = HTTPConnectionPool.urlopen

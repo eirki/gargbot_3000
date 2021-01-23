@@ -48,7 +48,7 @@ def map_for_locs(conn, journey_id, location, last_location, steps_for_date):
     return img
 
 
-def generate_map(conn, journey_id, index: int, write=True):
+def generate_map(conn, journey_id, index: int, write=True):  # no test coverage
     steps_for_date, locations = prepare_map_generation(conn, journey_id)
     location = locations[index]
     last_location = locations[index - 1]
@@ -70,7 +70,7 @@ def generate_all_maps(conn, journey_id, write=True):
         img = map_for_locs(conn, journey_id, location, last_location, steps_for_date)
         if write is False:
             imgs.append(img)
-        elif img is not None:
+        elif img is not None:  # no test coverage
             with open(
                 (Path.cwd() / location["date"].isoformat()).with_suffix((".jpg")), "wb"
             ) as f:
@@ -96,7 +96,7 @@ def get_detailed_coords(current_waypoints, last_location, steps_data, start_dist
             if next_waypoint is None or next_waypoint["distance"] < current_distance:
                 # next_waypoint from previous garglings has been passed
                 next_waypoint = next(waypoints_itr, None)
-                if next_waypoint is None:
+                if next_waypoint is None:  # no test coverage
                     # this shouldn't really happen
                     break
 
@@ -202,7 +202,9 @@ def map_legend(gargling_coords: list[dict], gargling_info) -> Image.Image:
     return trimmed
 
 
-def render_map(map_: StaticMap, retry=True) -> t.Optional[Image.Image]:
+def render_map(
+    map_: StaticMap, retry=True
+) -> t.Optional[Image.Image]:  # no test coverage
     try:
         img = map_.render()
     except Exception:
@@ -233,11 +235,11 @@ def merge_maps(
         img.paste(overview_img, (0, 0))
         img.paste(sep, (overview_img.width, 0))
         img.paste(detailed_img, (overview_img.width + sep.width, 0))
-    elif overview_img is not None:
+    elif overview_img is not None:  # no test coverage
         img = overview_img
-    elif detailed_img is not None:
+    elif detailed_img is not None:  # no test coverage
         img = detailed_img
-    else:
+    else:  # no test coverage
         return None
     bytes_io = BytesIO()
     img.save(bytes_io, format="JPEG", subsampling=0, quality=100)

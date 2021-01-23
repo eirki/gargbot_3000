@@ -57,7 +57,7 @@ def test_user_exclusive(conn: connection, dbx: conftest.MockDropbox) -> None:
         assert_valid_returns(url1, timestamp, description)
         if not url1.endswith(exclusive_pic):
             break
-    else:
+    else:  # no test coverage
         raise Exception("could not find good seed")
 
     with conn.cursor() as cursor:
@@ -86,7 +86,7 @@ def test_multiple_users_exclusive(conn: connection, dbx: conftest.MockDropbox) -
         assert_valid_returns(url1, timestamp, description)
         if not url1.endswith(exclusive_pic):
             break
-    else:
+    else:  # no test coverage
         raise Exception("could not find good seed")
 
     with conn.cursor() as cursor:

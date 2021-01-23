@@ -88,7 +88,7 @@ def msn(
         messages = msn_queries.random_message_session(conn)
         if len(messages) <= 10:
             first = 0
-        else:
+        else:  # no test coverage
             first = random.randint(0, len(messages) - 10)
     conversation = messages[first : first + 10]
 
@@ -98,7 +98,7 @@ def msn(
     for message in conversation:
         if squashed:
             prev_from_user, prev_content, prev_color = squashed[-1]
-            if message["from_user"] == prev_from_user:
+            if message["from_user"] == prev_from_user:  # no test coverage
                 squashed[-1][1] = "\n".join([prev_content, message["content"]])
                 continue
         squashed.append([message["from_user"], message["content"], message["color"]])

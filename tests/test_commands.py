@@ -2,6 +2,8 @@
 # coding: utf-8
 from __future__ import annotations
 
+import datetime as dt
+
 from psycopg2.extensions import connection
 
 from gargbot_3000 import commands
@@ -40,3 +42,12 @@ def test_cmd_panic(monkeypatch):
     response = commands.execute(command_str="ping", args=[], conn=None, dbx=None)
     assert response["text"].startswith("Error, error!")
     assert "division by zero" in response["text"]
+
+
+def test_prettify_date():
+    date = dt.datetime(2020, 1, 2, 0, 0, 0)
+    pretty = commands.prettify_date(date)
+    assert (
+        pretty
+        == "<!date^1577919600^{date_pretty} at 00:00| Thursday 02. January 2020 00:00>"
+    )

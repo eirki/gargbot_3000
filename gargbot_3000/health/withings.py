@@ -39,7 +39,7 @@ class WithingsService:
         url = self.client.get_authorize_url()
         return url
 
-    def token(self, code: str) -> t.Tuple[int, Credentials]:
+    def token(self, code: str) -> t.Tuple[int, Credentials]:  # no test coverage
         credentials = self.client.get_credentials(code)
         return credentials.userid, credentials
 
@@ -86,7 +86,9 @@ class WithingsUser:
             credentials, refresh_cb=self.service.persist_token
         )
 
-    def _steps_api_call(self, date: pendulum.Date) -> MeasureGetActivityResponse:
+    def _steps_api_call(
+        self, date: pendulum.Date
+    ) -> MeasureGetActivityResponse:  # no test coverage
         return self.client.measure_get_activity(
             data_fields=[GetActivityField.STEPS],
             startdateymd=date,
@@ -100,5 +102,5 @@ class WithingsUser:
         )
         return entry.steps if entry else 0
 
-    def body(self, date: pendulum.Date) -> None:
+    def body(self, date: pendulum.Date) -> None:  # no test coverage
         return None

@@ -69,3 +69,4 @@ Network Trash Folder
 Temporary Items
 .apdisk
 tests/__pycache__/*
+coverage.xml

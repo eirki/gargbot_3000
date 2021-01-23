@@ -44,7 +44,7 @@ class GooglefitService:
         )
         return authorization_url
 
-    def token(self, code: str) -> t.Tuple[None, Credentials]:
+    def token(self, code: str) -> t.Tuple[None, Credentials]:  # no test coverage
         self.client.fetch_token(code=code)
         credentials = self.client.credentials
         return None, credentials
@@ -103,17 +103,17 @@ class GooglefitUser:
             token_uri=config.googlefit_token_uri,
         )
         credentials.expiry = pendulum.from_timestamp(expires_at).naive()
-        if credentials.expired:
+        if credentials.expired:  # no test coverage
             request = google.auth.transport.requests.Request()
             credentials.refresh(request)
             self.service.update_token(service_user_id, credentials)
-        if not credentials.valid:
+        if not credentials.valid:  # no test coverage
             raise Exception("Invalid credentials")
         self.client = build(
             "fitness", "v1", credentials=credentials, cache_discovery=False
         )
 
-    def _steps_api_call(self, start_ms: int, end_ms: int) -> dict:
+    def _steps_api_call(self, start_ms: int, end_ms: int) -> dict:  # no test coverage
         return (
             self.client.users()
             .dataset()
@@ -149,5 +149,5 @@ class GooglefitUser:
         except IndexError:
             return 0
 
-    def body(self, date: pendulum.Date):
+    def body(self, date: pendulum.Date):  # no test coverage
         pass

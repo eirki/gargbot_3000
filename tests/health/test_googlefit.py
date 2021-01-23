@@ -15,13 +15,6 @@ from gargbot_3000.health import queries
 from gargbot_3000.health.googlefit import GooglefitService, GooglefitUser
 from tests import conftest
 
-
-def googlefit_user(conn) -> GooglefitUser:
-    user = conftest.users[0]
-    googlefit_user = register_user(user, conn, enable_steps=True)
-    return googlefit_user
-
-
 expiry = pendulum.tomorrow().timestamp()
 
 
