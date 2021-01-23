@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 import math
 from operator import itemgetter
 import typing as t
@@ -25,7 +27,7 @@ def define_journey(conn, origin, destination) -> int:
 def parse_gpx(conn, journey_id, xml_data) -> None:
     gpx = gpxpy.parse(xml_data)
     plist = gpx.tracks[0].segments[0].points
-    waypoints: t.List[dict] = []
+    waypoints: list[dict] = []
     prev_waypoint = None
     cumulative_distance = 0
     for waypoint in plist:
@@ -161,8 +163,8 @@ def perform_daily_update(
     conn: connection,
     journey_id: int,
     date: pendulum.Date,
-    steps_data: t.List[dict],
-    gargling_info: t.Dict[int, dict],
+    steps_data: list[dict],
+    gargling_info: dict[int, dict],
 ) -> t.Optional[
     t.Tuple[dict, float, dict, t.Optional[str], str, t.Optional[str], bool, bool]
 ]:
@@ -269,9 +271,9 @@ def format_response(
     photo_url: t.Optional[str],
     map_url: str,
     map_img_url: t.Optional[str],
-    body_reports: t.Optional[t.List[str]],
+    body_reports: t.Optional[list[str]],
     finished: bool,
-    gargling_info: t.Dict[int, dict],
+    gargling_info: dict[int, dict],
     achievement: t.Optional[str],
 ) -> dict:
     blocks = []

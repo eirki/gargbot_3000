@@ -1,5 +1,7 @@
-#! /usr/bin/env python3.6
+#! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 import datetime as dt
 import html
 import random
@@ -47,7 +49,7 @@ def _sanitize_post(inp, bbcode_uid: str):
 
 
 def forum(
-    conn: connection, args: t.Optional[t.List[str]]
+    conn: connection, args: t.Optional[list[str]]
 ) -> t.Tuple[str, str, str, dt.datetime, str, str]:
     user = args[0] if args else None
     desc = " "
@@ -68,7 +70,7 @@ def forum(
 
 
 def msn(
-    conn: connection, args: t.Optional[t.List[str]]
+    conn: connection, args: t.Optional[list[str]]
 ) -> t.Tuple[dt.datetime, list, t.Optional[str]]:
     user = args[0] if args else None
     desc = None
@@ -92,7 +94,7 @@ def msn(
 
     date = conversation[0]["sent_at"].strftime("%d.%m.%y %H:%M")
 
-    squashed: t.List[t.List[str]] = []
+    squashed: list[list[str]] = []
     for message in conversation:
         if squashed:
             prev_from_user, prev_content, prev_color = squashed[-1]

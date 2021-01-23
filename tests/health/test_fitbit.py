@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 # coding: utf-8
-import typing as t
+from __future__ import annotations
+
 from unittest.mock import patch
 
 from flask import testing
@@ -136,7 +137,7 @@ def test_handle_redirect(
     assert data["gargling_id"] == user.id
 
 
-def fitbit_users(conn) -> t.List[FitbitUser]:
+def fitbit_users(conn) -> list[FitbitUser]:
     users = conftest.users[0:2]
     health_users = [register_user(user, conn, enable_steps=True) for user in users]
     return health_users
@@ -167,8 +168,8 @@ def test_fitbit_steps(conn: connection):
 def test_fitbit_steps_no_data(conn: connection):
     users = fitbit_users(conn)
     user1, user2 = users
-    user1_return_value: t.Dict[str, list] = {"activities-steps": []}
-    user2_return_value: t.Dict[str, list] = {"activities-steps": []}
+    user1_return_value: dict[str, list] = {"activities-steps": []}
+    user2_return_value: dict[str, list] = {"activities-steps": []}
     user1._steps_api_call = lambda date: user1_return_value  # type: ignore
     user2._steps_api_call = lambda date: user2_return_value  # type: ignore
     test_date = pendulum.Date(2020, 1, 2)
@@ -214,12 +215,12 @@ def test_fitbit_body(conn: connection):
 def test_fitbit_body_no_data(conn: connection):
     users = fitbit_users(conn)
     user1, user2 = users
-    user1_weight_return_value: t.Dict[str, list] = {"weight": []}
-    user1_bodyfat_return_value: t.Dict[str, list] = {"fat": []}
+    user1_weight_return_value: dict[str, list] = {"weight": []}
+    user1_bodyfat_return_value: dict[str, list] = {"fat": []}
     user1._weight_api_call = lambda date: user1_weight_return_value  # type: ignore
     user1._bodyfat_api_call = lambda date: user1_bodyfat_return_value  # type: ignore
-    user2_weight_return_value: t.Dict[str, list] = {"weight": []}
-    user2_bodyfat_return_value: t.Dict[str, list] = {"fat": []}
+    user2_weight_return_value: dict[str, list] = {"weight": []}
+    user2_bodyfat_return_value: dict[str, list] = {"fat": []}
     user2._weight_api_call = lambda date: user2_weight_return_value  # type: ignore
     user2._bodyfat_api_call = lambda date: user2_bodyfat_return_value  # type: ignore
     expected = [

@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 from gargbot_3000.journey import common
 from gargbot_3000.journey.endpoints import blueprint
 from gargbot_3000.journey.journey import main

@@ -1,7 +1,8 @@
 #! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 from dataclasses import dataclass
-import typing as t
 
 import aiosql
 from dropbox import Dropbox
@@ -24,7 +25,7 @@ class Recipient:
     age: int
 
 
-def todays_recipients(conn: connection) -> t.List[Recipient]:
+def todays_recipients(conn: connection) -> list[Recipient]:
     now_tz = pendulum.now(config.tz)
     data = queries.congrats_for_date(conn, month=now_tz.month, day=now_tz.day)
     recipients = [
@@ -38,7 +39,7 @@ def todays_recipients(conn: connection) -> t.List[Recipient]:
     return recipients
 
 
-def formulate_congrat(recipient: Recipient, conn: connection, dbx: Dropbox) -> t.Dict:
+def formulate_congrat(recipient: Recipient, conn: connection, dbx: Dropbox) -> dict:
     sentence = queries.random_sentence(conn)["sentence"]
     text = (
         f"Hurra! Vår felles venn <@{recipient.slack_id}> fyller {recipient.age} i dag!\n"

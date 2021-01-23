@@ -1,5 +1,7 @@
-#! /usr/bin/env python3.6
+#! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 from asyncio import Future
 import contextlib
 import json
@@ -201,7 +203,7 @@ def attach_share_buttons(result: dict, func: str, args: list) -> dict:
 
 
 def attach_original_request(
-    result: dict, slack_id: str, user_name: str, func: str, args: t.List[str]
+    result: dict, slack_id: str, user_name: str, func: str, args: list[str]
 ) -> dict:
     with app.pool.get_connection() as conn:
         data = commands.queries.avatar_for_slack_id(conn, slack_id=slack_id)
@@ -322,7 +324,7 @@ def handle_command(command_str: str, args: list, buttons=True) -> dict:
 
 
 class StandaloneApplication(BaseApplication):
-    def __init__(self, app, options: t.Dict[str, t.Any] = None) -> None:
+    def __init__(self, app, options: dict[str, t.Any] = None) -> None:
         self.options = options if options is not None else {}
         self.application = app
         super().__init__()

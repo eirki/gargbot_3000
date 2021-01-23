@@ -1,5 +1,7 @@
-#! /usr/bin/env python3.6
+#! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 from psycopg2.extensions import connection
 
 from gargbot_3000 import commands

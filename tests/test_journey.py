@@ -1,8 +1,9 @@
-#! /usr/bin/env python3.6
+#! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 from contextlib import contextmanager
 from operator import itemgetter
-import typing as t
 from unittest.mock import patch
 
 from PIL import Image
@@ -57,7 +58,7 @@ def insert_journey_data(conn) -> int:
     journey_id = journey.define_journey(
         conn, origin="Origin", destination="Destination"
     )
-    data_in: t.List[dict] = [{"journey_id": journey_id, **d} for d in gps_data]
+    data_in: list[dict] = [{"journey_id": journey_id, **d} for d in gps_data]
     journey.queries.add_waypoints(conn, data_in)
     return journey_id
 

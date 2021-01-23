@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 from collections import namedtuple
 from dataclasses import asdict, dataclass
 import datetime as dt
@@ -11,6 +13,7 @@ from google.oauth2.credentials import Credentials as GooglefitCredentials
 import pendulum
 from psycopg2.extensions import connection
 import pytest
+import pytz
 from urllib3.connectionpool import HTTPConnectionPool
 from withings_api.common import Credentials as WithingsCredentials
 
@@ -29,7 +32,7 @@ from gargbot_3000.database import LoggingCursor
 from gargbot_3000.health.googlefit import GooglefitService
 
 age = 28
-byear = dt.datetime.now(config.tz).year - age
+byear = dt.datetime.now(pytz.timezone(config.tz)).year - age
 
 # flake8: noqa
 # fmt: off
@@ -61,7 +64,7 @@ class Pic:
     path: str
     topic: str
     taken_at: dt.datetime
-    faces: t.List[int]
+    faces: list[int]
 
 pics = [
     Pic("path/test_pic1", "topic1", dt.datetime(2001, 1, 1), [2]),
@@ -135,7 +138,7 @@ congrats = [
 
 
 class MockDropbox:
-    responsetuple = namedtuple("response", ["url"])
+    responsetuple = namedtuple("responsetuple", ["url"])
 
     def sharing_create_shared_link(self, path):
         return self.responsetuple("https://" + path)

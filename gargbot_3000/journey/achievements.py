@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 import typing as t
 
 import pendulum
@@ -60,11 +62,11 @@ possible = [
 def format_new(
     desc: str,
     unit: str,
-    holders: t.Optional[t.List[int]],
+    holders: t.Optional[list[int]],
     value: int,
     prev_holders: t.Optional[t.Set[int]],
     prev_value: t.Optional[int],
-    gargling_info: t.Dict[int, dict],
+    gargling_info: dict[int, dict],
 ):
     tangering = prev_value is None
     achv_txt = ""
@@ -100,7 +102,7 @@ def extract(
     query: t.Callable,
     **query_kwargs,
 ) -> t.Optional[
-    t.Tuple[t.Optional[t.List[int]], int, t.Optional[t.Set[int]], t.Optional[int]]
+    t.Tuple[t.Optional[list[int]], int, t.Optional[t.Set[int]], t.Optional[int]]
 ]:
     current = query(conn, journey_id=journey_id, taken_before=date, **query_kwargs)
     if len(current) == 0:
@@ -110,7 +112,7 @@ def extract(
     new = [rec for rec in current if rec["taken_at"] == date]
     value = new[0]["amount"]
     try:
-        holders: t.Optional[t.List[int]] = [r["gargling_id"] for r in new]
+        holders: t.Optional[list[int]] = [r["gargling_id"] for r in new]
     except KeyError:
         holders = None
     prev = [rec for rec in current if rec["taken_at"] < date]
@@ -137,7 +139,7 @@ def new(
     conn: connection,
     journey_id: int,
     date: pendulum.Date,
-    gargling_info: t.Dict[int, dict],
+    gargling_info: dict[int, dict],
 ) -> t.Optional[str]:
     for p in possible:
         achv = extract(
@@ -166,7 +168,7 @@ def new(
 
 
 def get_all_at_date(conn, journey_id, date=None):
-    all_records: t.List[dict] = []
+    all_records: list[dict] = []
     p = possible[0]
     most = [
         p,
@@ -219,7 +221,7 @@ def get_all_at_date(conn, journey_id, date=None):
     return all_records
 
 
-def format_all(gargling_info: t.Dict[int, dict], records) -> str:
+def format_all(gargling_info: dict[int, dict], records) -> str:
     def fdate(date: pendulum.Date) -> str:
         return f"{date.day}.{date.month}.{date.year}"
 

@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 from io import BytesIO
 import itertools
 from operator import itemgetter
@@ -77,7 +79,7 @@ def generate_all_maps(conn, journey_id, write=True):
 
 
 def get_detailed_coords(current_waypoints, last_location, steps_data, start_dist):
-    detailed_coords: t.List[dict] = []
+    detailed_coords: list[dict] = []
     waypoints_itr = iter(current_waypoints)
     # starting location
     latest_waypoint = (
@@ -130,12 +132,12 @@ def traversal_data(
     current_lat: float,
     current_lon: float,
     current_distance: float,
-    steps_data: t.List[dict],
+    steps_data: list[dict],
 ) -> t.Tuple[
-    t.List[t.Tuple[float, float]],
-    t.List[t.Tuple[float, float]],
-    t.List[t.Tuple[float, float]],
-    t.List[dict],
+    list[t.Tuple[float, float]],
+    list[t.Tuple[float, float]],
+    list[t.Tuple[float, float]],
+    list[dict],
 ]:
     if last_location is not None:
         old_waypoints = queries.waypoints_between_distances(
@@ -171,7 +173,7 @@ def traversal_data(
     return old_coords, location_coordinates, overview_coords, detailed_coords
 
 
-def map_legend(gargling_coords: t.List[dict], gargling_info) -> Image.Image:
+def map_legend(gargling_coords: list[dict], gargling_info) -> Image.Image:
     def trim(im):
         bg = Image.new(im.mode, im.size, im.getpixel((0, 0)))
         diff = ImageChops.difference(im, bg)
@@ -249,8 +251,8 @@ def main(
     current_lat: float,
     current_lon: float,
     current_distance: float,
-    steps_data: t.List[dict],
-    gargling_info: t.Dict[int, dict],
+    steps_data: list[dict],
+    gargling_info: dict[int, dict],
 ) -> t.Optional[bytes]:
     old_coords, locations, overview_coords, detailed_coords = traversal_data(
         conn,

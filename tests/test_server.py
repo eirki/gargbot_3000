@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 import json
 from types import SimpleNamespace
 import typing as t
@@ -30,7 +32,7 @@ class MockRequests:
 
 
 class MockCommands:
-    def execute(self, command_str, args, conn, dbx) -> t.Dict[str, t.Any]:
+    def execute(self, command_str, args, conn, dbx) -> dict[str, t.Any]:
         self.command_str = command_str
         self.args = args
         self.conn = conn
@@ -125,10 +127,10 @@ def test_slash(client: testing.FlaskClient, conn: connection, monkeypatch, cmd, 
 @pytest.mark.parametrize("cmd", ["pic", "forum", "msn"])
 @pytest.mark.parametrize("args", [[], ["arg1"], ["arg1", "arg2"]])
 def test_interactive_share(
-    client: testing.FlaskClient, monkeypatch, cmd: str, args: t.List[str]
+    client: testing.FlaskClient, monkeypatch, cmd: str, args: list[str]
 ):
     user = conftest.users[0]
-    original_response: t.Dict[str, t.Any] = (
+    original_response: dict[str, t.Any] = (
         {"text": cmd, "blocks": []}
         if cmd != "msn"
         else {"text": cmd, "attachments": [{"blocks": []}]}

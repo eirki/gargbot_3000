@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 from operator import itemgetter
 import typing as t
 
@@ -95,13 +97,13 @@ class FitbitUser:
         return self.client.get_bodyfat(base_date=date, period="1w")
 
     def body(self, date: pendulum.Date) -> dict:
-        def most_recent(entries: t.List[dict]) -> t.Optional[dict]:
+        def most_recent(entries: list[dict]) -> t.Optional[dict]:
             if len(entries) == 0:
                 return None
             for entry in entries:
-                entry["datetime"] = pendulum.parse(
-                    f"{entry['date']}T{entry['time']}"
-                ).date()
+                parsed = pendulum.parse(f"{entry['date']}T{entry['time']}")
+                assert isinstance(parsed, pendulum.DateTime)
+                entry["datetime"] = parsed.date()
             entries.sort(key=itemgetter("datetime"), reverse=True)
             return entries[0]
 

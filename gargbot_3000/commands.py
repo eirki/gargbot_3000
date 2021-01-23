@@ -1,5 +1,7 @@
-#! /usr/bin/env python3.6
+#! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 import datetime as dt
 from functools import partial
 import time
@@ -38,56 +40,56 @@ def command_explanation(server: bool = False):
     return commands if server is False else commands.replace("@gargbot_3000 ", "/")
 
 
-def cmd_ping() -> t.Dict:
+def cmd_ping() -> dict:
     """if command is 'ping' """
     text = "GargBot 3000 is active. Beep boop beep"
-    response: t.Dict[str, t.Any] = {"text": text}
+    response: dict[str, t.Any] = {"text": text}
     return response
 
 
-def cmd_welcome() -> t.Dict:
+def cmd_welcome() -> dict:
     """when joining new channel"""
     text = (
         "Hei hei kjære alle sammen!\n"
         "Dette er kommandoene jeg skjønner:\n" + command_explanation()
     )
-    response: t.Dict[str, t.Any] = {"text": text}
+    response: dict[str, t.Any] = {"text": text}
     return response
 
 
-def cmd_server_explanation() -> t.Dict:
+def cmd_server_explanation() -> dict:
     expl = command_explanation(server=True)
     text = "Beep boop beep! Dette er kommandoene jeg skjønner:\n" + expl
-    response: t.Dict[str, t.Any] = {"text": text}
+    response: dict[str, t.Any] = {"text": text}
     return response
 
 
-def cmd_hvem(args: t.List[str], conn: connection) -> t.Dict:
+def cmd_hvem(args: list[str], conn: connection) -> dict:
     """if command.lower().startswith("hvem")"""
     data = queries.random_first_name(conn)
     user = data["first_name"]
     answ = " ".join(args).replace("?", "!")
     text = f"{user} {answ}"
-    response: t.Dict[str, t.Any] = {"text": text}
+    response: dict[str, t.Any] = {"text": text}
     return response
 
 
 def cmd_pic(
-    args: t.Optional[t.List[str]], conn: connection, dbx: dropbox.Dropbox
-) -> t.Dict:
+    args: t.Optional[list[str]], conn: connection, dbx: dropbox.Dropbox
+) -> dict:
     """if command is 'pic'"""
     picurl, date, description = pictures.get_pic(conn, dbx, args)
     pretty_date = prettify_date(date)
     blocks = []
     image_block = {"type": "image", "image_url": picurl, "alt_text": picurl}
     blocks.append(image_block)
-    context_block: t.Dict[str, t.Any] = {
+    context_block: dict[str, t.Any] = {
         "type": "context",
         "elements": [{"type": "mrkdwn", "text": pretty_date}],
     }
     blocks.append(context_block)
     if description:
-        description_block: t.Dict[str, t.Any] = {
+        description_block: dict[str, t.Any] = {
             "type": "context",
             "elements": [{"type": "mrkdwn", "text": description}],
         }
@@ -97,7 +99,7 @@ def cmd_pic(
     return response
 
 
-def cmd_forum(args: t.Optional[t.List[str]], conn: connection) -> t.Dict:
+def cmd_forum(args: t.Optional[list[str]], conn: connection) -> dict:
     """if command is 'forum'"""
     text, user, avatar_url, date, url, description = quotes.forum(conn, args)
     pretty_date = prettify_date(date)
@@ -118,11 +120,11 @@ def cmd_forum(args: t.Optional[t.List[str]], conn: connection) -> t.Dict:
     return response
 
 
-def cmd_msn(args: t.Optional[t.List[str]], conn: connection) -> t.Dict:
+def cmd_msn(args: t.Optional[list[str]], conn: connection) -> dict:
     """if command is 'msn'"""
     date, text, description = quotes.msn(conn, args)
 
-    response: t.Dict[str, t.Any] = {
+    response: dict[str, t.Any] = {
         "text": date,
         "attachments": [
             {
@@ -146,43 +148,43 @@ def cmd_msn(args: t.Optional[t.List[str]], conn: connection) -> t.Dict:
 def cmd_rekorder(conn: connection) -> dict:
     """if command is 'rekorder'"""
     text = achievements.all_at_date(conn)
-    response: t.Dict[str, t.Any] = {"text": text}
+    response: dict[str, t.Any] = {"text": text}
     return response
 
 
-def cmd_not_found(args: str) -> t.Dict:
+def cmd_not_found(args: str) -> dict:
     text = (
         f"Beep boop beep! Nôt sure whåt you mean by `{args}`. "
         "Dette er kommandoene jeg skjønner:\n" + command_explanation()
     )
-    response: t.Dict[str, t.Any] = {"text": text}
+    response: dict[str, t.Any] = {"text": text}
     return response
 
 
-def cmd_panic(exc: Exception) -> t.Dict:
+def cmd_panic(exc: Exception) -> dict:
     text = (
         f"Error, error! Noe har gått fryktelig galt: {str(exc)}! Ææææææ. Ta kontakt"
         " med systemadministrator umiddelbart, før det er for sent. "
         "HJELP MEG. If I don't survive, tell mrs. gargbot... 'Hello'"
     )
-    response: t.Dict[str, t.Any] = {"text": text}
+    response: dict[str, t.Any] = {"text": text}
     return response
 
 
 def send_response(
-    slack_client, response: t.Dict, channel: str, thread_ts: t.Optional[str] = None,
+    slack_client, response: dict, channel: str, thread_ts: t.Optional[str] = None,
 ):
     log.info("Sending to slack: ", response)
     slack_client.chat_postMessage(channel=channel, thread_ts=thread_ts, **response)
 
 
 def execute(
-    command_str: str, args: t.List, conn: connection, dbx: dropbox.Dropbox
-) -> t.Dict:
+    command_str: str, args: list, conn: connection, dbx: dropbox.Dropbox
+) -> dict:
     log.info(f"command: {command_str}")
     log.info(f"args: {args}")
 
-    switch: t.Dict[str, t.Callable] = {
+    switch: dict[str, t.Callable] = {
         "ping": cmd_ping,
         "new_channel": cmd_welcome,
         "gargbot": cmd_server_explanation,

@@ -1,5 +1,7 @@
-#! /usr/bin/env python3.6
+#! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 import datetime as dt
 import itertools
 import typing as t
@@ -25,7 +27,7 @@ def sortout_args(
     args: t.Set[str],
     topic: t.Optional[str],
     year: t.Optional[str],
-    garglings: t.List[str],
+    garglings: list[str],
     exclusive: bool,
 ) -> t.Tuple[list, set]:
     valid_args = []
@@ -40,7 +42,7 @@ def sortout_args(
     return valid_args, invalid_args
 
 
-def reduce_arg_combinations(args: t.List[str]) -> t.Iterator[t.Sequence[str]]:
+def reduce_arg_combinations(args: list[str]) -> t.Iterator[t.Sequence[str]]:
     try:
         args.remove("kun")
         yield args
@@ -52,10 +54,7 @@ def reduce_arg_combinations(args: t.List[str]) -> t.Iterator[t.Sequence[str]]:
 
 
 def get_description_for_invalid_args(
-    invalid_args: t.Set[str],
-    years: t.List[str],
-    topics: t.List[str],
-    garglings: t.List[str],
+    invalid_args: t.Set[str], years: list[str], topics: list[str], garglings: list[str],
 ):
     invalid_args_fmt = ", ".join(f"`{arg}`" for arg in invalid_args)
     years_fmt = ", ".join(f"`{year}`" for year in years)
@@ -86,7 +85,7 @@ def get_random_pic(conn: connection, dbx: Dropbox):
 
 
 def get_pic(
-    conn: connection, dbx: Dropbox, arg_list: t.Optional[t.List[str]]
+    conn: connection, dbx: Dropbox, arg_list: t.Optional[list[str]]
 ) -> t.Tuple[str, dt.datetime, str]:
     description = ""
 

@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 import typing as t
 
 from flask import Blueprint, Response, current_app, jsonify, request
@@ -24,7 +26,7 @@ HealthUser = t.Union[FitbitUser, GooglefitUser, PolarUser, WithingsUser]
 
 
 def init_service(service_name: str) -> HealthService:
-    services: t.Dict[str, t.Type[HealthService]] = {
+    services: dict[str, t.Type[HealthService]] = {
         "fitbit": FitbitService,
         "googlefit": GooglefitService,
         "polar": PolarService,
@@ -35,7 +37,7 @@ def init_service(service_name: str) -> HealthService:
 
 
 def init_user(token: dict) -> HealthUser:
-    services: t.Dict[str, t.Type[HealthUser]] = {
+    services: dict[str, t.Type[HealthUser]] = {
         "fitbit": FitbitUser,
         "googlefit": GooglefitUser,
         "polar": PolarUser,
@@ -141,9 +143,7 @@ def health_status():
     return jsonify(data=as_dict)
 
 
-def steps(
-    conn: connection, users: t.List[HealthUser], date: pendulum.Date
-) -> t.List[dict]:
+def steps(conn: connection, users: list[HealthUser], date: pendulum.Date) -> list[dict]:
     step_amounts = []
     for user in users:
         try:
@@ -164,7 +164,7 @@ def steps(
     return step_amounts
 
 
-def get_body_data(users: t.List[HealthUser], date: pendulum.Date) -> t.List[dict]:
+def get_body_data(users: list[HealthUser], date: pendulum.Date) -> list[dict]:
     all_data = []
     for user in users:
         try:
@@ -182,7 +182,7 @@ def get_body_data(users: t.List[HealthUser], date: pendulum.Date) -> t.List[dict
     return all_data
 
 
-def body_details(body_data: t.List[dict]) -> t.Optional[list]:
+def body_details(body_data: list[dict]) -> t.Optional[list]:
     user_reports = []
     for datum in body_data:
         weight = datum["weight"]

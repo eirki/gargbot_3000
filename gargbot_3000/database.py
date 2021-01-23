@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 from contextlib import contextmanager
 import datetime as dt
 import logging
@@ -167,7 +169,7 @@ class SqlFormatAdapter(PsycoPG2Adapter):
 
     @classmethod
     def insert_update_delete_many(
-        cls, conn, _query_name, template: str, parmeters: t.List[dict]
+        cls, conn, _query_name, template: str, parmeters: list[dict]
     ):
         query = cls.render_template(template, parmeters[0] if parmeters else {})
         return super().insert_update_delete_many(conn, _query_name, query, parmeters)
@@ -224,7 +226,7 @@ class JinjaSqlAdapter(PsycoPG2Adapter):
         return super().insert_update_delete(conn, _query_name, sql, parameters)
 
     @classmethod
-    def insert_update_delete_many(cls, conn, _query_name, sql, parmeters: t.List[dict]):
+    def insert_update_delete_many(cls, conn, _query_name, sql, parmeters: list[dict]):
         sql = cls.render_template(sql, parmeters[0] if parmeters else {})
         return super().insert_update_delete_many(conn, _query_name, sql, parmeters)
 
@@ -342,6 +344,7 @@ class MSN:
             match = re.search(r"color:(#\w{6})", text_node.getAttribute("Style"))
             msg_color = match.group(1) if match else None
 
+            to_users = None
             if msg_type == "message":
                 to_node = message.getElementsByTagName("To")[0]
                 user_to_nodes = to_node.getElementsByTagName("User")
@@ -350,10 +353,10 @@ class MSN:
                     node.getAttribute("LogonName") for node in user_to_nodes
                 )
             elif msg_type == "invitation":
-                to_users = None
+                pass
 
             if not all(
-                participant in config.gargling_msn_emails
+                participant in config.gargling_msn_emails  # type: ignore
                 for participant in participants
             ):
                 continue
@@ -408,7 +411,7 @@ class MSN:
         cursor.execute(sql_command)
         users = cursor.fetchall()
         for slack_nick, db_id in users:
-            msn_nicks = config.slack_to_msn_nicks[slack_nick]
+            msn_nicks = config.slack_to_msn_nicks[slack_nick]  # type:ignore
             for msn_nick in msn_nicks:
                 sql_command = (
                     f"UPDATE msn_messages SET db_id = {db_id} "
@@ -419,9 +422,8 @@ class MSN:
         conn.close()
 
 
-def add_user_ids_table():
+def add_user_ids_table(users):
     conn = connect()
-    users = []
     cursor = conn.cursor()
     for slack_id, db_id, slack_nick, first_name in users:
         sql_command = (
@@ -447,6 +449,8 @@ class DropPics:
 
     @property
     def firstname_to_db_id(self):
+        if not self.conn:
+            raise Exception
         if self._firstname_to_db_id is None:
             cursor = self.conn.cursor()
             sql_command = "SELECT first_name, db_id FROM user_ids"
@@ -465,7 +469,7 @@ class DropPics:
         log.info("Connected to dbx")
 
     @staticmethod
-    def get_tags(image: t.Union[Path, str]) -> t.Optional[t.List[str]]:
+    def get_tags(image: Path | str) -> t.Optional[list[str]]:
         im = Image.open(image)
         exif = im._getexif()
         try:
@@ -474,7 +478,7 @@ class DropPics:
             return None
 
     @staticmethod
-    def get_date_taken(image: t.Union[Path, str]) -> dt.datetime:
+    def get_date_taken(image: Path | str) -> dt.datetime:
         im = Image.open(image)
         exif = im._getexif()
         date_str = exif[36867]
@@ -513,6 +517,8 @@ class DropPics:
             cursor.execute(sql_command, data)
 
     def add_pics_in_folder(self, folder: Path, topic: str, dbx_folder: str) -> None:
+        if not self.conn:
+            raise Exception
         cursor = self.conn.cursor()
         for pic in folder.iterdir():
             if not pic.suffix.lower() in {".jpg", ".jpeg"}:
@@ -541,6 +547,8 @@ class DropPics:
 
     def add_faces_to_existing_pics(self, folder: Path, dbx_folder: str):
         self.connect()
+        if not self.conn:
+            raise Exception
         try:
             for pic in list(folder.iterdir()):
                 dbx_path = dbx_folder + "/" + pic.name.lower()

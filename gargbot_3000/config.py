@@ -1,10 +1,11 @@
 #! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-import pytz
 
 load_dotenv(dotenv_path=Path(".") / ".env.local")
 load_dotenv(dotenv_path=Path(".") / ".env")
@@ -39,7 +40,7 @@ dropbox_token = os.environ["dropbox_token"]
 dbx_pic_folder = os.environ["dbx_pic_folder"]
 dbx_journey_folder = Path(os.environ["dbx_journey_folder"])
 dbx_db_backup_folder = Path(os.environ["dbx_db_backup_folder"])
-tz = pytz.timezone(os.environ["tz"])
+tz = os.environ["tz"]
 
 test_channel = os.environ["test_channel"]
 health_channel = os.environ["health_channel"]

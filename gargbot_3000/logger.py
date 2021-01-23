@@ -1,8 +1,10 @@
-#! /usr/bin/env python3.6
+#! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 import logging
-import os
 from logging import StreamHandler
+import os
 
 log = logging.getLogger()
 formatter = logging.Formatter("%(filename)s %(levelname)s - %(message)s")

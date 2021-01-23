@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 # coding: utf-8
+from __future__ import annotations
+
 from collections import defaultdict
 from operator import itemgetter
 import typing as t
@@ -84,11 +86,13 @@ class PolarUser:
         if trans is not None:
             activities = trans.list_activities()["activity-log"]
             log.info(f"number of activities: {len(activities)}")
-            steps_by_date: t.Dict[pendulum.Date, list] = defaultdict(list)
+            steps_by_date: dict[pendulum.Date, list] = defaultdict(list)
             for activity in activities:
                 summary = trans.get_activity_summary(activity)
                 log.info(summary)
-                taken_at = pendulum.parse(summary["date"]).date()
+                parsed = pendulum.parse(summary["date"])
+                assert isinstance(parsed, pendulum.DateTime)
+                taken_at = parsed.date()
                 created_at = pendulum.parse(summary["created"])
 
                 n_steps = summary["active-steps"]
@@ -96,7 +100,7 @@ class PolarUser:
                 steps_by_date[taken_at].append(
                     {"n_steps": n_steps, "created_at": created_at}
                 )
-            not_past: t.List[dict] = []
+            not_past: list[dict] = []
             for activity_date, activity_list in steps_by_date.items():
                 activity_list.sort(key=itemgetter("created_at"))
                 last_synced = activity_list[-1]
