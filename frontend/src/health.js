@@ -1,13 +1,16 @@
 "use strict";
 
+import h from 'hyperscript'
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 import { getToken, redirectLogin, getBackend, postBackend } from "./utils.js"
 
 
+
 let errormsg = "Errår. Kan det va fel på systemet?"
 
-function toggleService(elem, service_name, measure, token) {
-    let otherEnabled = document.querySelectorAll(`tr:not(#${service_name}) > th > .switch > .${measure}:not([disabled])`)
+function toggleService(elem, service_name, measure, token, all_buttons) {
+    let otherEnabled = all_buttons.filter(btn => !btn.disabled && btn !== elem)
     let wasChecked = null
     for (let box of otherEnabled) {
         box.disabled = true;
@@ -60,53 +63,72 @@ function authorizeService(elem, service, token) {
         })
 }
 
-function activateTable(user_data, token) {
-    let service_rows = document.querySelectorAll(".service-row")
-    for (let row of service_rows) {
-        let service_name = row.id
-        let service_data = user_data[service_name]
-
-        let steps_input = row.querySelector(".steps")
-        steps_input.addEventListener("change", (event) => toggleService(event.target, service_name, "steps", token))
-
-        let weight_input = row.querySelector(".weight")
-        weight_input.addEventListener("change", (event) => toggleService(event.target, service_name, "weight", token))
-
-        let auth_input = row.querySelector(".auth")
-        auth_input.addEventListener("click", (event) => authorizeService(event.target, service_name, token))
-        auth_input.disabled = false
-        if (service_data) {
-            auth_input.value = "Reauthenticate"
-        } else {
-            continue
-        }
-
-        steps_input.disabled = false
-        steps_input.checked = service_data["enable_steps"]
-
-        if (service_name === "fitbit") {
-            weight_input.disabled = false
-        }
-        weight_input.checked = service_data["enable_weight"]
-    }
-}
-
 
 function userHealthData(token) {
     return getBackend(token, "/health_status")
 }
+
+
+function activity_button(activity, service_id, service_data, token, all_buttons) {
+    let button = h("input.form-check-input", {
+        type: "checkbox",
+        disabled: !service_data || (activity === "weight" && service_id !== "fitbit"),
+        checked: service_data ? service_data[`enable_${activity}`] : false,
+        onchange: event => toggleService(event.target, service_id, activity, token, all_buttons)
+    })
+    all_buttons.push(button)
+    return button
+}
+
+
+async function renderTable(token) {
+    let services = [
+        { name: 'Fitbit', id: 'fitbit' },
+        { name: 'Polar', id: 'polar' },
+        { name: 'Google Fit', id: 'googlefit' },
+        { name: 'Withings', id: 'withings' },
+    ]
+    let step_buttons = []
+    let weight_buttons = []
+
+    let user_data = await userHealthData(token).then(obj => obj["data"])
+    return h("table.table", [
+        h("thead",
+            h("tr", ["service", "steps", "weight & fat", ""].map(header => h("th", header)))),
+        h("tbody", services.map(service => {
+            let service_data = user_data[service["id"]]
+            return h("tr", [
+                h("td", service["name"]),
+                h("td", [
+                    h("div.form-check.form-switch", [
+                        activity_button("steps", service["id"], service_data, token, step_buttons)
+                    ])]),
+                h("td", [
+                    h("div.form-check.form-switch", [
+                        activity_button("weight", service["id"], service_data, token, weight_buttons)
+                    ])]),
+                h("td", [
+                    h("input.btn.btn-outline-primary.btn-sm", {
+                        type: "button",
+                        value: !service_data ? "Authenticate" : "Reauthenticate",
+                        onclick: event => authorizeService(event.target, service["id"], token)
+                    })]),
+            ])
+        }))
+
+    ])
+}
+
 
 async function main() {
     let token = getToken();
     if (!token) {
         redirectLogin("health")
     }
-
-    let user_data = await userHealthData(token).then(obj => obj["data"])
-    activateTable(user_data, token);
+    var root = document.body
+    root.appendChild(await renderTable(token))
 
 }
 
 
 main();
-
