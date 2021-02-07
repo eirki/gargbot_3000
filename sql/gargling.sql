@@ -9,7 +9,10 @@ create table gargling (
   slack_avatar text,
   color_hex text not null,
   color_name text not null,
-  is_admin boolean not null default false
+  is_admin boolean not null default false,
+  last_sync_reminder_ts text,
+  sync_reminder_is_enabled boolean not null default false
+
 );
 
 

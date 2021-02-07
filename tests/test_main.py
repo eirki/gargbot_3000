@@ -8,5 +8,5 @@ from gargbot_3000 import __main__
 
 
 def test_main():
-    with pytest.raises(SystemExit):
+    with pytest.raises((SystemExit, Exception)):
         __main__.main()

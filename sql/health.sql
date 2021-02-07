@@ -366,4 +366,34 @@ from
   inner join googlefit_token_gargling on googlefit.id = googlefit_token_gargling.service_user_id
   inner join gargling on googlefit_token_gargling.gargling_id = gargling.id
 where
-  gargling_id = :gargling_id
+  gargling_id = :gargling_id;
+
+
+-- name: get_sync_reminder_users
+select
+  id,
+  slack_id,
+  last_sync_reminder_ts
+from
+  gargling
+where
+  sync_reminder_is_enabled;
+
+
+-- name: update_reminder_ts!
+update
+  gargling
+set
+  last_sync_reminder_ts = :ts
+where
+  id = :id;
+
+
+-- name: toggle_sync_reminding!
+update
+  gargling
+set
+  sync_reminder_is_enabled = :enable_
+where
+  id = :id;
+

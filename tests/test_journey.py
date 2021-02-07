@@ -192,7 +192,7 @@ def test_detail_journey(client: FlaskClient, conn: connection):
                 "address": "Address",
                 "country": "Country",
                 "date": "Sun, 31 Mar 2013 00:00:00 GMT",
-                "distance": 26846,
+                "distance": 26845.5,
                 "journey_id": 1,
                 "lat": 47.445256107266275,
                 "latest_waypoint": 12,

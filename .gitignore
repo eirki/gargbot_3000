@@ -70,3 +70,4 @@ Temporary Items
 .apdisk
 tests/__pycache__/*
 coverage.xml
+htmlcov/*

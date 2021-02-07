@@ -1,14 +1,45 @@
 -- name: migrations#
-update location set country = 'Norway' where date = '2020-7-26';
+alter table
+    fitbit_token_gargling rename constraint fitbit_token_gargling_fitbit_id_fkey to fitbit_token_gargling_service_user_id_fkey;
 
-update location set country = 'Sweden' where date between '2020-7-27' and '2020-8-12';
 
-update location set country = 'Denmark' where date between '2020-8-13' and '2020-8-16';
+alter table
+    googlefit_token_gargling rename constraint googlefit_token_gargling_googlefit_id_fkey to googlefit_token_gargling_service_user_id_fkey;
 
-update location set country = 'Germany' where date between '2020-8-18' and '2020-8-23';
 
-update location set country = 'Poland' where country = 'Polska';
+alter table
+    polar_token_gargling rename constraint polar_token_gargling_polar_id_fkey to polar_token_gargling_service_user_id_fkey;
 
-update location set country = 'Poland' where country = 'Polen';
 
-update location set country = 'Ukraine' where country = 'Україна';
+alter table
+    withings_token_gargling rename constraint withings_token_gargling_withings_id_fkey to withings_token_gargling_service_user_id_fkey;
+
+
+alter table
+    gargling
+add
+    column last_sync_reminder_ts text;
+
+
+alter table
+    gargling
+add
+    column sync_reminder_is_enabled boolean not null default true;
+
+
+alter table
+    googlefit_token
+alter column
+    enable_steps
+set
+    not null;
+
+
+
+alter table
+    polar_token
+alter column
+    enable_steps
+set
+    not null;
+

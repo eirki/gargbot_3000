@@ -2,14 +2,17 @@
 # coding: utf-8
 from __future__ import annotations
 
+from asyncio import Future
 import typing as t
 
 from flask import Blueprint, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 import pendulum
 from psycopg2.extensions import connection
+import slack
 import withings_api
 
+from gargbot_3000 import config, database
 from gargbot_3000.health.common import queries
 from gargbot_3000.health.fitbit_ import FitbitService, FitbitUser
 from gargbot_3000.health.googlefit import GooglefitService, GooglefitUser
@@ -135,12 +138,26 @@ def toggle():
 
 @blueprint.route("/health_status")
 @jwt_required
-def health_status():  # no test coverage
+def health_status():
     gargling_id = get_jwt_identity()
     with current_app.pool.get_connection() as conn:
         data = queries.health_status(conn, gargling_id=gargling_id)
-    as_dict = {row["service"]: dict(row) for row in data}
+        reminder_users = queries.get_sync_reminder_users(conn)
+    as_dict: dict[str, t.Any] = {row["service"]: dict(row) for row in data}
+    is_reminder_user = any(user["id"] == gargling_id for user in reminder_users)
+    as_dict["is_reminder_user"] = is_reminder_user
     return jsonify(data=as_dict)
+
+
+@blueprint.route("/toggle_sync_reminder", methods=["POST"])
+@jwt_required
+def toggle_sync_reminder():
+    gargling_id = get_jwt_identity()
+    enable = request.json["enable"]
+    with current_app.pool.get_connection() as conn:
+        queries.toggle_sync_reminding(conn, enable_=enable, id=gargling_id)
+        conn.commit()
+    return Response(status=200)
 
 
 def steps(conn: connection, users: list[HealthUser], date: pendulum.Date) -> list[dict]:
@@ -161,7 +178,7 @@ def steps(conn: connection, users: list[HealthUser], date: pendulum.Date) -> lis
         if amount is None:  # no test coverage
             continue
         step_amounts.append(
-            {"amount": amount, "gargling_id": user.gargling_id}
+            {"amount": amount, "gargling_id": user.gargling_id},
         )  # no test coverage
     return step_amounts
 
@@ -227,3 +244,73 @@ def activity(
     body_data = get_body_data(weight_users, date)
     body_reports = body_details(body_data)
     return steps_data, body_reports
+
+
+def send_sync_reminder(conn: connection, date: pendulum.Date) -> t.Generator:
+    data = activity(conn, date)
+    if data is None:  # no test coverage
+        return
+    steps_data, body_reports = data
+
+    reminder_users = queries.get_sync_reminder_users(conn)
+    reminder_users_by_id = {user["id"]: user for user in reminder_users}
+    for datum in steps_data:
+        try:
+            user_data = reminder_users_by_id[datum["gargling_id"]]
+        except KeyError:
+            continue
+        msg = (
+            f"Du gikk {datum['amount']} skritt i går, by my preliminary calculations. "
+            "Husk å synce hvis dette tallet er for lavt. "
+            f"Denne reminderen kan skrus av <{config.server_name}/health|her>."
+        )
+        resp = yield msg, user_data["slack_id"]
+        if resp is not None and resp.get("ok") is True:
+            queries.update_reminder_ts(conn, ts=resp["ts"], id=datum["gargling_id"])
+        yield
+
+
+def delete_sync_reminders() -> None:  # no test coverage
+    conn = database.connect()
+    reminder_users = queries.get_sync_reminder_users(conn)
+    slack_client = slack.WebClient(config.slack_bot_user_token)
+    for user in reminder_users:
+        if user["last_message_ts"] is None:
+            continue
+        try:
+            slack_client.chat_delete(
+                channel=user["slack_id"], ts=user["last_message_ts"]
+            )
+        except Exception:
+            log.error(
+                f"Error deleting sync reminder for user id: {user['id']}",
+                exc_info=True,
+            )
+        queries.update_reminder_ts(conn, ts=None, id=user["id"])
+    conn.close()
+
+
+def run_sync_reminding() -> None:  # no test coverage
+    conn = database.connect()
+    current_date = pendulum.now()
+    date = current_date.subtract(days=1)
+    slack_client = slack.WebClient(config.slack_bot_user_token)
+    try:
+        gen = send_sync_reminder(conn, date)
+        for msg, slack_id in gen:
+            data: t.Optional[dict]
+            try:
+                response = slack_client.chat_postMessage(text=msg, channel=slack_id)
+                if isinstance(response, Future):  # no test coverage
+                    # satisfy mypy
+                    raise Exception()
+                data = response.data
+            except Exception:
+                data = None
+                log.error(
+                    f"Error sending sync reminder for user id: {slack_id}",
+                    exc_info=True,
+                )
+            gen.send(data)
+    finally:
+        conn.close()

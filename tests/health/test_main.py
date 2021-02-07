@@ -9,7 +9,7 @@ import pendulum
 from psycopg2.extensions import connection
 import pytest
 
-from gargbot_3000 import health
+from gargbot_3000 import config, health
 from gargbot_3000.health import fitbit_, googlefit, polar, withings
 from tests import conftest
 from tests.health import test_fitbit, test_googlefit, test_polar, test_withings
@@ -110,4 +110,76 @@ def test_activity(conn):
     test_fitbit.register_user(user2, conn, enable_steps=False)
     test_date = pendulum.Date(2020, 1, 2)
     health.activity(conn, test_date)
-    # TODO: mock out body and steps calls and check results
+
+
+@patch("gargbot_3000.health.health.get_jwt_identity")
+@patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
+def test_health_status(
+    mock_jwt_required, mock_jwt_identity, client: testing.FlaskClient, conn
+):
+    user = conftest.users[0]
+    mock_jwt_identity.return_value = user.id
+    test_fitbit.register_user(user, conn)
+    response = client.get("/health_status")
+    assert response.json == {
+        "data": {
+            "fitbit": {
+                "enable_steps": False,
+                "enable_weight": False,
+                "service": "fitbit",
+            },
+            "is_reminder_user": False,
+        }
+    }
+
+
+@patch("gargbot_3000.health.health.get_jwt_identity")
+@patch("flask_jwt_extended.view_decorators.verify_jwt_in_request")
+def test_health_status_toggle_reminder(
+    mock_jwt_required, mock_jwt_identity, client: testing.FlaskClient, conn
+):
+    user = conftest.users[0]
+    mock_jwt_identity.return_value = user.id
+    test_fitbit.register_user(user, conn)
+    response = client.post("/toggle_sync_reminder", json={"enable": True})
+    response = client.get("/health_status")
+    assert response.json["data"]["is_reminder_user"] is True
+    response = client.post("/toggle_sync_reminder", json={"enable": False})
+    response = client.get("/health_status")
+    assert response.json["data"]["is_reminder_user"] is False
+
+
+@patch("gargbot_3000.health.health.activity")
+def test_send_sync_reminder(mock_activity, conn):
+    date = pendulum.Date(2020, 1, 2)
+    user = conftest.users[0]
+    test_fitbit.register_user(user, conn)
+    health.queries.toggle_sync_reminding(conn, enable_=True, id=user.id)
+    amount = 1778
+    mock_activity.return_value = [
+        [{"gargling_id": user.id, "amount": amount}, {"gargling_id": 0, "amount": 0}],
+        [],
+    ]
+    gen = health.health.send_sync_reminder(conn, date)
+    result = []
+    ts = "1503435956.000247"
+    for msg, slack_id in gen:
+        result.append((msg, slack_id))
+        resp = {"ok": True, "ts": ts}
+        gen.send(resp)
+    assert len(result) == 1
+    msg, slack_id = result[0]
+
+    assert msg == (
+        f"Du gikk {amount} skritt i går, by my preliminary calculations. "
+        "Husk å synce hvis dette tallet er for lavt. "
+        f"Denne reminderen kan skrus av <{config.server_name}/health|her>."
+    )
+    assert slack_id == user.slack_id
+    reminder_users = health.queries.get_sync_reminder_users(conn)
+    assert len(reminder_users) == 1
+    assert dict(reminder_users[0]) == {
+        "id": user.id,
+        "last_sync_reminder_ts": ts,
+        "slack_id": "s_id2",
+    }

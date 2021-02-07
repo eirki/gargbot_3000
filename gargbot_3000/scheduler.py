@@ -9,6 +9,7 @@ import pendulum
 import schedule
 
 from gargbot_3000 import config, database, greetings
+from gargbot_3000.health import health
 from gargbot_3000.journey import journey
 from gargbot_3000.logger import log
 
@@ -32,6 +33,15 @@ def main():  # no test coverage
             hour = local_hour_at_utc(7)
             log.info(f"Scheduling send_congrats at {hour}")
             schedule.every().day.at(hour).do(greetings.send_congrats)
+
+            hour = local_hour_at_utc(10)
+            log.info(f"Scheduling sync reminder at {hour}")
+            schedule.every().day.at(hour).do(health.send_sync_reminder)
+
+            hour = local_hour_at_utc(11)
+            delete_time = f"{hour}:55"
+            log.info(f"Scheduling sync reminder deletion at {delete_time}")
+            schedule.every().day.at(delete_time).do(health.delete_sync_reminders)
 
             hour = local_hour_at_utc(12)
             log.info(f"Scheduling update_journey at {hour}")

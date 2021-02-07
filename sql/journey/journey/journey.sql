@@ -28,7 +28,7 @@ create table step (
     journey_id smallint not null references journey(id),
     gargling_id smallint not null references gargling(id),
     taken_at date not null,
-    amount smallint not null
+    amount integer not null
 );
 
 
@@ -37,10 +37,10 @@ create unique index on step (journey_id, gargling_id, taken_at);
 
 create table location (
     journey_id smallint not null references journey(id),
-    latest_waypoint smallint not null references waypoint(id),
+    latest_waypoint integer not null references waypoint(id),
     lat double precision not null,
     lon double precision not null,
-    distance int not null,
+    distance float not null,
     date date not null,
     address text,
     country text,

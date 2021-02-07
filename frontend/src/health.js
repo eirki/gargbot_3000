@@ -92,30 +92,54 @@ async function renderTable(token) {
     let weight_buttons = []
 
     let user_data = await userHealthData(token).then(obj => obj["data"])
-    return h("table.table", [
-        h("thead",
-            h("tr", ["service", "steps", "weight & fat", ""].map(header => h("th", header)))),
-        h("tbody", services.map(service => {
-            let service_data = user_data[service["id"]]
-            return h("tr", [
-                h("td", service["name"]),
-                h("td", [
-                    h("div.form-check.form-switch", [
-                        activity_button("steps", service["id"], service_data, token, step_buttons)
-                    ])]),
-                h("td", [
-                    h("div.form-check.form-switch", [
-                        activity_button("weight", service["id"], service_data, token, weight_buttons)
-                    ])]),
-                h("td", [
-                    h("input.btn.btn-outline-primary.btn-sm", {
-                        type: "button",
-                        value: !service_data ? "Authenticate" : "Reauthenticate",
-                        onclick: event => authorizeService(event.target, service["id"], token)
-                    })]),
-            ])
-        }))
+    return h("div.m-3", [
+        h("h1", "Health services"),
+        h("table.table", [
+            h("thead",
+                h("tr", ["service", "steps", "weight & fat", ""].map(header => h("th", header)))),
+            h("tbody", services.map(service => {
+                let service_data = user_data[service["id"]]
+                return h("tr", [
+                    h("td", service["name"]),
+                    h("td", [
+                        h("div.form-check.form-switch", [
+                            activity_button("steps", service["id"], service_data, token, step_buttons)
+                        ])]),
+                    h("td", [
+                        h("div.form-check.form-switch", [
+                            activity_button("weight", service["id"], service_data, token, weight_buttons)
+                        ])]),
+                    h("td", [
+                        h("input.btn.btn-outline-primary.btn-sm", {
+                            type: "button",
+                            value: !service_data ? "Authenticate" : "Reauthenticate",
+                            onclick: event => authorizeService(event.target, service["id"], token)
+                        })]),
+                ])
+            }))
+        ]),
+        h("div", [
+            h("h1", "Sync Reminder"),
+            h("div.form-check.form-switch", [
+                h("input.form-check-input", {
+                    id: "reminderCheckbox",
+                    type: "checkbox",
+                    checked: user_data["is_reminder_user"],
+                    onchange: event =>
+                        postBackend(token, "/toggle_sync_reminder", { enable: event.target.checked }).then(response => {
+                            if (response.status !== 200) {
+                                throw ("Failed to set setting:" + response.status);
+                            }
+                        })
+                }),
+                h("label.form-check-label", {
+                    htmlFor: "reminderCheckbox"
+                },
+                    "Reminder klokka 10 hver dag om å synce steps?"
+                )
+            ]),
 
+        ])
     ])
 }
 

@@ -264,14 +264,18 @@ def setup_test() -> None:  # no test coverage
     conn.close()
 
     conn = psycopg2.connect(database="target_db", **credentials)
-    queries = aiosql.from_path("sql/gargling.sql", "psycopg2")
-    queries.create_schema(conn)
-    for path in Path("sql/").iterdir():
-        if path.stem == "gargling":
-            continue
-        queries = aiosql.from_path(path, "psycopg2")
+    for path in [
+        "gargling",
+        "congrats",
+        "health",
+        "message",
+        "picture",
+        "post",
+        "journey/journey/journey",
+    ]:
+        queries = aiosql.from_path(f"sql/{path}.sql", "psycopg2")
+        queries.create_schema(conn)
         try:
-            queries.create_schema(conn)
             queries.define_args(conn)
         except AttributeError:
             pass
