@@ -36,7 +36,7 @@ def main():  # no test coverage
 
             hour = local_hour_at_utc(10)
             log.info(f"Scheduling sync reminder at {hour}")
-            schedule.every().day.at(hour).do(health.send_sync_reminder)
+            schedule.every().day.at(hour).do(health.run_sync_reminding)
 
             hour = local_hour_at_utc(11)
             delete_time = f"{hour}:55"

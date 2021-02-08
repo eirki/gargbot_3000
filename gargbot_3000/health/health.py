@@ -275,11 +275,11 @@ def delete_sync_reminders() -> None:  # no test coverage
     reminder_users = queries.get_sync_reminder_users(conn)
     slack_client = slack.WebClient(config.slack_bot_user_token)
     for user in reminder_users:
-        if user["last_message_ts"] is None:
+        if user["last_sync_reminder_ts"] is None:
             continue
         try:
             slack_client.chat_delete(
-                channel=user["slack_id"], ts=user["last_message_ts"]
+                channel=user["slack_id"], ts=user["last_sync_reminder_ts"]
             )
         except Exception:
             log.error(
