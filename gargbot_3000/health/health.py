@@ -287,6 +287,7 @@ def delete_sync_reminders() -> None:  # no test coverage
                 exc_info=True,
             )
         queries.update_reminder_ts(conn, ts=None, id=user["id"])
+        conn.commit()
     conn.close()
 
 
@@ -312,5 +313,6 @@ def run_sync_reminding() -> None:  # no test coverage
                     exc_info=True,
                 )
             gen.send(data)
+            conn.commit()
     finally:
         conn.close()
