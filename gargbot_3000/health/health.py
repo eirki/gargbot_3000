@@ -246,12 +246,7 @@ def activity(
     return steps_data, body_reports
 
 
-def send_sync_reminder(conn: connection, date: pendulum.Date) -> t.Generator:
-    data = activity(conn, date)
-    if data is None:  # no test coverage
-        return
-    steps_data, body_reports = data
-
+def send_sync_reminders(conn: connection, slack_client, steps_data) -> None:
     reminder_users = queries.get_sync_reminder_users(conn)
     reminder_users_by_id = {user["id"]: user for user in reminder_users}
     for datum in steps_data:
@@ -264,55 +259,63 @@ def send_sync_reminder(conn: connection, date: pendulum.Date) -> t.Generator:
             "Husk å synce hvis dette tallet er for lavt. "
             f"Denne reminderen kan skrus av <{config.server_name}/health|her>."
         )
-        resp = yield msg, user_data["slack_id"]
-        if resp is not None and resp.get("ok") is True:
-            queries.update_reminder_ts(conn, ts=resp["ts"], id=datum["gargling_id"])
-        yield
+        try:
+            resp = slack_client.chat_postMessage(
+                text=msg, channel=user_data["slack_id"]
+            )
+            if isinstance(resp, Future):  # no test coverage
+                # satisfy mypy
+                raise Exception()
+            if resp.data.get("ok") is True:
+                queries.update_reminder_ts(
+                    conn, ts=resp.data["ts"], id=datum["gargling_id"]
+                )
+                conn.commit()
+        except Exception:  # no test coverage
+            log.error(
+                f"Error sending sync reminder for user id: {user_data['slack_id']}",
+                exc_info=True,
+            )
 
 
-def delete_sync_reminders() -> None:  # no test coverage
-    conn = database.connect()
+def delete_sync_reminders(conn: connection, slack_client) -> None:
     reminder_users = queries.get_sync_reminder_users(conn)
-    slack_client = slack.WebClient(config.slack_bot_user_token)
+    log.info(reminder_users)
     for user in reminder_users:
-        if user["last_sync_reminder_ts"] is None:
+        if user["last_sync_reminder_ts"] is None:  # no test coverage
             continue
         try:
             slack_client.chat_delete(
                 channel=user["slack_id"], ts=user["last_sync_reminder_ts"]
             )
-        except Exception:
+        except Exception:  # no test coverage
             log.error(
                 f"Error deleting sync reminder for user id: {user['id']}",
                 exc_info=True,
             )
         queries.update_reminder_ts(conn, ts=None, id=user["id"])
         conn.commit()
-    conn.close()
+
+
+def run_sync_deleting() -> None:  # no test coverage
+    conn = database.connect()
+    slack_client = slack.WebClient(config.slack_bot_user_token)
+    try:
+        delete_sync_reminders(conn, slack_client)
+    finally:
+        conn.close()
 
 
 def run_sync_reminding() -> None:  # no test coverage
     conn = database.connect()
     current_date = pendulum.now()
     date = current_date.subtract(days=1)
+    data = activity(conn, date)
+    if data is None:
+        return
+    steps_data, body_reports = data
     slack_client = slack.WebClient(config.slack_bot_user_token)
     try:
-        gen = send_sync_reminder(conn, date)
-        for msg, slack_id in gen:
-            data: t.Optional[dict]
-            try:
-                response = slack_client.chat_postMessage(text=msg, channel=slack_id)
-                if isinstance(response, Future):  # no test coverage
-                    # satisfy mypy
-                    raise Exception()
-                data = response.data
-            except Exception:
-                data = None
-                log.error(
-                    f"Error sending sync reminder for user id: {slack_id}",
-                    exc_info=True,
-                )
-            gen.send(data)
-            conn.commit()
+        send_sync_reminders(conn, slack_client, steps_data)
     finally:
         conn.close()

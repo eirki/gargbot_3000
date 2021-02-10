@@ -2,6 +2,8 @@
 # coding: utf-8
 from __future__ import annotations
 
+from dataclasses import dataclass
+import typing as t
 from unittest.mock import patch
 
 from flask import testing
@@ -149,37 +151,67 @@ def test_health_status_toggle_reminder(
     assert response.json["data"]["is_reminder_user"] is False
 
 
-@patch("gargbot_3000.health.health.activity")
-def test_send_sync_reminder(mock_activity, conn):
-    date = pendulum.Date(2020, 1, 2)
+@dataclass
+class FakeResponse:
+    data: dict
+
+
+@dataclass
+class FakeSlack:
+    resp: t.Optional[FakeResponse] = None
+    n_sent: int = 0
+
+    def chat_postMessage(self, channel, text):
+        self.text = text
+        self.channel = channel
+        self.n_sent += 1
+        return self.resp
+
+    def chat_delete(self, channel, ts):
+        pass
+
+
+def test_send_sync_reminders(conn):
     user = conftest.users[0]
     test_fitbit.register_user(user, conn)
     health.queries.toggle_sync_reminding(conn, enable_=True, id=user.id)
     amount = 1778
-    mock_activity.return_value = [
-        [{"gargling_id": user.id, "amount": amount}, {"gargling_id": 0, "amount": 0}],
-        [],
+    steps_data = [
+        {"gargling_id": user.id, "amount": amount},
+        {"gargling_id": 0, "amount": 0},
     ]
-    gen = health.health.send_sync_reminder(conn, date)
-    result = []
     ts = "1503435956.000247"
-    for msg, slack_id in gen:
-        result.append((msg, slack_id))
-        resp = {"ok": True, "ts": ts}
-        gen.send(resp)
-    assert len(result) == 1
-    msg, slack_id = result[0]
+    slack_client = FakeSlack(FakeResponse({"ok": True, "ts": ts}))
+    health.health.send_sync_reminders(conn, slack_client, steps_data)
 
-    assert msg == (
+    assert slack_client.n_sent == 1
+    assert slack_client.text == (
         f"Du gikk {amount} skritt i går, by my preliminary calculations. "
         "Husk å synce hvis dette tallet er for lavt. "
         f"Denne reminderen kan skrus av <{config.server_name}/health|her>."
     )
-    assert slack_id == user.slack_id
+    assert slack_client.channel == user.slack_id
+
     reminder_users = health.queries.get_sync_reminder_users(conn)
     assert len(reminder_users) == 1
     assert dict(reminder_users[0]) == {
         "id": user.id,
         "last_sync_reminder_ts": ts,
+        "slack_id": "s_id2",
+    }
+
+
+def test_delete_sync_reminder(conn):
+    user = conftest.users[0]
+    test_fitbit.register_user(user, conn)
+    health.queries.toggle_sync_reminding(conn, enable_=True, id=user.id)
+    health.queries.update_reminder_ts(conn, ts="1612968090.000100", id=user.id)
+    slack_client = FakeSlack()
+    health.health.delete_sync_reminders(conn, slack_client)
+    reminder_users = health.queries.get_sync_reminder_users(conn)
+    assert len(reminder_users) == 1
+    assert dict(reminder_users[0]) == {
+        "id": user.id,
+        "last_sync_reminder_ts": None,
         "slack_id": "s_id2",
     }

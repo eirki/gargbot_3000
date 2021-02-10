@@ -41,7 +41,7 @@ def main():  # no test coverage
             hour = local_hour_at_utc(11)
             delete_time = f"{hour}:55"
             log.info(f"Scheduling sync reminder deletion at {delete_time}")
-            schedule.every().day.at(delete_time).do(health.delete_sync_reminders)
+            schedule.every().day.at(delete_time).do(health.run_sync_deleting)
 
             hour = local_hour_at_utc(12)
             log.info(f"Scheduling update_journey at {hour}")
