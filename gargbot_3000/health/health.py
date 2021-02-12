@@ -257,7 +257,8 @@ def send_sync_reminders(conn: connection, slack_client, steps_data) -> None:
         msg = (
             f"Du gikk {datum['amount']} skritt i går, by my preliminary calculations. "
             "Husk å synce hvis dette tallet er for lavt. "
-            f"Denne reminderen kan skrus av <{config.server_name}/health|her>."
+            f"Denne reminderen kan skrus av <{config.server_name}/health|her>. Stay "
+            "beautiful, doll-face!"
         )
         try:
             resp = slack_client.chat_postMessage(

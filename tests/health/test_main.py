@@ -188,7 +188,8 @@ def test_send_sync_reminders(conn):
     assert slack_client.text == (
         f"Du gikk {amount} skritt i går, by my preliminary calculations. "
         "Husk å synce hvis dette tallet er for lavt. "
-        f"Denne reminderen kan skrus av <{config.server_name}/health|her>."
+        f"Denne reminderen kan skrus av <{config.server_name}/health|her>. "
+        "Stay beautiful, doll-face!"
     )
     assert slack_client.channel == user.slack_id
 
