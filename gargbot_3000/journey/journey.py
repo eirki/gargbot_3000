@@ -52,8 +52,8 @@ def coordinates_for_distance(
     latest_waypoint = queries.get_waypoint_for_distance(
         conn, journey_id=journey_id, distance=distance
     )
-    next_waypoint = queries.get_next_waypoint_for_waypoint(
-        conn, journey_id=journey_id, waypoint_id=latest_waypoint["id"]
+    next_waypoint = queries.get_next_waypoint_for_distance(
+        conn, journey_id=journey_id, distance=distance
     )
     if next_waypoint is None:
         finished = True

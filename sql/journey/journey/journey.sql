@@ -221,14 +221,18 @@ fetch first
     row only;
 
 
--- name: get_next_waypoint_for_waypoint^
+-- name: get_next_waypoint_for_distance^
 select
     *
 from
     waypoint
 where
     journey_id = :journey_id
-    and id = :waypoint_id + 1;
+    and :distance < distance
+order by
+    distance asc
+fetch first
+    row only;
 
 
 -- name: add_location!
