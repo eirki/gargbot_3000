@@ -53,7 +53,7 @@ credentials = {
     "password": config.db_password,
     "host": config.db_host,
     "port": config.db_port,
-    "cursor_factory": LoggingCursor,
+    "cursor_factory": DictCursor,
 }
 
 
