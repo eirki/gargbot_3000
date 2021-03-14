@@ -129,7 +129,7 @@ function addMarkers(map, data) {
         }
         if (location["poi"] != null) {
             p = document.createElement('p')
-            p.innerHTML = `Kveldens underholdning: ${location["poi"]}`
+            p.innerHTML = `Dagens underholdning: ${location["poi"]}`
             popupElem.appendChild(p)
         }
         if (location["photo_url"] != null) {

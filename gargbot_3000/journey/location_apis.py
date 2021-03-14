@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+from collections.abc import Iterator
 import hashlib
 import hmac
 import typing as t
@@ -14,6 +15,8 @@ import requests
 
 from gargbot_3000 import config
 from gargbot_3000.logger import log
+
+poi_radius = 2500
 
 poi_types = {
     "amusement_park",
@@ -115,7 +118,7 @@ def poi_for_location(
 ) -> t.Tuple[t.Optional[str], t.Optional[bytes]]:  # no test coverage
     try:
         gmaps = googlemaps.Client(key=config.google_api_key)
-        places = gmaps.places_nearby(location=(lat, lon), radius=5000)["results"]
+        places = gmaps.places_nearby(location=(lat, lon), radius=poi_radius)["results"]
     except Exception:
         log.error("Error getting location data", exc_info=True)
         return None, None
@@ -141,13 +144,26 @@ def poi_for_location(
 
 
 def main(
-    lat: float, lon: float
-) -> t.Tuple[
+    lat_lons: Iterator[tuple[float, float]]
+) -> tuple[
     t.Optional[str], t.Optional[str], t.Optional[bytes], str, t.Optional[str],
 ]:  # no test coverage
-    address, country = address_for_location(lat, lon)
-    poi, photo = poi_for_location(lat, lon)
-    if photo is None:
-        photo = street_view_for_location(lat, lon)
-    map_url = map_url_for_location(lat, lon)
+    address, sw_photo, map_url, poi, map_url = [None] * 5
+    for lat, lon in lat_lons:
+        if address is None:
+            address, country = address_for_location(lat, lon)
+        if poi is None:
+            poi, poi_photo = poi_for_location(lat, lon)
+        if sw_photo is None:
+            sw_photo = street_view_for_location(lat, lon)
+        if map_url is None:
+            map_url = map_url_for_location(lat, lon)
+        if (
+            address is not None
+            and poi is not None
+            and (poi_photo is not None or sw_photo is not None)
+        ):
+            break
+    assert map_url is not None  # satisfy mypy
+    photo = poi_photo if poi is not None else sw_photo
     return address, country, photo, map_url, poi

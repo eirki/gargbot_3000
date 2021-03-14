@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from PIL import Image
 from flask.testing import FlaskClient
+import gpxpy
 import pendulum
 import psycopg2
 from psycopg2.extensions import connection
@@ -491,7 +492,7 @@ def test_format_response():
                 "text": {
                     "text": (
                         "Velkommen til Country! :confetti_ball: Vi har nå "
-                        "kommet til Address. Kveldens underholdning er Poi."
+                        "kommet til Address. Dagens underholdning er Poi."
                     ),
                     "type": "mrkdwn",
                 },
@@ -539,7 +540,7 @@ def test_format_response_no_address_no_country():
     )
     address_block = response["blocks"][4]
     expected_address = {
-        "text": {"text": "Kveldens underholdning er Poi.", "type": "mrkdwn"},
+        "text": {"text": "Dagens underholdning er Poi.", "type": "mrkdwn"},
         "type": "section",
     }
     img_block = response["blocks"][5]
@@ -567,7 +568,7 @@ def test_format_response_no_address():
     address_block = response["blocks"][4]
     expected_address = {
         "text": {
-            "text": "Velkommen til Country! :confetti_ball: Kveldens underholdning er Poi.",
+            "text": "Velkommen til Country! :confetti_ball: Dagens underholdning er Poi.",
             "type": "mrkdwn",
         },
         "type": "section",
@@ -597,7 +598,7 @@ def test_format_response_no_country():
     address_block = response["blocks"][4]
     expected_address = {
         "text": {
-            "text": "Vi har nå kommet til Address. Kveldens underholdning er Poi.",
+            "text": "Vi har nå kommet til Address. Dagens underholdning er Poi.",
             "type": "mrkdwn",
         },
         "type": "section",
@@ -792,3 +793,26 @@ def test_generate_all_maps(mock_activity, conn):
     with patch("gargbot_3000.journey.mapping.render_map") as maps:
         maps.return_value = Image.new("RGB", (1000, 600), (255, 255, 255))
         mapping.generate_all_maps(conn, journey_id, write=False)
+
+
+def test_lat_lon_increments(conn):
+    journey_id = insert_journey_data(conn)
+    date = pendulum.Date(2013, 3, 31)
+    journey.queries.start_journey(conn, journey_id=journey_id, date=date)
+    iterator = journey.lat_lon_increments(
+        conn, journey_id, distance_total=40_123, last_total_distance=0
+    )
+    lat_lons = list(iterator)
+    distances = [
+        gpxpy.geo.distance(
+            latitude_1=lat_a,
+            longitude_1=lon_a,
+            elevation_1=None,
+            latitude_2=lat_b,
+            longitude_2=lon_b,
+            elevation_2=None,
+        )
+        for (lat_a, lon_a), (lat_b, lon_b) in zip(lat_lons, lat_lons[1:])
+    ]
+    assert len(lat_lons) == 8
+    assert not any(abs(distance - 5000) > 500 for distance in distances)

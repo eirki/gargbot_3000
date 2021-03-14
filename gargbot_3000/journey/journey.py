@@ -2,6 +2,7 @@
 # coding: utf-8
 from __future__ import annotations
 
+from collections.abc import Iterator
 import math
 from operator import itemgetter
 import typing as t
@@ -159,6 +160,19 @@ def most_recent_location(conn, journey_id) -> t.Optional[dict]:
     return loc
 
 
+def lat_lon_increments(
+    conn: connection, journey_id: int, distance_total: float, last_total_distance: float
+) -> Iterator[tuple[float, float]]:
+    incr_length = location_apis.poi_radius * 2
+    for intermediate_distance in range(
+        int(distance_total), int(last_total_distance + incr_length), -incr_length
+    ):
+        inter_lat, inter_lon, *_ = coordinates_for_distance(
+            conn, journey_id, intermediate_distance
+        )
+        yield inter_lat, inter_lon
+
+
 def perform_daily_update(
     conn: connection,
     journey_id: int,
@@ -189,7 +203,9 @@ def perform_daily_update(
     lat, lon, latest_waypoint_id, finished = coordinates_for_distance(
         conn, journey_id, distance_total
     )
-    address, country, photo, map_url, poi = location_apis.main(lat, lon)
+
+    lat_lons = lat_lon_increments(conn, journey_id, distance_total, last_total_distance)
+    address, country, photo, map_url, poi = location_apis.main(lat_lons)
 
     new_country = (
         country != last_location["country"]
@@ -319,7 +335,7 @@ def format_response(
     if address is not None:
         location_txt += f"Vi har nå kommet til {address}. "
     if poi is not None:
-        location_txt += f"Kveldens underholdning er {poi}."
+        location_txt += f"Dagens underholdning er {poi}."
     if location_txt:
         blocks.append(
             {"type": "section", "text": {"type": "mrkdwn", "text": location_txt}}
