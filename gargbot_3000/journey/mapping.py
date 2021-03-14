@@ -133,10 +133,10 @@ def traversal_data(
     current_lon: float,
     current_distance: float,
     steps_data: list[dict],
-) -> t.Tuple[
-    list[t.Tuple[float, float]],
-    list[t.Tuple[float, float]],
-    list[t.Tuple[float, float]],
+) -> tuple[
+    list[tuple[float, float]],
+    list[tuple[float, float]],
+    list[tuple[float, float]],
     list[dict],
 ]:
     if last_location is not None:

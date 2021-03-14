@@ -39,7 +39,7 @@ class WithingsService:
         url = self.client.get_authorize_url()
         return url
 
-    def token(self, code: str) -> t.Tuple[int, Credentials]:  # no test coverage
+    def token(self, code: str) -> tuple[int, Credentials]:  # no test coverage
         credentials = self.client.get_credentials(code)
         return credentials.userid, credentials
 

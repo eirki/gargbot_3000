@@ -32,7 +32,7 @@ class PolarService:
         auth_url = self.client.get_authorization_url()
         return auth_url
 
-    def token(self, code: str) -> t.Tuple[int, dict]:  # no test coverage
+    def token(self, code: str) -> tuple[int, dict]:  # no test coverage
         token = self.client.get_access_token(code)
         try:
             self.client.users.register(access_token=token["access_token"])

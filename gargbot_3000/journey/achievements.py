@@ -102,7 +102,7 @@ def extract(
     query: t.Callable,
     **query_kwargs,
 ) -> t.Optional[
-    t.Tuple[t.Optional[list[int]], int, t.Optional[t.Set[int]], t.Optional[int]]
+    tuple[t.Optional[list[int]], int, t.Optional[t.Set[int]], t.Optional[int]]
 ]:
     current = query(conn, journey_id=journey_id, taken_before=date, **query_kwargs)
     if len(current) == 0:

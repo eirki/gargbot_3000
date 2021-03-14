@@ -224,7 +224,7 @@ def body_details(body_data: list[dict]) -> t.Optional[list]:
 
 def activity(
     conn: connection, date: pendulum.Date
-) -> t.Optional[t.Tuple[list, t.Optional[list]]]:
+) -> t.Optional[tuple[list, t.Optional[list]]]:
     tokens = queries.tokens(conn)
     if not tokens:  # no test coverage
         return None

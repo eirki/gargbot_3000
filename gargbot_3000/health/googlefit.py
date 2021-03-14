@@ -44,7 +44,7 @@ class GooglefitService:
         )
         return authorization_url
 
-    def token(self, code: str) -> t.Tuple[None, Credentials]:  # no test coverage
+    def token(self, code: str) -> tuple[None, Credentials]:  # no test coverage
         self.client.fetch_token(code=code)
         credentials = self.client.credentials
         return None, credentials

@@ -49,7 +49,7 @@ def parse_gpx(conn, journey_id, xml_data) -> None:
 
 def coordinates_for_distance(
     conn, journey_id, distance
-) -> t.Tuple[float, float, int, bool]:
+) -> tuple[float, float, int, bool]:
     latest_waypoint = queries.get_waypoint_for_distance(
         conn, journey_id=journey_id, distance=distance
     )
@@ -132,7 +132,7 @@ def upload_images(
     date: pendulum.Date,
     photo: t.Optional[bytes],
     traversal_map: t.Optional[bytes],
-) -> t.Tuple[t.Optional[str], t.Optional[str]]:  # no test coverage
+) -> tuple[t.Optional[str], t.Optional[str]]:  # no test coverage
     dbx = Dropbox(config.dropbox_token)
 
     def upload(data: bytes, name: str) -> t.Optional[str]:
@@ -180,7 +180,7 @@ def perform_daily_update(
     steps_data: list[dict],
     gargling_info: dict[int, dict],
 ) -> t.Optional[
-    t.Tuple[dict, float, dict, t.Optional[str], str, t.Optional[str], bool, bool]
+    tuple[dict, float, dict, t.Optional[str], str, t.Optional[str], bool, bool]
 ]:
     journey_data = dict(queries.get_journey(conn, journey_id=journey_id))
     if journey_data["finished_at"] is not None or journey_data["started_at"] is None:

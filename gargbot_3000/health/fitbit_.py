@@ -32,7 +32,7 @@ class FitbitService:
         url, _ = self.client.authorize_token_url(scope=scope)
         return url
 
-    def token(self, code: str) -> t.Tuple[str, dict]:  # no test coverage
+    def token(self, code: str) -> tuple[str, dict]:  # no test coverage
         self.client.fetch_access_token(code)
         token = self.client.session.token
         return token["user_id"], token

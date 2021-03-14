@@ -50,7 +50,7 @@ poi_types = {
 
 def address_for_location(
     lat, lon
-) -> t.Tuple[t.Optional[str], t.Optional[str]]:  # no test coverage
+) -> tuple[t.Optional[str], t.Optional[str]]:  # no test coverage
     geolocator = Nominatim(user_agent=config.bot_name)
     try:
         location = geolocator.reverse(f"{lat}, {lon}", language="en")
@@ -115,7 +115,7 @@ def map_url_for_location(lat, lon) -> str:  # no test coverage
 
 def poi_for_location(
     lat, lon
-) -> t.Tuple[t.Optional[str], t.Optional[bytes]]:  # no test coverage
+) -> tuple[t.Optional[str], t.Optional[bytes]]:  # no test coverage
     try:
         gmaps = googlemaps.Client(key=config.google_api_key)
         places = gmaps.places_nearby(location=(lat, lon), radius=poi_radius)["results"]

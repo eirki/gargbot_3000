@@ -50,7 +50,7 @@ def _sanitize_post(inp, bbcode_uid: str):
 
 def forum(
     conn: connection, args: t.Optional[list[str]]
-) -> t.Tuple[str, str, str, dt.datetime, str, str]:
+) -> tuple[str, str, str, dt.datetime, str, str]:
     user = args[0] if args else None
     desc = " "
     post = None
@@ -71,7 +71,7 @@ def forum(
 
 def msn(
     conn: connection, args: t.Optional[list[str]]
-) -> t.Tuple[dt.datetime, list, t.Optional[str]]:
+) -> tuple[dt.datetime, list, t.Optional[str]]:
     user = args[0] if args else None
     desc = None
     messages = None

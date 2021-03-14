@@ -29,7 +29,7 @@ def sortout_args(
     year: t.Optional[str],
     garglings: list[str],
     exclusive: bool,
-) -> t.Tuple[list, set]:
+) -> tuple[list, set]:
     valid_args = []
     if topic:
         valid_args.append(topic)
@@ -86,7 +86,7 @@ def get_random_pic(conn: connection, dbx: Dropbox):
 
 def get_pic(
     conn: connection, dbx: Dropbox, arg_list: t.Optional[list[str]]
-) -> t.Tuple[str, dt.datetime, str]:
+) -> tuple[str, dt.datetime, str]:
     description = ""
 
     if not arg_list:

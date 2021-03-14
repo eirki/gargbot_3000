@@ -2,8 +2,6 @@
 # coding: utf-8
 from __future__ import annotations
 
-import typing as t
-
 import aiosql
 import gpxpy
 from psycopg2.extensions import connection
@@ -14,7 +12,7 @@ queries = aiosql.from_path("sql/journey", "psycopg2")
 
 def location_between_waypoints(
     first_waypoint, last_waypoint, distance: float
-) -> t.Tuple[float, float]:
+) -> tuple[float, float]:
     angle = gpxpy.geo.get_course(
         first_waypoint["lat"],
         first_waypoint["lon"],
