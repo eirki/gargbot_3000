@@ -13,6 +13,7 @@ from psycopg2.extensions import connection
 
 from gargbot_3000 import config
 from gargbot_3000.health.common import connection_context, queries
+from gargbot_3000.logger import log
 
 
 class FitbitService:
@@ -77,11 +78,20 @@ class FitbitUser:
 
     def _steps_api_call(self, date: pendulum.Date) -> dict:  # no test coverage
         kwargs = {"resource": "activities/steps", "base_date": date, "period": "1d"}
-        try:
-            return self.client.time_series(**kwargs)
-        except fitbit.exceptions.HTTPServerError:
-            # retry
-            return self.client.time_series(**kwargs)
+        exc = None
+        data = None
+        for _ in range(10):
+            try:
+                data = self.client.time_series(**kwargs)
+                break
+            except fitbit.exceptions.HTTPServerError as e:
+                log.info("Error fetching fitbit data. Retrying")
+                exc = e
+                continue
+        if data is None:
+            assert exc is not None
+            raise exc
+        return data
 
     def steps(self, date: pendulum.Date) -> t.Optional[int]:
         data = self._steps_api_call(date)
