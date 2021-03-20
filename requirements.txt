@@ -4,97 +4,265 @@
 #
 #    pip-compile
 #
-aiohttp==3.6.2            # via slackclient
-aiosql==3.2.0             # via -r requirements.in
-arrow==0.15.5             # via withings-api
-async-timeout==3.0.1      # via aiohttp
-attrs==20.2.0             # via aiohttp
-backcall==0.2.0           # via ipython
-bbcode==1.0.33            # via -r requirements.in
-cachetools==4.1.1         # via google-auth
-certifi==2019.11.28       # via requests
-cffi==1.13.2              # via cryptography
-chardet==3.0.4            # via aiohttp, requests
-click==7.0                # via flask
-cryptography==3.2         # via pyopenssl
-decorator==4.4.2          # via ipython
-dropbox==9.4.0            # via -r requirements.in
-fitbit==0.3.1             # via -r requirements.in
-flask-cors==3.0.8         # via -r requirements.in
-flask-jwt-extended==3.24.1  # via -r requirements.in
-flask==1.1.1              # via -r requirements.in, flask-cors, flask-jwt-extended, slackeventsapi
-geographiclib==1.50       # via geopy
-geojson==2.5.0            # via -r requirements.in
-geopy==2.0.0              # via -r requirements.in
-google-api-core==1.22.1   # via google-api-python-client
-google-api-python-client==1.10.0  # via -r requirements.in
-google-auth-httplib2==0.0.4  # via google-api-python-client
-google-auth-oauthlib==0.4.1  # via -r requirements.in
-google-auth==1.20.1       # via -r requirements.in, google-api-core, google-api-python-client, google-auth-httplib2, google-auth-oauthlib
-googleapis-common-protos==1.52.0  # via google-api-core
-googlemaps==4.4.1         # via -r requirements.in
-gpxpy==1.4.2              # via -r requirements.in
-gunicorn==20.0.4          # via -r requirements.in
-html-slacker==0.1.6       # via -r requirements.in
-httplib2==0.18.1          # via google-api-python-client, google-auth-httplib2
-idna==2.8                 # via requests, yarl
-ipykernel==5.3.4          # via -r requirements.in
-ipython-genutils==0.2.0   # via traitlets
-ipython==7.18.1           # via ipykernel
-itsdangerous==1.1.0       # via flask, slackeventsapi
-jedi==0.17.2              # via ipython
-jinja2==2.10.3            # via -r requirements.in, flask, slackeventsapi
-jupyter-client==6.1.7     # via ipykernel
-jupyter-core==4.6.3       # via jupyter-client
-markupsafe==1.1.1         # via jinja2, slackeventsapi
-migra[pg]==1.0.1575954682  # via -r requirements.in
-multidict==4.7.6          # via aiohttp, yarl
-oauthlib==3.1.0           # via requests-oauthlib
-parso==0.7.1              # via jedi
-pathlib==1.0.1            # via sqlbag
-pendulum==2.1.2           # via -r requirements.in
-pexpect==4.8.0            # via ipython
-pickleshare==0.7.5        # via ipython
-pillow==7.2.0             # via -r requirements.in, staticmap
-polar-accesslink==0.0.5   # via -r requirements.in
-prompt-toolkit==3.0.7     # via ipython
-protobuf==3.13.0          # via google-api-core, googleapis-common-protos
-psycopg2-binary==2.8.4    # via -r requirements.in, migra
-ptyprocess==0.6.0         # via pexpect
-pyasn1-modules==0.2.8     # via google-auth
-pyasn1==0.4.8             # via pyasn1-modules, rsa
-pycparser==2.19           # via cffi
-pyee==7.0.3               # via slackeventsapi
-pygments==2.6.1           # via ipython
-pyjwt==1.7.1              # via flask-jwt-extended
-pyopenssl==19.1.0         # via -r requirements.in
-python-dateutil==2.8.1    # via arrow, fitbit, jupyter-client, pendulum
-python-dotenv==0.10.3     # via -r requirements.in
-pytz==2019.3              # via -r requirements.in, google-api-core
-pytzdata==2020.1          # via pendulum
-pyzmq==19.0.2             # via jupyter-client
-requests-oauth==0.4.1     # via withings-api
-requests-oauthlib==1.3.0  # via fitbit, google-auth-oauthlib, withings-api
-requests==2.22.0          # via -r requirements.in, dropbox, google-api-core, googlemaps, polar-accesslink, requests-oauth, requests-oauthlib, staticmap
-rsa==4.6                  # via google-auth
-schedule==0.6.0           # via -r requirements.in
-schemainspect==0.1.1576717677  # via migra
-six==1.13.0               # via cryptography, dropbox, flask-cors, flask-jwt-extended, google-api-core, google-api-python-client, google-auth, google-auth-httplib2, migra, protobuf, pyopenssl, python-dateutil, schemainspect, sqlbag, websocket-client
-slackclient==2.9.0        # via -r requirements.in
-slackeventsapi==2.2.1     # via -r requirements.in
-sqlalchemy==1.3.12        # via schemainspect, sqlbag
-sqlbag==0.1.1579049654    # via -r requirements.in, migra
-staticmap==0.5.4          # via -r requirements.in
-tornado==6.0.4            # via ipykernel, jupyter-client
-traitlets==5.0.4          # via ipykernel, ipython, jupyter-client, jupyter-core
-typing-extensions==3.7.4.3  # via aiosql
-uritemplate==3.0.1        # via google-api-python-client
-urllib3==1.25.7           # via requests
-wcwidth==0.2.5            # via prompt-toolkit
-websocket-client==0.54.0  # via -r requirements.in
-werkzeug==0.16.0          # via -r requirements.in, flask, flask-jwt-extended
-withings-api==2.1.4       # via -r requirements.in
-yarl==1.5.1               # via aiohttp
+aiohttp==3.6.2
+    # via slackclient
+aiosql==3.2.0
+    # via -r requirements.in
+arrow==0.15.5
+    # via withings-api
+async-timeout==3.0.1
+    # via aiohttp
+attrs==20.2.0
+    # via aiohttp
+backcall==0.2.0
+    # via ipython
+bbcode==1.0.33
+    # via -r requirements.in
+cachetools==4.1.1
+    # via google-auth
+certifi==2019.11.28
+    # via requests
+cffi==1.13.2
+    # via cryptography
+chardet==3.0.4
+    # via
+    #   aiohttp
+    #   requests
+click==7.0
+    # via flask
+cryptography==3.2
+    # via pyopenssl
+decorator==4.4.2
+    # via ipython
+dropbox==9.4.0
+    # via -r requirements.in
+fitbit==0.3.1
+    # via -r requirements.in
+flask-cors==3.0.8
+    # via -r requirements.in
+flask-jwt-extended==3.24.1
+    # via -r requirements.in
+flask==1.1.1
+    # via
+    #   -r requirements.in
+    #   flask-cors
+    #   flask-jwt-extended
+    #   slackeventsapi
+geographiclib==1.50
+    # via geopy
+geojson==2.5.0
+    # via -r requirements.in
+geopy==2.0.0
+    # via -r requirements.in
+google-api-core==1.22.1
+    # via google-api-python-client
+google-api-python-client==1.10.0
+    # via -r requirements.in
+google-auth-httplib2==0.0.4
+    # via google-api-python-client
+google-auth-oauthlib==0.4.1
+    # via -r requirements.in
+google-auth==1.20.1
+    # via
+    #   -r requirements.in
+    #   google-api-core
+    #   google-api-python-client
+    #   google-auth-httplib2
+    #   google-auth-oauthlib
+googleapis-common-protos==1.52.0
+    # via google-api-core
+googlemaps==4.4.1
+    # via -r requirements.in
+gpxpy==1.4.2
+    # via -r requirements.in
+gunicorn==20.0.4
+    # via -r requirements.in
+html-slacker==0.1.6
+    # via -r requirements.in
+httplib2==0.18.1
+    # via
+    #   google-api-python-client
+    #   google-auth-httplib2
+idna==2.8
+    # via
+    #   requests
+    #   yarl
+ipykernel==5.3.4
+    # via -r requirements.in
+ipython-genutils==0.2.0
+    # via traitlets
+ipython==7.18.1
+    # via ipykernel
+itsdangerous==1.1.0
+    # via
+    #   flask
+    #   slackeventsapi
+jedi==0.17.2
+    # via ipython
+jinja2==2.11.3
+    # via
+    #   -r requirements.in
+    #   flask
+    #   slackeventsapi
+jupyter-client==6.1.7
+    # via ipykernel
+jupyter-core==4.6.3
+    # via jupyter-client
+markupsafe==1.1.1
+    # via
+    #   jinja2
+    #   slackeventsapi
+migra[pg]==1.0.1575954682
+    # via -r requirements.in
+multidict==4.7.6
+    # via
+    #   aiohttp
+    #   yarl
+oauthlib==3.1.0
+    # via requests-oauthlib
+parso==0.7.1
+    # via jedi
+pathlib==1.0.1
+    # via sqlbag
+pendulum==2.1.2
+    # via -r requirements.in
+pexpect==4.8.0
+    # via ipython
+pickleshare==0.7.5
+    # via ipython
+pillow==7.2.0
+    # via
+    #   -r requirements.in
+    #   staticmap
+polar-accesslink==0.0.5
+    # via -r requirements.in
+prompt-toolkit==3.0.7
+    # via ipython
+protobuf==3.13.0
+    # via
+    #   google-api-core
+    #   googleapis-common-protos
+psycopg2-binary==2.8.4
+    # via
+    #   -r requirements.in
+    #   migra
+ptyprocess==0.6.0
+    # via pexpect
+pyasn1-modules==0.2.8
+    # via google-auth
+pyasn1==0.4.8
+    # via
+    #   pyasn1-modules
+    #   rsa
+pycparser==2.19
+    # via cffi
+pyee==7.0.3
+    # via slackeventsapi
+pygments==2.6.1
+    # via ipython
+pyjwt==1.7.1
+    # via flask-jwt-extended
+pyopenssl==19.1.0
+    # via -r requirements.in
+python-dateutil==2.8.1
+    # via
+    #   arrow
+    #   fitbit
+    #   jupyter-client
+    #   pendulum
+python-dotenv==0.10.3
+    # via -r requirements.in
+pytz==2019.3
+    # via
+    #   -r requirements.in
+    #   google-api-core
+pytzdata==2020.1
+    # via pendulum
+pyzmq==19.0.2
+    # via jupyter-client
+requests-oauth==0.4.1
+    # via withings-api
+requests-oauthlib==1.3.0
+    # via
+    #   fitbit
+    #   google-auth-oauthlib
+    #   withings-api
+requests==2.22.0
+    # via
+    #   -r requirements.in
+    #   dropbox
+    #   google-api-core
+    #   googlemaps
+    #   polar-accesslink
+    #   requests-oauth
+    #   requests-oauthlib
+    #   staticmap
+rsa==4.6
+    # via google-auth
+schedule==0.6.0
+    # via -r requirements.in
+schemainspect==0.1.1576717677
+    # via migra
+six==1.13.0
+    # via
+    #   cryptography
+    #   dropbox
+    #   flask-cors
+    #   flask-jwt-extended
+    #   google-api-core
+    #   google-api-python-client
+    #   google-auth
+    #   google-auth-httplib2
+    #   migra
+    #   protobuf
+    #   pyopenssl
+    #   python-dateutil
+    #   schemainspect
+    #   sqlbag
+    #   websocket-client
+slackclient==2.9.0
+    # via -r requirements.in
+slackeventsapi==2.2.1
+    # via -r requirements.in
+sqlalchemy==1.3.12
+    # via
+    #   schemainspect
+    #   sqlbag
+sqlbag==0.1.1579049654
+    # via
+    #   -r requirements.in
+    #   migra
+staticmap==0.5.4
+    # via -r requirements.in
+tornado==6.0.4
+    # via
+    #   ipykernel
+    #   jupyter-client
+traitlets==5.0.4
+    # via
+    #   ipykernel
+    #   ipython
+    #   jupyter-client
+    #   jupyter-core
+typing-extensions==3.7.4.3
+    # via aiosql
+uritemplate==3.0.1
+    # via google-api-python-client
+urllib3==1.25.7
+    # via requests
+wcwidth==0.2.5
+    # via prompt-toolkit
+websocket-client==0.54.0
+    # via -r requirements.in
+werkzeug==0.16.0
+    # via
+    #   -r requirements.in
+    #   flask
+    #   flask-jwt-extended
+withings-api==2.1.4
+    # via -r requirements.in
+yarl==1.5.1
+    # via aiohttp
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
