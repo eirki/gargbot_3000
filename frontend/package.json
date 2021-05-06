@@ -7,7 +7,7 @@
     "@raruto/leaflet-elevation": "^1.4.0",
     "bootstrap": "^5.0.0-beta1",
     "countdown": "^2.6.0",
-    "highcharts": "^8.2.2",
+    "highcharts": "^9.0.0",
     "hyperscript": "^2.0.2",
     "leaflet": "^1.7.1"
   },
