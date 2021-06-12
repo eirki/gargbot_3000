@@ -276,7 +276,6 @@ def round_meters(n: float) -> str:
 
 
 def format_response(
-    destination: str,
     n_day: int,
     date: pendulum.Date,
     steps_data: list,
@@ -303,16 +302,22 @@ def format_response(
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": factoid}})
 
     steps_txt = "Steps taken:"
+    most_steps = steps_data[0]["amount"]
+    fewest_steps = steps_data[-1]["amount"]
     for i, row in enumerate(steps_data):
         color = gargling_info[row["gargling_id"]]["color_name"]
         name = gargling_info[row["gargling_id"]]["first_name"]
 
         steps = row["amount"]
         g_distance = round_meters(steps * common.STRIDE)
-        if i == 0:
-            amount = f"*{steps}* ({g_distance}) :star:"
-        elif i == len(steps_data) - 1:
-            amount = f"_{steps}_ ({g_distance})"
+        if steps == most_steps:
+            amount = f"*{steps}* ({g_distance}) :first_place_medal:"
+        elif steps == fewest_steps:
+            amount = f"_{steps}_ ({g_distance}) :turtle:"
+        elif i == 1:
+            amount = f"{steps} ({g_distance}) :second_place_medal:"
+        elif i == 2:
+            amount = f"{steps} ({g_distance}) :third_place_medal:"
         else:
             amount = f"{steps} ({g_distance})"
         desc = f"\n\t:dot-{color}: {name}: {amount}"
@@ -390,7 +395,6 @@ def store_steps(conn, steps, journey_id, date) -> None:
 def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
     ongoing_journey = queries.get_ongoing_journey(conn)
     journey_id = ongoing_journey["id"]
-    destination = ongoing_journey["destination"]
     try:
         for date in days_to_update(conn, journey_id, current_date):
             log.info(f"Journey update for {date}")
@@ -430,7 +434,6 @@ def main(conn: connection, current_date: pendulum.Date) -> t.Iterator[dict]:
             n_day = (date - ongoing_journey["started_at"]).days + 1
             formatted = format_response(
                 date=date,
-                destination=destination,
                 n_day=n_day,
                 steps_data=steps_data,
                 body_reports=body_reports,

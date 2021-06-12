@@ -448,10 +448,24 @@ def test_factoid_weekly_summary(conn: connection):
 
 
 def test_format_response():
-    g_info = example_gargling_info()
+    g_info = {
+        6: {"first_name": "name6", "color_name": "cyan", "color_hex": "#42d4f4"},
+        2: {"first_name": "name2", "color_name": "green", "color_hex": "#3cb44b"},
+        3: {"first_name": "name3", "color_name": "orange", "color_hex": "#f58231"},
+        5: {"first_name": "name5", "color_name": "purple", "color_hex": "#911eb4"},
+        7: {"first_name": "name7", "color_name": "blue", "color_hex": "#911eb7"},
+        8: {"first_name": "name8", "color_name": "red", "color_hex": "#911eb8"},
+    }
+    steps_data = [
+        {"gargling_id": 6, "amount": 17782},
+        {"gargling_id": 2, "amount": 11521},
+        {"gargling_id": 3, "amount": 6380},
+        {"gargling_id": 7, "amount": 1000},
+        {"gargling_id": 8, "amount": 111},
+        {"gargling_id": 5, "amount": 111},
+    ]
     data = example_update_data()
-    steps_data, body_reports = example_activity_data()
-    data["destination"] = "Destinasjon"
+    body_reports = ["name2 veier 60 kg"]
     factoid = "Vi gikk *26.8 km*! Nå har vi gått 26.8 km totalt, vi har 29 km igjen til vi er framme."
     formatted = journey.format_response(
         n_day=8,
@@ -477,10 +491,12 @@ def test_format_response():
                 "text": {
                     "text": (
                         "Steps taken:\n"
-                        "\t:dot-cyan: name6: *17782* (13.3 km) :star:\n"
-                        "\t:dot-green: name2: 11521 (8.6 km)\n"
-                        "\t:dot-orange: name3: 6380 (4.8 km)\n"
-                        "\t:dot-purple: name5: _111_ (83.2 m)"
+                        "\t:dot-cyan: name6: *17782* (13.3 km) :first_place_medal:\n"
+                        "\t:dot-green: name2: 11521 (8.6 km) :second_place_medal:\n"
+                        "\t:dot-orange: name3: 6380 (4.8 km) :third_place_medal:\n"
+                        "\t:dot-blue: name7: 1000 (750 m)\n"
+                        "\t:dot-red: name8: _111_ (83.2 m) :turtle:\n"
+                        "\t:dot-purple: name5: _111_ (83.2 m) :turtle:"
                     ),
                     "type": "mrkdwn",
                 },
@@ -525,7 +541,6 @@ def test_format_response_no_address_no_country():
     data = example_update_data()
     steps_data, body_reports = example_activity_data()
     g_info = example_gargling_info()
-    data["destination"] = "Destinasjon"
 
     data["address"] = None
     data["country"] = None
@@ -553,7 +568,6 @@ def test_format_response_no_address():
     data = example_update_data()
     steps_data, body_reports = example_activity_data()
     g_info = example_gargling_info()
-    data["destination"] = "Destinasjon"
 
     data["address"] = None
     response = journey.format_response(
@@ -583,7 +597,6 @@ def test_format_response_no_country():
     data = example_update_data()
     steps_data, body_reports = example_activity_data()
     g_info = example_gargling_info()
-    data["destination"] = "Destinasjon"
 
     data["country"] = None
     response = journey.format_response(
@@ -614,7 +627,6 @@ def test_format_response_nopoi():
     steps_data, body_reports = example_activity_data()
 
     g_info = example_gargling_info()
-    data["destination"] = "Destinasjon"
 
     data["poi"] = None
 
@@ -643,8 +655,6 @@ def test_format_response_no_photo_url():
     steps_data, body_reports = example_activity_data()
     g_info = example_gargling_info()
 
-    data["destination"] = "Destinasjon"
-
     data["photo_url"] = None
     response = journey.format_response(
         n_day=8,
@@ -662,8 +672,6 @@ def test_format_response_no_all():
     data = example_update_data()
     steps_data, body_reports = example_activity_data()
     g_info = example_gargling_info()
-
-    data["destination"] = "Destinasjon"
 
     data["address"] = None
     data["country"] = None
