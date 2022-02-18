@@ -15,6 +15,8 @@ L.Icon.Default.mergeOptions({
     shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
 
+const journey_id = 2;
+
 // https://leaflet-extras.github.io/leaflet-providers/preview/
 const tileServer = (
     config.prod ?
@@ -25,7 +27,7 @@ const attr = 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStree
 
 
 function journeyDetails(token) {
-    return getBackend(token, "/detail_journey/1")
+    return getBackend(token, `/detail_journey/${journey_id}`)
 }
 
 function defineMap() {

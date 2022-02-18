@@ -10,6 +10,7 @@ import * as charts from "./charts"
 more(Highcharts);
 Timeline(Highcharts);
 
+const journey_id = 2;
 
 
 function formatNumber(num) {
@@ -55,7 +56,7 @@ function to_dict(data) {
 }
 
 async function distance_area_data(token) {
-    return getBackend(token, "/dashboard/distance_area/1").then(resp => resp["data"])
+    return getBackend(token, `/dashboard/distance_area/${journey_id}`).then(resp => resp["data"])
 }
 
 
@@ -81,7 +82,7 @@ function update_stats(leftSet, rightSet) {
 
 
 async function personal_stats(token) {
-    return getBackend(token, "/dashboard/personal_stats/1")
+    return getBackend(token, `/dashboard/personal_stats/${journey_id}`)
         .then(resp => {
             let as_list = resp["data"]
             let data = to_dict(as_list)
@@ -155,7 +156,7 @@ function person_steps(data_as_list, selectLeft, selectRight) {
 
 
 async function weekday_polar(token, selectLeft, selectRight) {
-    const resp = await getBackend(token, "/dashboard/weekday_polar/1");
+    const resp = await getBackend(token, `/dashboard/weekday_polar/${journey_id}`);
     const as_list = resp["data"];
     const data = to_dict(as_list)
     let leftSeries = JSON.parse(JSON.stringify(data[selectLeft.value])); // deep copy
@@ -178,7 +179,7 @@ async function weekday_polar(token, selectLeft, selectRight) {
 
 
 async function month_polar(token, selectLeft, selectRight) {
-    const resp = await getBackend(token, "/dashboard/month_polar/1");
+    const resp = await getBackend(token, `/dashboard/month_polar/${journey_id}`);
     const as_list = resp["data"];
     const data = to_dict(as_list)
     let leftSeries = JSON.parse(JSON.stringify(data[selectLeft.value])); // deep copy
@@ -201,7 +202,7 @@ async function month_polar(token, selectLeft, selectRight) {
 
 
 async function countries_timeline(token) {
-    const resp = await getBackend(token, "/dashboard/countries_timeline/1");
+    const resp = await getBackend(token, `/dashboard/countries_timeline/${journey_id}`);
     const data = resp["data"];
     let opts = charts.countries_timeline;
     opts.series[0].data = data;
@@ -229,7 +230,7 @@ function distance_area(data) {
 
 
 async function steps_pie(token) {
-    const resp = await getBackend(token, "/dashboard/steps_pie/1");
+    const resp = await getBackend(token, `/dashboard/steps_pie/${journey_id}`);
     const data = resp["data"];
     let opts = charts.steps_pie;
     opts.series[0].data = data;
@@ -238,7 +239,7 @@ async function steps_pie(token) {
 
 
 async function first_place_pie(token) {
-    const resp = await getBackend(token, "/dashboard/first_place_pie/1");
+    const resp = await getBackend(token, `/dashboard/first_place_pie/${journey_id}`);
     const data = resp["data"];
     let opts = charts.first_place_pie;
     opts.series[0].data = data;
@@ -247,7 +248,7 @@ async function first_place_pie(token) {
 
 
 async function above_median_pie(token) {
-    const resp = await getBackend(token, "/dashboard/above_median_pie/1");
+    const resp = await getBackend(token, `/dashboard/above_median_pie/${journey_id}`);
     const data = resp["data"];
     let opts = charts.above_median_pie;
     opts.series[0].data = data;
@@ -256,7 +257,7 @@ async function above_median_pie(token) {
 
 
 async function contributing_days_pie(token) {
-    const resp = await getBackend(token, "/dashboard/contributing_days_pie/1");
+    const resp = await getBackend(token, `/dashboard/contributing_days_pie/${journey_id}`);
     const data = resp["data"];
     let opts = charts.contributing_days_pie;
     opts.series[0].data = data;
