@@ -71,3 +71,4 @@ Temporary Items
 tests/__pycache__/*
 coverage.xml
 htmlcov/*
+.venv
