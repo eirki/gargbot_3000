@@ -2,6 +2,7 @@
 # coding: utf-8
 from __future__ import annotations
 
+import datetime as dt
 from unittest.mock import patch
 
 import arrow
@@ -164,37 +165,21 @@ def test_handle_redirect(
     assert data["gargling_id"] == user.id
 
 
-unused_measures = [
-    "timezone",
-    "deviceid",
-    "brand",
-    "is_tracker",
-    "distance",
-    "elevation",
-    "soft",
-    "moderate",
-    "intense",
-    "active",
-    "calories",
-    "totalcalories",
-    "hr_average",
-    "hr_min",
-    "hr_max",
-    "hr_zone_0",
-    "hr_zone_1",
-    "hr_zone_2",
-    "hr_zone_3",
-]
-
-
 def test_withings_steps(conn: connection):
     user = withings_user(conn)
     test_date = pendulum.Date(2020, 1, 2)
-    none_data = {measure: None for measure in unused_measures}
+    none_data = {
+        "timezone": dt.tzinfo(),
+        "brand": 1,
+        "is_tracker": True,
+        "totalcalories": 0.1,
+    }
     n_steps = 6620
     return_value = MeasureGetActivityResponse(
         activities=(
-            MeasureGetActivityActivity(date=test_date, steps=n_steps, **none_data),
+            MeasureGetActivityActivity(
+                date=arrow.get(test_date), steps=n_steps, **none_data
+            ),
         ),
         more=False,
         offset=0,
@@ -207,8 +192,12 @@ def test_withings_steps(conn: connection):
 def test_withings_steps_no_data(conn: connection):
     user = withings_user(conn)
     test_date = pendulum.Date(2020, 1, 2)
-    none_data = {measure: None for measure in unused_measures}
-
+    none_data = {
+        "timezone": dt.tzinfo(),
+        "brand": 1,
+        "is_tracker": True,
+        "totalcalories": 0.1,
+    }
     return_value = MeasureGetActivityResponse(
         activities=(
             MeasureGetActivityActivity(
