@@ -9,13 +9,13 @@ if [[ $? != 0 ]]; then
   exit 1
 fi
 
-docker-machine active | grep -q 'docker-droplet'
-if [[ $? != 0 ]]; then
-  echo
-  echo "Docker-machine not active, run:"
-  echo "docker-machine env docker-droplet; and eval (docker-machine env docker-droplet)"
-  exit 1
-fi
+# docker-machine active | grep -q 'docker-droplet'
+# if [[ $? != 0 ]]; then
+#   echo
+#   echo "Docker-machine not active, run:"
+#   echo "docker-machine env docker-droplet; and eval (docker-machine env docker-droplet)"
+#   exit 1
+# fi
 
 pytest tests/
 if [[ $? != 0 ]]; then
